@@ -221,20 +221,17 @@ export function registerRoutes(app: Express) {
 }`
                 : `Analyze this shortcut and suggest improvements: ${prompt}`
             }],
-            temperature: 0.7,
-            system: type === 'generate' 
-              ? SYSTEM_PROMPT + "\nRespond ONLY with valid JSON that matches the Shortcut interface structure."
-              : SYSTEM_PROMPT + "\nAnalyze shortcuts and provide improvements in JSON format."
+            temperature: 0.7
           });
 
-          // Safely extract and verify response
-          const content = response.content?.[0]?.text;
+          // Get content from response
+          const content = response.content[0]?.text;
           if (!content) {
             throw new Error('Empty response from Claude');
           }
 
           // Extract JSON if wrapped in code blocks
-          const jsonMatch = content.match(/```json\n?(.*)\n?```/s) || content.match(/{.*}/s);
+          const jsonMatch = content.match(/```json\n?(.*?)\n?```/s) || content.match(/{.*}/s);
           const cleanContent = jsonMatch ? jsonMatch[1].trim() : content.trim();
           
           if (type === 'generate') {
