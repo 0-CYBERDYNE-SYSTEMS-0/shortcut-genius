@@ -126,9 +126,15 @@ export function registerRoutes(app: Express) {
             messages: [
               { 
                 role: "system", 
-                content: type === 'generate' ? SYSTEM_PROMPT : "You are an iOS Shortcuts expert. Analyze shortcuts and provide improvements in JSON format with 'analysis' and 'suggestions' fields." 
+                content: type === 'generate' 
+                  ? SYSTEM_PROMPT + "\nRespond with a valid JSON shortcut object." 
+                  : "You are an iOS Shortcuts expert. Analyze shortcuts and provide improvements as JSON." 
               },
-              { role: "user", content: prompt }
+              { role: "user", content: type === 'generate'
+                ? `Create a shortcut with the following description and return as JSON:
+${prompt}`
+                : prompt 
+              }
             ],
             response_format: { type: "json_object" }
           });
@@ -163,20 +169,24 @@ export function registerRoutes(app: Express) {
         try {
           const response = await anthropic.messages.create({
             model: 'claude-3-5-sonnet-20241022',
-            max_tokens: 4000,
-            temperature: 0.7,
-            system: type === 'generate' ? SYSTEM_PROMPT : "You are an iOS Shortcuts expert. Analyze shortcuts and provide improvements in JSON format with 'analysis' and 'suggestions' fields.",
-            messages: [{ role: 'user', content: prompt }]
+            system: type === 'generate' 
+              ? SYSTEM_PROMPT + "\nPlease respond with valid JSON that matches the Shortcut interface structure." 
+              : "You are an iOS Shortcuts expert. Analyze shortcuts and provide improvements in JSON format.",
+            messages: [{ 
+              role: 'user', 
+              content: type === 'generate'
+                ? `Create a shortcut with the following description and return it as JSON:
+${prompt}`
+                : prompt 
+            }]
           });
-          
-          const content = response.content[0]?.type === 'text' ? response.content[0].text : '';
-          
-          if (!content) {
-            return res.status(500).json({
-              error: 'Empty response from Claude'
-            });
+
+          if (!response.content[0]?.text) {
+            throw new Error('Empty response from Claude');
           }
 
+          const content = response.content[0].text;
+          
           if (type === 'generate') {
             try {
               // Verify it's valid JSON before validation
