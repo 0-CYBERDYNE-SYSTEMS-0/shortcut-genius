@@ -207,37 +207,24 @@ export function registerRoutes(app: Express) {
             messages: [{
               role: 'user',
               content: type === 'generate'
-                ? `Create a shortcut that ${prompt}. Return ONLY valid JSON in this exact format:
-{
-  "name": "Shortcut Name",
-  "actions": [
-    {
-      "type": "action_type",
-      "parameters": {
-        "param1": "value1"
-      }
-    }
-  ]
-}`
-                : `Analyze this shortcut and suggest improvements: ${prompt}`
+                ? `Create a shortcut that ${prompt}. You must respond with ONLY a valid JSON object in this exact format: {"name": string, "actions": Action[]}`
+                : `Analyze this shortcut and suggest improvements. You must respond with ONLY a valid JSON object in this format: {"issues": string[], "suggestions": string[], "optimizations": string[]}`
             }],
             temperature: 0.7
           });
 
-          // Get content from response
-          const content = response.content[0]?.text;
+          // Extract content safely
+          const content = response.content?.[0]?.text || '';
           if (!content) {
             throw new Error('Empty response from Claude');
           }
 
-          // Extract JSON if wrapped in code blocks
-          const jsonMatch = content.match(/```json\n?(.*?)\n?```/s) || content.match(/{.*}/s);
+          // Remove any markdown or text wrapping, keep only JSON
+          const jsonMatch = content.match(/```json\n?({[\s\S]*?})\n?```/m) || content.match(/({[\s\S]*?})/);
           const cleanContent = jsonMatch ? jsonMatch[1].trim() : content.trim();
-          
+
           if (type === 'generate') {
             try {
-              // Verify it's valid JSON before validation
-              JSON.parse(cleanContent);
               const validation = validateAIResponse(cleanContent);
               if (!validation.valid) {
                 return res.status(422).json({
@@ -252,7 +239,11 @@ export function registerRoutes(app: Express) {
             }
           } else {
             try {
-              JSON.parse(cleanContent);
+              // Parse and validate analysis format
+              const analysis = JSON.parse(cleanContent);
+              if (!analysis.issues || !analysis.suggestions || !analysis.optimizations) {
+                throw new Error('Invalid analysis format');
+              }
               result = { content: cleanContent };
             } catch (error) {
               return res.status(422).json({
