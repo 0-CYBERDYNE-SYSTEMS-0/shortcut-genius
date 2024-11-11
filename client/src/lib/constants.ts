@@ -17,9 +17,9 @@ export const MODEL_INFO = {
     name: 'GPT-4o',
     description: 'Latest OpenAI model with enhanced capabilities',
   },
-  'claude-3-5-sonnet-20241022': {
+  'claude-3-sonnet': {
     provider: 'anthropic',
-    name: 'Claude 3.5 Sonnet',
+    name: 'Claude 3 Sonnet',
     description: 'Latest Anthropic model with enhanced capabilities',
   },
 };

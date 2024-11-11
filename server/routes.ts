@@ -5,7 +5,7 @@ import { validateShortcut, SHORTCUT_ACTIONS } from '../client/src/lib/shortcuts'
 import { Shortcut } from '../client/src/lib/shortcuts';
 
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024
-// the newest Anthropic model is "claude-3-5-sonnet-20241022" which was released October 22, 2024
+// the newest Anthropic model is "claude-3-sonnet" which was released October 22, 2024
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || '' });
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY || '' });
@@ -212,51 +212,87 @@ export function registerRoutes(app: Express) {
     try {
       let result;
       if (model === 'gpt-4o') {
-        const response = await openai.chat.completions.create({
-          model: "gpt-4o",
-          messages: [
-            { 
-              role: "system", 
-              content: type === 'generate' ? SYSTEM_PROMPT : "You are an iOS Shortcuts expert. Analyze shortcuts and provide improvements in JSON format with 'analysis' and 'suggestions' fields." 
-            },
-            { role: "user", content: prompt }
-          ],
-          response_format: { type: "json_object" }
-        });
-        
-        const content = response.choices[0].message.content || '';
-        
-        if (type === 'generate') {
-          const validation = validateAIResponse(content);
-          if (!validation.valid) {
-            return res.status(422).json({
-              error: `Invalid shortcut generated: ${validation.error}`
-            });
+        try {
+          const response = await openai.chat.completions.create({
+            model: "gpt-4o",
+            messages: [
+              { 
+                role: "system", 
+                content: type === 'generate' ? SYSTEM_PROMPT : "You are an iOS Shortcuts expert. Analyze shortcuts and provide improvements in JSON format with 'analysis' and 'suggestions' fields." 
+              },
+              { role: "user", content: prompt }
+            ],
+            response_format: { type: "json_object" }
+          });
+          
+          const content = response.choices[0].message.content || '';
+          
+          if (type === 'generate') {
+            const validation = validateAIResponse(content);
+            if (!validation.valid) {
+              return res.status(422).json({
+                error: `Invalid shortcut generated: ${validation.error}`
+              });
+            }
+            result = { content };
+          } else {
+            try {
+              // Validate JSON for analysis response
+              JSON.parse(content);
+              result = { content };
+            } catch (error) {
+              return res.status(422).json({
+                error: 'Invalid JSON response from analysis'
+              });
+            }
           }
-          result = { content };
-        } else {
-          result = { content };
+        } catch (error: any) {
+          const errorMessage = error?.response?.data?.error?.message || error.message;
+          return res.status(500).json({
+            error: `OpenAI API Error: ${errorMessage}`
+          });
         }
-      } else if (model === 'claude-3-5-sonnet-20241022') {
-        const response = await anthropic.messages.create({
-          model: 'claude-3-5-sonnet-20241022',
-          max_tokens: 1024,
-          system: type === 'generate' ? SYSTEM_PROMPT : "You are an iOS Shortcuts expert. Analyze shortcuts and provide improvements in JSON format with 'analysis' and 'suggestions' fields.",
-          messages: [{ role: 'user', content: prompt }]
-        });
-        
-        const content = response.content[0]?.type === 'text' ? response.content[0].text : '';
-        
-        if (type === 'generate') {
-          const validation = validateAIResponse(content);
-          if (!validation.valid) {
-            return res.status(422).json({
-              error: `Invalid shortcut generated: ${validation.error}`
+      } else if (model === 'claude-3-sonnet') {
+        try {
+          const response = await anthropic.messages.create({
+            model: 'claude-3-sonnet',
+            system: type === 'generate' ? SYSTEM_PROMPT : "You are an iOS Shortcuts expert. Analyze shortcuts and provide improvements in JSON format with 'analysis' and 'suggestions' fields.",
+            messages: [{ role: 'user', content: prompt }],
+            format: 'json'
+          });
+          
+          const content = response.content[0]?.type === 'text' ? response.content[0].text : '';
+          
+          if (!content) {
+            return res.status(500).json({
+              error: 'Empty response from Claude'
             });
           }
-          result = { content };
-        } else {
-          result = { content };
+
+          if (type === 'generate') {
+            const validation = validateAIResponse(content);
+            if (!validation.valid) {
+              return res.status(422).json({
+                error: `Invalid shortcut generated: ${validation.error}`
+              });
+            }
+            result = { content };
+          } else {
+            try {
+              // Validate JSON for analysis response
+              JSON.parse(content);
+              result = { content };
+            } catch (error) {
+              return res.status(422).json({
+                error: 'Invalid JSON response from analysis'
+              });
+            }
+          }
+        } catch (error: any) {
+          const errorMessage = error?.response?.body?.error?.message || error.message;
+          return res.status(500).json({
+            error: `Claude API Error: ${errorMessage}`
+          });
         }
       } else {
         return res.status(400).json({
