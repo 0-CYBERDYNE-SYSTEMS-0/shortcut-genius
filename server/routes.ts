@@ -8,9 +8,57 @@ import Anthropic from "@anthropic-ai/sdk";
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || '' });
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY || '' });
 
+const SYSTEM_PROMPT = `You are an iOS Shortcuts expert. You can create shortcuts based on natural language descriptions.
+
+Available shortcut actions:
+- Text: Creates text content
+- Number: Creates a numeric value
+- Ask for Input: Prompts the user for input
+- Conditional: If/Then logic
+- Repeat: Loop through items
+- Variables: Store and retrieve values
+- URL: Make web requests
+- Notifications: Show alerts
+- Files: Read/Write files
+- Calendar: Access calendar events
+- Contacts: Access contact info
+- Location: Get location data
+- Maps: Get directions
+- Music: Control audio playback
+- Photos: Access photo library
+
+When generating a shortcut:
+1. Convert natural language into a valid shortcut structure
+2. Use appropriate actions and parameters
+3. Return a JSON object with:
+  - name: Shortcut name
+  - actions: Array of action objects
+    - type: Action type
+    - parameters: Action parameters
+
+Example response:
+{
+  "name": "Morning Routine",
+  "actions": [
+    {
+      "type": "text",
+      "parameters": {
+        "text": "Good morning!"
+      }
+    },
+    {
+      "type": "ask",
+      "parameters": {
+        "prompt": "How did you sleep?",
+        "defaultValue": "Well"
+      }
+    }
+  ]
+}`;
+
 export function registerRoutes(app: Express) {
   app.post('/api/process', async (req, res) => {
-    const { model, prompt } = req.body;
+    const { model, prompt, type = 'analyze' } = req.body;
     
     if (!model || !prompt) {
       return res.status(400).json({
@@ -24,14 +72,8 @@ export function registerRoutes(app: Express) {
         const response = await openai.chat.completions.create({
           model: "gpt-4o",
           messages: [
-            { 
-              role: "system", 
-              content: "You are an iOS Shortcuts expert. Analyze shortcuts and provide improvements in JSON format with 'analysis' and 'suggestions' fields."
-            },
-            { 
-              role: "user", 
-              content: prompt 
-            }
+            { role: "system", content: type === 'generate' ? SYSTEM_PROMPT : "You are an iOS Shortcuts expert. Analyze shortcuts and provide improvements in JSON format with 'analysis' and 'suggestions' fields." },
+            { role: "user", content: prompt }
           ],
           response_format: { type: "json_object" }
         });
@@ -40,7 +82,7 @@ export function registerRoutes(app: Express) {
         const response = await anthropic.messages.create({
           model: 'claude-3-5-sonnet-20241022',
           max_tokens: 1024,
-          system: "You are an iOS Shortcuts expert. Analyze shortcuts and provide improvements in JSON format with 'analysis' and 'suggestions' fields.",
+          system: type === 'generate' ? SYSTEM_PROMPT : "You are an iOS Shortcuts expert. Analyze shortcuts and provide improvements in JSON format with 'analysis' and 'suggestions' fields.",
           messages: [{ role: 'user', content: prompt }]
         });
         const content = response.content[0]?.type === 'text' ? response.content[0].text : '';

@@ -23,7 +23,8 @@ function checkRateLimit(userId: string): boolean {
 export async function processWithAI(
   model: AIModel,
   prompt: string,
-  userId: string
+  userId: string,
+  type: 'analyze' | 'generate' = 'analyze'
 ): Promise<AIResponse> {
   if (!checkRateLimit(userId)) {
     return { content: '', error: 'Rate limit exceeded. Please try again later.' };
@@ -33,6 +34,7 @@ export async function processWithAI(
     const result = await postData('/api/process', { 
       model, 
       prompt,
+      type,
       apiKeys: {
         openai: AI_CONFIG.OPENAI_API_KEY,
         anthropic: AI_CONFIG.ANTHROPIC_API_KEY

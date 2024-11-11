@@ -61,7 +61,8 @@ export function Editor() {
       const response = await processWithAI(
         model,
         `Analyze this iOS shortcut and suggest improvements:\n${code}`,
-        'anonymous' // Using anonymous for now until auth is implemented
+        'anonymous',
+        'analyze'
       );
       
       if (response.error) {
@@ -83,6 +84,39 @@ export function Editor() {
     }
   };
 
+  const handleGenerate = async (prompt: string) => {
+    setIsProcessing(true);
+    try {
+      const response = await processWithAI(
+        model,
+        prompt,
+        'anonymous',
+        'generate'
+      );
+      
+      if (response.error) {
+        throw new Error(response.error);
+      }
+
+      const generatedShortcut = JSON.parse(response.content);
+      setShortcut(generatedShortcut);
+      setCode(JSON.stringify(generatedShortcut, null, 2));
+
+      toast({
+        title: 'Shortcut Generated',
+        description: 'New shortcut has been created based on your description.'
+      });
+    } catch (error) {
+      toast({
+        title: 'Generation failed',
+        description: error instanceof Error ? error.message : 'Failed to generate shortcut',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   return (
     <div className="h-screen flex flex-col">
       <Toolbar
@@ -91,6 +125,7 @@ export function Editor() {
         onImport={handleImport}
         onExport={handleExport}
         onProcess={handleProcess}
+        onGenerate={handleGenerate}
         isProcessing={isProcessing}
       />
       
