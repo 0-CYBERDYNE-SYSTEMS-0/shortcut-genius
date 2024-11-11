@@ -12,6 +12,21 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY || '' })
 
 const SYSTEM_PROMPT = `You are an iOS Shortcuts expert. You can create shortcuts based on natural language descriptions.
 
+Example valid shortcut:
+{
+  "name": "Good Morning Notification",
+  "actions": [
+    {
+      "type": "notification",
+      "parameters": {
+        "title": "Good Morning!",
+        "body": "Have a great day!",
+        "sound": true
+      }
+    }
+  ]
+}
+
 Available shortcut actions:
 
 Text & Input:
@@ -123,16 +138,19 @@ export function registerRoutes(app: Express) {
         try {
           const response = await openai.chat.completions.create({
             model: "gpt-4o",
+            temperature: 0.7,
             messages: [
               { 
                 role: "system", 
                 content: type === 'generate' 
-                  ? SYSTEM_PROMPT + "\nPlease respond with valid JSON in the following format ONLY:\n{\n  \"name\": \"Shortcut Name\",\n  \"actions\": []\n}" 
-                  : "You are an iOS Shortcuts expert. Analyze shortcuts and provide improvements as JSON." 
+                  ? SYSTEM_PROMPT + "\nRespond ONLY with a valid JSON shortcut object following the exact structure from the example."
+                  : SYSTEM_PROMPT + "\nAnalyze the shortcut and respond with improvement suggestions in JSON format."
               },
-              { role: "user", content: type === 'generate'
-                ? `Create a shortcut with the following description and return it as JSON with exactly this structure: { "name": string, "actions": array }\n${prompt}`
-                : prompt 
+              { 
+                role: "user", 
+                content: type === 'generate'
+                  ? `Create a shortcut that ${prompt}. Respond with ONLY the JSON shortcut object.`
+                  : `Analyze this shortcut and suggest improvements: ${prompt}`
               }
             ],
             response_format: { type: "json_object" }
@@ -169,22 +187,26 @@ export function registerRoutes(app: Express) {
           const response = await anthropic.messages.create({
             model: 'claude-3-5-sonnet-20241022',
             max_tokens: 4000,
+            temperature: 0.7,
             system: type === 'generate' 
-              ? SYSTEM_PROMPT + "\nPlease respond with valid JSON in the following format ONLY:\n{\n  \"name\": \"Shortcut Name\",\n  \"actions\": []\n}" 
-              : "You are an iOS Shortcuts expert. Analyze shortcuts and provide improvements in JSON format.",
+              ? SYSTEM_PROMPT + "\nRespond ONLY with a valid JSON shortcut object following the exact structure from the example."
+              : SYSTEM_PROMPT + "\nAnalyze the shortcut and respond with improvement suggestions in JSON format.",
             messages: [{ 
               role: 'user', 
               content: type === 'generate'
-                ? `Create a shortcut with the following description and return it as JSON with exactly this structure: { "name": string, "actions": array }\n${prompt}`
-                : prompt 
+                ? `Create a shortcut that ${prompt}. Respond with ONLY the JSON shortcut object.`
+                : `Analyze this shortcut and suggest improvements: ${prompt}`
             }]
           });
 
-          if (!response.content[0]?.text) {
+          const rawContent = response.content[0]?.text.trim();
+          if (!rawContent) {
             throw new Error('Empty response from Claude');
           }
 
-          const content = response.content[0].text;
+          // Extract JSON if it's wrapped in code blocks
+          const jsonMatch = rawContent.match(/```json\n?(.*)\n?```/s) || rawContent.match(/{.*}/s);
+          const content = jsonMatch ? jsonMatch[1].trim() : rawContent;
           
           if (type === 'generate') {
             try {
