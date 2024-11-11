@@ -12,14 +12,14 @@ export const RATE_LIMIT = {
 
 // Model information
 export const MODEL_INFO = {
-  'gpt-4o': {
-    provider: 'openai',
-    name: 'GPT-4o',
-    description: 'Latest OpenAI model with enhanced capabilities',
+  "gpt-4o": {
+    provider: "openai",
+    name: "GPT-4o",
+    description: "Latest OpenAI model with enhanced capabilities",
   },
-  'claude-3-5-sonnet-20241022': {
-    provider: 'anthropic',
-    name: 'Claude 3.5 Sonnet',
-    description: 'Latest Anthropic model with enhanced capabilities',
+  "claude-3-5-sonnet-20241022": {
+    provider: "anthropic",
+    name: "claude-3-5-sonnet-20241022",
+    description: "Latest Anthropic model with enhanced capabilities",
   },
 };
