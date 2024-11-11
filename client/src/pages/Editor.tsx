@@ -3,10 +3,12 @@ import { ResizablePanel, ResizablePanelGroup, ResizableHandle } from '@/componen
 import { EditorPane } from '@/components/EditorPane';
 import { PreviewPane } from '@/components/PreviewPane';
 import { Toolbar } from '@/components/Toolbar';
+import { AnalysisPane } from '@/components/AnalysisPane';
 import { useToast } from '@/hooks/use-toast';
 import { AIModel } from '@/lib/types';
 import { processWithAI } from '@/lib/ai';
 import { Shortcut, parseShortcutFile, exportShortcut } from '@/lib/shortcuts';
+import { analyzeShortcut } from '@/lib/shortcut-analyzer';
 
 const DEFAULT_SHORTCUT: Shortcut = {
   name: 'New Shortcut',
@@ -18,6 +20,7 @@ export function Editor() {
   const [shortcut, setShortcut] = useState<Shortcut>(DEFAULT_SHORTCUT);
   const [code, setCode] = useState(JSON.stringify(DEFAULT_SHORTCUT, null, 2));
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showAnalysis, setShowAnalysis] = useState(false);
   const { toast } = useToast();
 
   const handleImport = (content: string) => {
@@ -25,6 +28,8 @@ export function Editor() {
       const imported = parseShortcutFile(content);
       setShortcut(imported);
       setCode(JSON.stringify(imported, null, 2));
+      // Automatically show analysis when importing
+      setShowAnalysis(true);
       toast({
         title: 'Shortcut imported',
         description: 'The shortcut file was successfully imported.'
@@ -74,6 +79,9 @@ export function Editor() {
         title: 'AI Processing Complete',
         description: response.content
       });
+      
+      // Show analysis pane after AI processing
+      setShowAnalysis(true);
     } catch (error) {
       toast({
         title: 'Processing failed',
@@ -103,6 +111,9 @@ export function Editor() {
       setShortcut(generatedShortcut);
       setCode(JSON.stringify(generatedShortcut, null, 2));
 
+      // Show analysis for generated shortcut
+      setShowAnalysis(true);
+
       toast({
         title: 'Shortcut Generated',
         description: 'New shortcut has been created based on your description.'
@@ -128,27 +139,38 @@ export function Editor() {
         onProcess={handleProcess}
         onGenerate={handleGenerate}
         isProcessing={isProcessing}
+        showAnalysis={showAnalysis}
+        onToggleAnalysis={() => setShowAnalysis(!showAnalysis)}
       />
       
       <ResizablePanelGroup
         direction="horizontal"
         className="flex-1"
       >
-        <ResizablePanel defaultSize={50}>
+        <ResizablePanel defaultSize={showAnalysis ? 33 : 50}>
           <EditorPane
             value={code}
             onChange={(value) => {
               setCode(value);
               try {
-                setShortcut(JSON.parse(value));
+                const parsed = JSON.parse(value);
+                setShortcut(parsed);
               } catch {} // Ignore parse errors while typing
             }}
           />
         </ResizablePanel>
         <ResizableHandle />
-        <ResizablePanel defaultSize={50}>
+        <ResizablePanel defaultSize={showAnalysis ? 33 : 50}>
           <PreviewPane shortcut={shortcut} />
         </ResizablePanel>
+        {showAnalysis && (
+          <>
+            <ResizableHandle />
+            <ResizablePanel defaultSize={33}>
+              <AnalysisPane analysis={analyzeShortcut(shortcut)} />
+            </ResizablePanel>
+          </>
+        )}
       </ResizablePanelGroup>
     </div>
   );

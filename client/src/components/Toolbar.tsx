@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { ModelSelector } from './ModelSelector';
 import { FileUpload } from './FileUpload';
 import { AIModel } from '@/lib/types';
+import { BarChart2 } from 'lucide-react';
 
 interface ToolbarProps {
   model: AIModel;
@@ -13,6 +14,8 @@ interface ToolbarProps {
   onProcess: () => void;
   onGenerate: (prompt: string) => void;
   isProcessing: boolean;
+  showAnalysis: boolean;
+  onToggleAnalysis: () => void;
 }
 
 export function Toolbar({
@@ -22,7 +25,9 @@ export function Toolbar({
   onExport,
   onProcess,
   onGenerate,
-  isProcessing
+  isProcessing,
+  showAnalysis,
+  onToggleAnalysis
 }: ToolbarProps) {
   const [prompt, setPrompt] = useState('');
 
@@ -55,6 +60,14 @@ export function Toolbar({
         onClick={onExport}
       >
         Export
+      </Button>
+      
+      <Button
+        variant="secondary"
+        onClick={onToggleAnalysis}
+      >
+        <BarChart2 className="mr-2 h-4 w-4" />
+        {showAnalysis ? 'Hide' : 'Show'} Analysis
       </Button>
       
       <Button
