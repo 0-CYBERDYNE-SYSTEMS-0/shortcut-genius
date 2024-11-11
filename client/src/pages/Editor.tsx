@@ -15,7 +15,7 @@ const DEFAULT_SHORTCUT: Shortcut = {
 export function Editor() {
   const [model, setModel] = useState<AIModel>('gpt-4o');
   const [shortcut, setShortcut] = useState<Shortcut>(DEFAULT_SHORTCUT);
-  const [code, setCode] = useState('');
+  const [code, setCode] = useState(JSON.stringify(DEFAULT_SHORTCUT, null, 2));
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
 
@@ -31,7 +31,7 @@ export function Editor() {
     } catch (error) {
       toast({
         title: 'Import failed',
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Failed to import file',
         variant: 'destructive'
       });
     }
@@ -49,7 +49,7 @@ export function Editor() {
     } catch (error) {
       toast({
         title: 'Export failed',
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Failed to export file',
         variant: 'destructive'
       });
     }
@@ -61,7 +61,7 @@ export function Editor() {
       const response = await processWithAI(
         model,
         `Analyze this iOS shortcut and suggest improvements:\n${code}`,
-        '1' // TODO: Replace with actual user ID
+        'anonymous' // Using anonymous for now until auth is implemented
       );
       
       if (response.error) {
@@ -75,7 +75,7 @@ export function Editor() {
     } catch (error) {
       toast({
         title: 'Processing failed',
-        description: error.message,
+        description: error instanceof Error ? error.message : 'Failed to process with AI',
         variant: 'destructive'
       });
     } finally {

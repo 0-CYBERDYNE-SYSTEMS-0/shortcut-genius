@@ -1,18 +1,6 @@
-import OpenAI from 'openai';
-import Anthropic from '@anthropic-ai/sdk';
-
-// the newest OpenAI model is "gpt-4o" which was released May 13, 2024
-// the newest Anthropic model is "claude-3-5-sonnet-20241022" which was released October 22, 2024
-
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
-export type AIModel = 'gpt-4o' | 'claude-3-5-sonnet-20241022';
-
-export interface AIResponse {
-  content: string;
-  error?: string;
-}
+import { AIModel, AIResponse } from './types';
+import { postData } from './fetcher';
+import { AI_CONFIG } from './constants';
 
 const rateLimits = new Map<string, number>();
 const RATE_LIMIT_WINDOW = 60000; // 1 minute
@@ -42,25 +30,19 @@ export async function processWithAI(
   }
 
   try {
-    if (model === 'gpt-4o') {
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o",
-        messages: [{ role: "user", content: prompt }],
-        response_format: { type: "json_object" }
-      });
-      return { content: response.choices[0].message.content || '' };
-    } else {
-      const response = await anthropic.messages.create({
-        model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 1024,
-        messages: [{ role: 'user', content: prompt }]
-      });
-      return { content: response.content[0].text };
-    }
+    const result = await postData('/api/process', { 
+      model, 
+      prompt,
+      apiKeys: {
+        openai: AI_CONFIG.OPENAI_API_KEY,
+        anthropic: AI_CONFIG.ANTHROPIC_API_KEY
+      }
+    });
+    return result;
   } catch (error) {
     return { 
       content: '', 
-      error: `Error processing with ${model}: ${error.message}` 
+      error: error instanceof Error ? error.message : 'An unknown error occurred'
     };
   }
 }

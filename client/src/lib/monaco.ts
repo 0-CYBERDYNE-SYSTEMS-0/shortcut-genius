@@ -38,6 +38,23 @@ export const shortcutLanguageConfig: monaco.languages.LanguageConfiguration = {
   ]
 };
 
+// Configure Monaco Editor workers
+self.MonacoEnvironment = {
+  getWorkerUrl: function (_moduleId: string, label: string) {
+    const workerPath = '/monaco-editor/esm/vs/';
+    
+    switch (label) {
+      case 'json':
+        return `${workerPath}language/json/json.worker.js`;
+      case 'typescript':
+      case 'javascript':
+        return `${workerPath}language/typescript/ts.worker.js`;
+      default:
+        return `${workerPath}editor/editor.worker.js`;
+    }
+  },
+};
+
 export function registerShortcutLanguage() {
   monaco.languages.register({ id: 'shortcut' });
   

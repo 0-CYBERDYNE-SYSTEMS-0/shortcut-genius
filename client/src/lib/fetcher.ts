@@ -8,19 +8,48 @@ export class FetchError extends Error {
   }
 }
 
-// Fetcher function for SWR that includes credentials and handles non-200 responses
-export const fetcher = async (url: string) => {
-  const res = await fetch(url, {
+// Fetcher function for SWR that includes proper error handling
+export const fetcher = async (input: RequestInfo, init?: RequestInit) => {
+  const res = await fetch(input, {
+    ...init,
     credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      ...(init?.headers || {})
+    }
   });
 
   if (!res.ok) {
+    const info = await res.json();
     const error = new FetchError(
-      `A ${res.status} error occurred while fetching the data.`,
-      await res.json(),
-      res.status,
+      `An error occurred while fetching the data.`,
+      info,
+      res.status
     );
     throw error;
+  }
+
+  return res.json();
+};
+
+// Helper function for making POST requests
+export const postData = async (url: string, data: any) => {
+  const res = await fetch(url, {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!res.ok) {
+    const info = await res.json();
+    throw new FetchError(
+      `An error occurred while posting data.`,
+      info,
+      res.status
+    );
   }
 
   return res.json();
