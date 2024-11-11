@@ -5,7 +5,7 @@ import { validateShortcut, SHORTCUT_ACTIONS } from '../client/src/lib/shortcuts'
 import { Shortcut } from '../client/src/lib/shortcuts';
 
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024
-// the newest Anthropic model is "claude-3-5-sonnet-20241022" which was released October 22, 2024
+// the newest Anthropic model is "claude-3-sonnet-20240229" which was released February 29, 2024
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || '' });
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY || '' });
@@ -202,32 +202,33 @@ export function registerRoutes(app: Express) {
       } else if (model === 'claude-3-5-sonnet-20241022') {
         try {
           const response = await anthropic.messages.create({
-            model: 'claude-3-5-sonnet-20241022',
+            model: 'claude-3-sonnet-20240229',
             max_tokens: 4000,
-            temperature: 0.7,
             messages: [{
               role: 'user',
               content: type === 'generate'
-                ? `Create a shortcut that ${prompt}. Return only valid JSON in this exact format:
+                ? `Create a shortcut that ${prompt}. Return ONLY valid JSON in this exact format:
 {
   "name": "Shortcut Name",
   "actions": [
     {
-      "type": "notification",
+      "type": "action_type",
       "parameters": {
-        "title": "Title",
-        "body": "Message",
-        "sound": true
+        "param1": "value1"
       }
     }
   ]
 }`
                 : `Analyze this shortcut and suggest improvements: ${prompt}`
-            }]
+            }],
+            temperature: 0.7,
+            system: type === 'generate' 
+              ? SYSTEM_PROMPT + "\nRespond ONLY with valid JSON that matches the Shortcut interface structure."
+              : SYSTEM_PROMPT + "\nAnalyze shortcuts and provide improvements in JSON format."
           });
 
-          // Safely extract content
-          const content = response.content?.[0]?.text || '';
+          // Safely extract and verify response
+          const content = response.content?.[0]?.text;
           if (!content) {
             throw new Error('Empty response from Claude');
           }
