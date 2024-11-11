@@ -78,99 +78,7 @@ Home:
 - Control Devices: Manage HomeKit devices
   Parameters: { device: string, action: "on" | "off" | "toggle", value?: number }
 - Get Device State: Check device status
-  Parameters: { device: string }
-
-Example Shortcuts:
-
-1. Morning Routine:
-{
-  "name": "Good Morning",
-  "actions": [
-    {
-      "type": "get_location",
-      "parameters": { "accuracy": "reduced" }
-    },
-    {
-      "type": "url",
-      "parameters": { 
-        "url": "https://api.weather.com/v1/forecast",
-        "method": "GET"
-      }
-    },
-    {
-      "type": "set_brightness",
-      "parameters": { "level": 75 }
-    },
-    {
-      "type": "play_sound",
-      "parameters": { 
-        "soundName": "morning_playlist",
-        "volume": 50
-      }
-    }
-  ]
-}
-
-2. Workout Tracker:
-{
-  "name": "Log Workout",
-  "actions": [
-    {
-      "type": "ask",
-      "parameters": {
-        "prompt": "What type of workout?",
-        "defaultValue": "Running"
-      }
-    },
-    {
-      "type": "log_health",
-      "parameters": {
-        "type": "workout",
-        "value": 30,
-        "unit": "minutes"
-      }
-    },
-    {
-      "type": "notification",
-      "parameters": {
-        "title": "Workout Logged",
-        "body": "Great job staying active!",
-        "sound": true
-      }
-    }
-  ]
-}
-
-3. Smart Home Evening:
-{
-  "name": "Evening Mode",
-  "actions": [
-    {
-      "type": "control_devices",
-      "parameters": {
-        "device": "Living Room Lights",
-        "action": "on",
-        "value": 30
-      }
-    },
-    {
-      "type": "set_do_not_disturb",
-      "parameters": {
-        "enabled": true,
-        "duration": 480
-      }
-    }
-  ]
-}
-
-When generating a shortcut:
-1. Convert natural language into a valid shortcut structure
-2. Use appropriate actions and parameters from the available list
-3. Return a JSON object with:
-  - name: Shortcut name (string)
-  - actions: Array of action objects
-    - type: Action type (string)
-    - parameters: Action parameters (object)`;
+  Parameters: { device: string }`;
 
 function validateAIResponse(content: string): { valid: boolean; error?: string; shortcut?: Shortcut } {
   try {
@@ -270,13 +178,21 @@ export function registerRoutes(app: Express) {
           }
 
           if (type === 'generate') {
-            const validation = validateAIResponse(content);
-            if (!validation.valid) {
+            try {
+              // Verify it's valid JSON before validation
+              JSON.parse(content);
+              const validation = validateAIResponse(content);
+              if (!validation.valid) {
+                return res.status(422).json({
+                  error: `Invalid shortcut generated: ${validation.error}`
+                });
+              }
+              result = { content };
+            } catch (error) {
               return res.status(422).json({
-                error: `Invalid shortcut generated: ${validation.error}`
+                error: 'Invalid JSON response from Claude'
               });
             }
-            result = { content };
           } else {
             try {
               JSON.parse(content);

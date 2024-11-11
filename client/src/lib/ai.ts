@@ -1,6 +1,5 @@
 import { AIModel, AIResponse } from './types';
 import { postData } from './fetcher';
-import { AI_CONFIG } from './constants';
 
 const rateLimits = new Map<string, number>();
 const RATE_LIMIT_WINDOW = 60000; // 1 minute
@@ -36,8 +35,8 @@ export async function processWithAI(
       prompt,
       type,
       apiKeys: {
-        openai: AI_CONFIG.OPENAI_API_KEY,
-        anthropic: AI_CONFIG.ANTHROPIC_API_KEY
+        openai: import.meta.env.VITE_OPENAI_API_KEY,
+        anthropic: import.meta.env.VITE_ANTHROPIC_API_KEY
       }
     });
     return result;
