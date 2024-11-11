@@ -127,12 +127,11 @@ export function registerRoutes(app: Express) {
               { 
                 role: "system", 
                 content: type === 'generate' 
-                  ? SYSTEM_PROMPT + "\nRespond with a valid JSON shortcut object." 
+                  ? SYSTEM_PROMPT + "\nPlease respond with valid JSON in the following format ONLY:\n{\n  \"name\": \"Shortcut Name\",\n  \"actions\": []\n}" 
                   : "You are an iOS Shortcuts expert. Analyze shortcuts and provide improvements as JSON." 
               },
               { role: "user", content: type === 'generate'
-                ? `Create a shortcut with the following description and return as JSON:
-${prompt}`
+                ? `Create a shortcut with the following description and return it as JSON with exactly this structure: { "name": string, "actions": array }\n${prompt}`
                 : prompt 
               }
             ],
@@ -169,14 +168,14 @@ ${prompt}`
         try {
           const response = await anthropic.messages.create({
             model: 'claude-3-5-sonnet-20241022',
+            max_tokens: 4000,
             system: type === 'generate' 
-              ? SYSTEM_PROMPT + "\nPlease respond with valid JSON that matches the Shortcut interface structure." 
+              ? SYSTEM_PROMPT + "\nPlease respond with valid JSON in the following format ONLY:\n{\n  \"name\": \"Shortcut Name\",\n  \"actions\": []\n}" 
               : "You are an iOS Shortcuts expert. Analyze shortcuts and provide improvements in JSON format.",
             messages: [{ 
               role: 'user', 
               content: type === 'generate'
-                ? `Create a shortcut with the following description and return it as JSON:
-${prompt}`
+                ? `Create a shortcut with the following description and return it as JSON with exactly this structure: { "name": string, "actions": array }\n${prompt}`
                 : prompt 
             }]
           });
