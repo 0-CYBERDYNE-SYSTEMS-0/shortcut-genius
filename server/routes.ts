@@ -113,7 +113,11 @@ function validateAIResponse(content: string): { valid: boolean; error?: string; 
     // Validate using existing validator
     const errors = validateShortcut(shortcut);
     if (errors.length > 0) {
-      return { valid: false, error: errors.join(', ') };
+      // Filter out permission-related errors since they're now warnings
+      const nonPermissionErrors = errors.filter(err => !err.includes('Permissions:'));
+      if (nonPermissionErrors.length > 0) {
+        return { valid: false, error: nonPermissionErrors.join(', ') };
+      }
     }
 
     return { valid: true, shortcut };
@@ -149,7 +153,20 @@ export function registerRoutes(app: Express) {
               { 
                 role: "user", 
                 content: type === 'generate'
-                  ? `Create a shortcut that ${prompt}. Respond with ONLY the JSON shortcut object.`
+                  ? `Create a shortcut that ${prompt}. Return only valid JSON in this exact format:
+{
+  "name": "Shortcut Name",
+  "actions": [
+    {
+      "type": "notification",
+      "parameters": {
+        "title": "Title",
+        "body": "Message",
+        "sound": true
+      }
+    }
+  ]
+}`
                   : `Analyze this shortcut and suggest improvements: ${prompt}`
               }
             ],
@@ -188,37 +205,48 @@ export function registerRoutes(app: Express) {
             model: 'claude-3-5-sonnet-20241022',
             max_tokens: 4000,
             temperature: 0.7,
-            system: type === 'generate' 
-              ? SYSTEM_PROMPT + "\nRespond ONLY with a valid JSON shortcut object following the exact structure from the example."
-              : SYSTEM_PROMPT + "\nAnalyze the shortcut and respond with improvement suggestions in JSON format.",
-            messages: [{ 
-              role: 'user', 
+            messages: [{
+              role: 'user',
               content: type === 'generate'
-                ? `Create a shortcut that ${prompt}. Respond with ONLY the JSON shortcut object.`
+                ? `Create a shortcut that ${prompt}. Return only valid JSON in this exact format:
+{
+  "name": "Shortcut Name",
+  "actions": [
+    {
+      "type": "notification",
+      "parameters": {
+        "title": "Title",
+        "body": "Message",
+        "sound": true
+      }
+    }
+  ]
+}`
                 : `Analyze this shortcut and suggest improvements: ${prompt}`
             }]
           });
 
-          const rawContent = response.content[0]?.text.trim();
-          if (!rawContent) {
+          // Safely extract content
+          const content = response.content?.[0]?.text || '';
+          if (!content) {
             throw new Error('Empty response from Claude');
           }
 
-          // Extract JSON if it's wrapped in code blocks
-          const jsonMatch = rawContent.match(/```json\n?(.*)\n?```/s) || rawContent.match(/{.*}/s);
-          const content = jsonMatch ? jsonMatch[1].trim() : rawContent;
+          // Extract JSON if wrapped in code blocks
+          const jsonMatch = content.match(/```json\n?(.*)\n?```/s) || content.match(/{.*}/s);
+          const cleanContent = jsonMatch ? jsonMatch[1].trim() : content.trim();
           
           if (type === 'generate') {
             try {
               // Verify it's valid JSON before validation
-              JSON.parse(content);
-              const validation = validateAIResponse(content);
+              JSON.parse(cleanContent);
+              const validation = validateAIResponse(cleanContent);
               if (!validation.valid) {
                 return res.status(422).json({
                   error: `Invalid shortcut generated: ${validation.error}`
                 });
               }
-              result = { content };
+              result = { content: cleanContent };
             } catch (error) {
               return res.status(422).json({
                 error: 'Invalid JSON response from Claude'
@@ -226,8 +254,8 @@ export function registerRoutes(app: Express) {
             }
           } else {
             try {
-              JSON.parse(content);
-              result = { content };
+              JSON.parse(cleanContent);
+              result = { content: cleanContent };
             } catch (error) {
               return res.status(422).json({
                 error: 'Invalid JSON response from analysis'
