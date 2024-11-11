@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { ResizablePanel, ResizablePanelGroup, ResizeHandle } from '@/components/ui/resizable';
+import { ResizablePanel, ResizablePanelGroup, ResizableHandle } from '@/components/ui/resizable';
 import { EditorPane } from '@/components/EditorPane';
 import { PreviewPane } from '@/components/PreviewPane';
 import { Toolbar } from '@/components/Toolbar';
 import { useToast } from '@/hooks/use-toast';
-import { AIModel, processWithAI } from '@/lib/ai';
+import { AIModel } from '@/lib/types';
+import { processWithAI } from '@/lib/ai';
 import { Shortcut, parseShortcutFile, exportShortcut } from '@/lib/shortcuts';
 
 const DEFAULT_SHORTCUT: Shortcut = {
@@ -144,7 +145,7 @@ export function Editor() {
             }}
           />
         </ResizablePanel>
-        <ResizeHandle />
+        <ResizableHandle />
         <ResizablePanel defaultSize={50}>
           <PreviewPane shortcut={shortcut} />
         </ResizablePanel>
