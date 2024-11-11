@@ -14,7 +14,7 @@ export interface Shortcut {
 const MAX_ACTIONS = 50;
 
 // Permission levels for different action types
-const ACTION_PERMISSIONS = {
+export const ACTION_PERMISSIONS = {
   text: 'none',
   number: 'none',
   ask: 'none',
