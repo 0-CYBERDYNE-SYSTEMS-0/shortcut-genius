@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
+import { ResizablePanel, ResizablePanelGroup, ResizeHandle } from '@/components/ui/resizable';
 import { EditorPane } from '@/components/EditorPane';
 import { PreviewPane } from '@/components/PreviewPane';
 import { Toolbar } from '@/components/Toolbar';
@@ -144,6 +144,7 @@ export function Editor() {
             }}
           />
         </ResizablePanel>
+        <ResizeHandle />
         <ResizablePanel defaultSize={50}>
           <PreviewPane shortcut={shortcut} />
         </ResizablePanel>

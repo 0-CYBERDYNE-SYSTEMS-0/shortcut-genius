@@ -5,7 +5,7 @@ import { validateShortcut, SHORTCUT_ACTIONS } from '../client/src/lib/shortcuts'
 import { Shortcut } from '../client/src/lib/shortcuts';
 
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024
-// the newest Anthropic model is "claude-3-sonnet" which was released October 22, 2024
+// the newest Anthropic model is "claude-3-5-sonnet-20241022" which was released October 22, 2024
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || '' });
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY || '' });
@@ -237,7 +237,6 @@ export function registerRoutes(app: Express) {
             result = { content };
           } else {
             try {
-              // Validate JSON for analysis response
               JSON.parse(content);
               result = { content };
             } catch (error) {
@@ -252,13 +251,14 @@ export function registerRoutes(app: Express) {
             error: `OpenAI API Error: ${errorMessage}`
           });
         }
-      } else if (model === 'claude-3-sonnet') {
+      } else if (model === 'claude-3-5-sonnet-20241022') {
         try {
           const response = await anthropic.messages.create({
-            model: 'claude-3-sonnet',
+            model: 'claude-3-5-sonnet-20241022',
+            max_tokens: 4000,
+            temperature: 0.7,
             system: type === 'generate' ? SYSTEM_PROMPT : "You are an iOS Shortcuts expert. Analyze shortcuts and provide improvements in JSON format with 'analysis' and 'suggestions' fields.",
-            messages: [{ role: 'user', content: prompt }],
-            format: 'json'
+            messages: [{ role: 'user', content: prompt }]
           });
           
           const content = response.content[0]?.type === 'text' ? response.content[0].text : '';
@@ -279,7 +279,6 @@ export function registerRoutes(app: Express) {
             result = { content };
           } else {
             try {
-              // Validate JSON for analysis response
               JSON.parse(content);
               result = { content };
             } catch (error) {

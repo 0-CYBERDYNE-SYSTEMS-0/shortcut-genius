@@ -1,6 +1,6 @@
 import * as monaco from 'monaco-editor';
 
-export const shortcutTheme = {
+export const shortcutTheme: monaco.editor.IStandaloneThemeData = {
   base: 'vs',
   inherit: true,
   rules: [
@@ -38,19 +38,19 @@ export const shortcutLanguageConfig: monaco.languages.LanguageConfiguration = {
   ]
 };
 
-// Configure Monaco Editor workers
+// Configure Monaco Editor workers using JSDelivr CDN
+const CDN_BASE = 'https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs';
+
 self.MonacoEnvironment = {
   getWorkerUrl: function (_moduleId: string, label: string) {
-    const workerPath = '/monaco-editor/esm/vs/';
-    
     switch (label) {
       case 'json':
-        return `${workerPath}language/json/json.worker.js`;
+        return `${CDN_BASE}/language/json/json.worker.js`;
       case 'typescript':
       case 'javascript':
-        return `${workerPath}language/typescript/ts.worker.js`;
+        return `${CDN_BASE}/language/typescript/ts.worker.js`;
       default:
-        return `${workerPath}editor/editor.worker.js`;
+        return `${CDN_BASE}/editor/editor.worker.js`;
     }
   },
 };

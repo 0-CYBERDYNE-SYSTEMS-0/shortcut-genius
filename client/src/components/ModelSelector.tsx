@@ -20,7 +20,7 @@ export function ModelSelector({ value, onChange }: ModelSelectorProps) {
       </SelectTrigger>
       <SelectContent>
         <SelectItem value="gpt-4o">GPT-4o</SelectItem>
-        <SelectItem value="claude-3-sonnet">Claude 3 Sonnet</SelectItem>
+        <SelectItem value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet</SelectItem>
       </SelectContent>
     </Select>
   );
