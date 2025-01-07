@@ -3,14 +3,15 @@ import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
 import { validateShortcut, SHORTCUT_ACTIONS } from '../client/src/lib/shortcuts';
 import { Shortcut } from '../client/src/lib/shortcuts';
+import { analyzeShortcut } from '../client/src/lib/shortcut-analyzer';
 
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024
-// the newest Anthropic model is "claude-3-sonnet-20240229" which was released February 29, 2024
+// the newest Anthropic model is "claude-3-5-sonnet-20241022" which was released February 29, 2024
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || '' });
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY || '' });
 
-const SYSTEM_PROMPT = `You are an iOS Shortcuts expert. You can create shortcuts based on natural language descriptions.
+const SYSTEM_PROMPT = `You are an iOS Shortcuts expert who specializes in reverse engineering and optimizing shortcuts.
 
 Example valid shortcut:
 {
@@ -28,72 +29,26 @@ Example valid shortcut:
 }
 
 Available shortcut actions:
+${Object.entries(SHORTCUT_ACTIONS).map(([type, config]) => `
+- ${config.name}: ${type}
+  Parameters: ${config.parameters.join(', ')}
+`).join('\n')}
 
-Text & Input:
-- Text: Creates text content
-  Parameters: { text: string }
-- Number: Creates a numeric value
-  Parameters: { value: number }
-- Ask for Input: Prompts the user for input
-  Parameters: { prompt: string, defaultValue?: string }
+When analyzing shortcuts, consider:
+1. Pattern detection - identify repeated actions and common parameter usage
+2. Data flow analysis - track how data moves between actions
+3. Complexity metrics - evaluate nesting depth and conditional logic
+4. Security implications - assess potential risks and permissions
+5. Optimization opportunities - suggest performance and structure improvements
 
-Control Flow:
-- If/Then/Else: Conditional logic
-  Parameters: { condition: string, then: Action[], else?: Action[] }
-- Repeat: Loop through items
-  Parameters: { count: number, actions: Action[] }
-- Wait: Pause execution
-  Parameters: { seconds: number }
-
-Media:
-- Play Sound: Play an audio file
-  Parameters: { soundName: string, volume?: number }
-- Record Audio: Record audio input
-  Parameters: { duration: number, quality: "low" | "medium" | "high" }
-- Take Photo: Capture photo
-  Parameters: { useFrontCamera?: boolean, flash?: "on" | "off" | "auto" }
-- Select Photos: Choose photos from library
-  Parameters: { allowMultiple?: boolean, includeVideos?: boolean }
-
-Device:
-- Set Volume: Adjust device volume
-  Parameters: { level: number }
-- Set Brightness: Adjust screen brightness
-  Parameters: { level: number }
-- Set Do Not Disturb: Toggle DND mode
-  Parameters: { enabled: boolean, duration?: number }
-
-System:
-- URL: Make web requests
-  Parameters: { url: string, method?: "GET" | "POST", headers?: object }
-- Notifications: Show alerts
-  Parameters: { title: string, body: string, sound?: boolean }
-- Files: Read/Write files
-  Parameters: { path: string, content?: string, operation: "read" | "write" | "append" }
-
-Calendar & Contacts:
-- Calendar: Access calendar events
-  Parameters: { action: "create" | "read" | "update", title?: string, date?: string }
-- Contacts: Access contact info
-  Parameters: { action: "create" | "read" | "update", name?: string, phone?: string }
-
-Location & Maps:
-- Get Location: Get current location
-  Parameters: { accuracy: "best" | "reduced" }
-- Get Directions: Get navigation info
-  Parameters: { destination: string, mode: "driving" | "walking" | "transit" }
-
-Health:
-- Log Health Data: Record health metrics
-  Parameters: { type: "steps" | "weight" | "heart-rate", value: number, unit: string }
-- Get Health Samples: Retrieve health data
-  Parameters: { type: string, startDate: string, endDate: string }
-
-Home:
-- Control Devices: Manage HomeKit devices
-  Parameters: { device: string, action: "on" | "off" | "toggle", value?: number }
-- Get Device State: Check device status
-  Parameters: { device: string }`;
+Response format for analysis:
+{
+  "patterns": [{ "type": string, "frequency": number, "context": string }],
+  "dependencies": [{ "action": string, "dependencies": string[], "dependents": string[] }],
+  "optimizations": [{ "type": string, "description": string, "impact": "high"|"medium"|"low" }],
+  "security": [{ "type": string, "risk": "high"|"medium"|"low", "description": string }],
+  "permissions": [{ "permission": string, "required": boolean, "reason": string }]
+}`;
 
 function validateAIResponse(content: string): { valid: boolean; error?: string; shortcut?: Shortcut } {
   try {
@@ -148,7 +103,7 @@ export function registerRoutes(app: Express) {
                 role: "system", 
                 content: type === 'generate' 
                   ? SYSTEM_PROMPT + "\nRespond ONLY with a valid JSON shortcut object following the exact structure from the example."
-                  : SYSTEM_PROMPT + "\nAnalyze the shortcut and respond with improvement suggestions in JSON format."
+                  : SYSTEM_PROMPT + "\nAnalyze the shortcut and respond with a valid JSON analysis object."
               },
               { 
                 role: "user", 
@@ -202,46 +157,54 @@ export function registerRoutes(app: Express) {
       } else if (model === 'claude-3-5-sonnet-20241022') {
         try {
           const response = await anthropic.messages.create({
-            model: 'claude-3-sonnet-20240229',
-            max_tokens: 4000,
-            messages: [{
-              role: 'user',
+            model: 'claude-3-5-sonnet-20241022',
+            system: type === 'generate' 
+              ? SYSTEM_PROMPT + "\nRespond ONLY with a valid JSON shortcut object."
+              : SYSTEM_PROMPT + "\nAnalyze the shortcut and respond with a valid JSON analysis object.",
+            messages: [{ 
+              role: 'user', 
               content: type === 'generate'
-                ? `Create a shortcut that ${prompt}. You must respond with ONLY a valid JSON object in this exact format: {"name": string, "actions": Action[]}`
-                : `Analyze this shortcut and suggest improvements. You must respond with ONLY a valid JSON object in this format: {"issues": string[], "suggestions": string[], "optimizations": string[]}`
+                ? `Create a shortcut that ${prompt}. Return only valid JSON in this exact format:
+{
+  "name": "Shortcut Name",
+  "actions": [
+    {
+      "type": "notification",
+      "parameters": {
+        "title": "Title",
+        "body": "Message",
+        "sound": true
+      }
+    }
+  ]
+}`
+                : `Analyze this shortcut in detail: ${prompt}`
             }],
-            temperature: 0.7
+            temperature: 0.7,
+            max_tokens: 4000
           });
 
-          // Extract content safely
-          const content = response.content?.[0]?.text || '';
+          const content = response.content[0]?.text || '';
           if (!content) {
             throw new Error('Empty response from Claude');
           }
 
-          // Remove any markdown or text wrapping, keep only JSON
           const jsonMatch = content.match(/```json\n?({[\s\S]*?})\n?```/m) || content.match(/({[\s\S]*?})/);
           const cleanContent = jsonMatch ? jsonMatch[1].trim() : content.trim();
 
           if (type === 'generate') {
-            try {
-              const validation = validateAIResponse(cleanContent);
-              if (!validation.valid) {
-                return res.status(422).json({
-                  error: `Invalid shortcut generated: ${validation.error}`
-                });
-              }
-              result = { content: cleanContent };
-            } catch (error) {
+            const validation = validateAIResponse(cleanContent);
+            if (!validation.valid) {
               return res.status(422).json({
-                error: 'Invalid JSON response from Claude'
+                error: `Invalid shortcut generated: ${validation.error}`
               });
             }
+            result = { content: cleanContent };
           } else {
             try {
-              // Parse and validate analysis format
+              // Additional validation for analysis format
               const analysis = JSON.parse(cleanContent);
-              if (!analysis.issues || !analysis.suggestions || !analysis.optimizations) {
+              if (!analysis.patterns || !analysis.dependencies || !analysis.optimizations) {
                 throw new Error('Invalid analysis format');
               }
               result = { content: cleanContent };
@@ -261,6 +224,17 @@ export function registerRoutes(app: Express) {
         return res.status(400).json({
           error: 'Invalid model specified'
         });
+      }
+      
+      // For analysis requests, also include our local analysis
+      if (type === 'analyze' && result?.content) {
+        try {
+          const shortcut = JSON.parse(result.content);
+          const localAnalysis = analyzeShortcut(shortcut);
+          result.localAnalysis = localAnalysis;
+        } catch (error) {
+          console.error('Failed to perform local analysis:', error);
+        }
       }
       
       res.json(result);

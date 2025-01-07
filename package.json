@@ -45,7 +45,7 @@
     "cors": "^2.8.5",
     "date-fns": "^3.6.0",
     "dotenv": "^16.4.5",
-    "drizzle-orm": "^0.36.0",
+    "drizzle-orm": "^0.36.1",
     "drizzle-zod": "^0.5.1",
     "embla-carousel-react": "^8.3.0",
     "express": "^4.21.1",
@@ -85,8 +85,8 @@
     "esbuild": "^0.24.0",
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.14",
-    "tsx": "^4.19.1",
-    "typescript": "5.6.3",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3",
     "vite": "^5.4.9"
   }
 }
