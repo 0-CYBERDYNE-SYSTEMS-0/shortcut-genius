@@ -50,35 +50,69 @@ Response format for analysis:
   "permissions": [{ "permission": string, "required": boolean, "reason": string }]
 }`;
 
-function validateAIResponse(content: string): { valid: boolean; error?: string; shortcut?: Shortcut } {
-  try {
-    const parsed = JSON.parse(content);
-    
-    // Check basic structure
-    if (!parsed.name || !Array.isArray(parsed.actions)) {
-      return { valid: false, error: 'Invalid shortcut structure: missing name or actions array' };
+function cleanJSONString(str: string): string {
+  // Remove any markdown code block syntax
+  let cleaned = str.replace(/```(?:json)?\n?([\s\S]*?)\n?```/g, '$1');
+  
+  // Remove any leading/trailing whitespace and newlines
+  cleaned = cleaned.trim();
+  
+  // Ensure the string starts with { and ends with }
+  if (!cleaned.startsWith('{') || !cleaned.endsWith('}')) {
+    const jsonStart = cleaned.indexOf('{');
+    const jsonEnd = cleaned.lastIndexOf('}');
+    if (jsonStart !== -1 && jsonEnd !== -1) {
+      cleaned = cleaned.slice(jsonStart, jsonEnd + 1);
     }
+  }
+  
+  return cleaned;
+}
 
-    // Create shortcut object
-    const shortcut: Shortcut = {
-      name: parsed.name,
-      actions: parsed.actions
-    };
-
-    // Validate using existing validator
-    const errors = validateShortcut(shortcut);
-    if (errors.length > 0) {
-      // Filter out permission-related errors since they're now warnings
-      const nonPermissionErrors = errors.filter(err => !err.includes('Permissions:'));
-      if (nonPermissionErrors.length > 0) {
-        return { valid: false, error: nonPermissionErrors.join(', ') };
+function validateAndParseJSON(content: string, type: 'generate' | 'analyze'): { valid: boolean; data?: any; error?: string } {
+  try {
+    const cleanedContent = cleanJSONString(content);
+    const parsed = JSON.parse(cleanedContent);
+    
+    // Validate structure based on type
+    if (type === 'generate') {
+      if (!parsed.name || !Array.isArray(parsed.actions)) {
+        return { valid: false, error: 'Invalid shortcut structure: missing name or actions array' };
+      }
+    } else {
+      // Validate analysis structure
+      if (!parsed.patterns || !Array.isArray(parsed.patterns) ||
+          !parsed.dependencies || !Array.isArray(parsed.dependencies) ||
+          !parsed.optimizations || !Array.isArray(parsed.optimizations)) {
+        return { valid: false, error: 'Invalid analysis structure: missing required arrays' };
       }
     }
-
-    return { valid: true, shortcut };
+    
+    return { valid: true, data: parsed };
   } catch (error) {
-    return { valid: false, error: 'Failed to parse AI response as JSON' };
+    return { valid: false, error: error instanceof Error ? error.message : 'Invalid JSON structure' };
   }
+}
+
+// Update the ContentBlock interface at the top of the file
+interface TextBlock {
+  type: 'text';
+  text: string;
+}
+
+interface ToolUseBlock {
+  type: 'tool_use';
+  id: string;
+  name: string;
+  input: any;
+}
+
+type ContentBlock = TextBlock | ToolUseBlock;
+
+interface ProcessResult {
+  content: string;
+  localAnalysis?: any;
+  error?: string;
 }
 
 export function registerRoutes(app: Express) {
@@ -129,25 +163,16 @@ export function registerRoutes(app: Express) {
           });
           
           const content = response.choices[0].message.content || '';
+          const validation = validateAndParseJSON(content, type);
           
-          if (type === 'generate') {
-            const validation = validateAIResponse(content);
-            if (!validation.valid) {
-              return res.status(422).json({
-                error: `Invalid shortcut generated: ${validation.error}`
-              });
-            }
-            result = { content };
-          } else {
-            try {
-              JSON.parse(content);
-              result = { content };
-            } catch (error) {
-              return res.status(422).json({
-                error: 'Invalid JSON response from analysis'
-              });
-            }
+          if (!validation.valid) {
+            return res.status(422).json({
+              error: `Invalid ${type === 'generate' ? 'shortcut' : 'analysis'} generated: ${validation.error}`
+            });
           }
+          
+          result = { content: JSON.stringify(validation.data) };
+          
         } catch (error: any) {
           const errorMessage = error?.response?.data?.error?.message || error.message;
           return res.status(500).json({
@@ -184,36 +209,20 @@ export function registerRoutes(app: Express) {
             max_tokens: 4000
           });
 
-          const content = response.content[0]?.text || '';
-          if (!content) {
-            throw new Error('Empty response from Claude');
+          const messageContent = response.content[0] as TextBlock;
+          if (!messageContent || messageContent.type !== 'text' || !messageContent.text) {
+            throw new Error('Empty or invalid response from Claude');
           }
-
-          const jsonMatch = content.match(/```json\n?({[\s\S]*?})\n?```/m) || content.match(/({[\s\S]*?})/);
-          const cleanContent = jsonMatch ? jsonMatch[1].trim() : content.trim();
-
-          if (type === 'generate') {
-            const validation = validateAIResponse(cleanContent);
-            if (!validation.valid) {
-              return res.status(422).json({
-                error: `Invalid shortcut generated: ${validation.error}`
-              });
-            }
-            result = { content: cleanContent };
-          } else {
-            try {
-              // Additional validation for analysis format
-              const analysis = JSON.parse(cleanContent);
-              if (!analysis.patterns || !analysis.dependencies || !analysis.optimizations) {
-                throw new Error('Invalid analysis format');
-              }
-              result = { content: cleanContent };
-            } catch (error) {
-              return res.status(422).json({
-                error: 'Invalid JSON response from analysis'
-              });
-            }
+          
+          const validation = validateAndParseJSON(messageContent.text, type);
+          if (!validation.valid) {
+            return res.status(422).json({
+              error: `Invalid ${type === 'generate' ? 'shortcut' : 'analysis'} generated: ${validation.error}`
+            });
           }
+          
+          result = { content: JSON.stringify(validation.data) } as ProcessResult;
+          
         } catch (error: any) {
           const errorMessage = error?.response?.body?.error?.message || error.message;
           return res.status(500).json({
@@ -246,3 +255,6 @@ export function registerRoutes(app: Express) {
     }
   });
 }
+
+
+//hello
