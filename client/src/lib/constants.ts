@@ -1,8 +1,7 @@
-// AI Models
-export const AI_CONFIG = {
-  OPENAI_API_KEY: import.meta.env.VITE_OPENAI_API_KEY,
-  ANTHROPIC_API_KEY: import.meta.env.VITE_ANTHROPIC_API_KEY,
-};
+// AI Models - API keys handled server-side only
+// export const AI_CONFIG = {
+//   // API keys moved to server-side for security
+// };
 
 // Rate limiting
 export const RATE_LIMIT = {

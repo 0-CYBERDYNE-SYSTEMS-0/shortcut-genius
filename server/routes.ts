@@ -119,9 +119,54 @@ export function registerRoutes(app: Express) {
   app.post('/api/process', async (req, res) => {
     const { model, prompt, type = 'analyze' } = req.body;
     
+    // Enhanced input validation and security
     if (!model || !prompt) {
       return res.status(400).json({
         error: 'Missing required fields'
+      });
+    }
+
+    // Validate model selection
+    const allowedModels = ['gpt-4o', 'claude-3-5-sonnet-20241022'];
+    if (!allowedModels.includes(model)) {
+      return res.status(400).json({
+        error: 'Invalid model specified'
+      });
+    }
+
+    // Validate request type
+    const allowedTypes = ['generate', 'analyze'];
+    if (!allowedTypes.includes(type)) {
+      return res.status(400).json({
+        error: 'Invalid type specified'
+      });
+    }
+
+    // Input length validation
+    if (prompt.length > 10000) {
+      return res.status(400).json({
+        error: 'Prompt too long (max 10000 characters)'
+      });
+    }
+
+    // Basic content safety check
+    const suspiciousPatterns = /\b(api[_-]?key|secret|token|password|auth)\b/i;
+    if (suspiciousPatterns.test(prompt)) {
+      return res.status(400).json({
+        error: 'Prompt contains potentially sensitive information'
+      });
+    }
+
+    // Check for API key availability
+    if (model === 'gpt-4o' && !process.env.OPENAI_API_KEY) {
+      return res.status(503).json({
+        error: 'OpenAI service unavailable - API key not configured'
+      });
+    }
+
+    if (model === 'claude-3-5-sonnet-20241022' && !process.env.ANTHROPIC_API_KEY) {
+      return res.status(503).json({
+        error: 'Anthropic service unavailable - API key not configured'
       });
     }
 

@@ -33,11 +33,8 @@ export async function processWithAI(
     const result = await postData('/api/process', { 
       model, 
       prompt,
-      type,
-      apiKeys: {
-        openai: import.meta.env.VITE_OPENAI_API_KEY,
-        anthropic: import.meta.env.VITE_ANTHROPIC_API_KEY
-      }
+      type
+      // Removed API keys - server handles authentication
     });
     return result;
   } catch (error) {
