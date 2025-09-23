@@ -1,4 +1,5 @@
 import type { Express } from "express";
+import multer from 'multer';
 import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
 import { validateShortcut, SHORTCUT_ACTIONS } from '../client/src/lib/shortcuts';
@@ -7,6 +8,31 @@ import { analyzeShortcut } from '../client/src/lib/shortcut-analyzer';
 import { responseCache } from './cache';
 import { openAICircuitBreaker, anthropicCircuitBreaker } from './circuit-breaker';
 import { modelRouter } from './model-router';
+import {
+  convertToPlist,
+  convertToBinaryPlist,
+  validateAppleCompatibility,
+  generateShortcutMetadata
+} from './shortcut-builder';
+import {
+  signShortcut,
+  checkSigningCapability,
+  verifyShortcutSignature,
+  getSigningInfo,
+  createMockSignedShortcut
+} from './shortcut-signer';
+import {
+  initializeSharingSystem,
+  createSharedShortcut,
+  getSharedShortcut,
+  getShortcutFile,
+  getQRCode,
+  listPublicShortcuts,
+  searchShortcuts,
+  getSharingStats,
+  incrementDownloadCount,
+  generateSharingMetadata
+} from './shortcut-sharing';
 
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024
 // the newest Anthropic model is "claude-3-5-sonnet-20241022" which was released February 29, 2024
@@ -518,6 +544,491 @@ export function registerRoutes(app: Express) {
       circuitBreakers: circuitBreakerStatus,
       uptime: process.uptime()
     });
+  });
+
+  // Initialize sharing system
+  initializeSharingSystem().catch(console.error);
+
+  // Configure multer for file uploads
+  const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
+  });
+
+  // Shortcut building and conversion routes
+
+  // Build shortcut as plist
+  app.post('/api/shortcuts/build', async (req, res) => {
+    try {
+      const { shortcut, format = 'plist' }: { shortcut: Shortcut; format?: 'plist' | 'binary' } = req.body;
+
+      if (!shortcut || !shortcut.name || !Array.isArray(shortcut.actions)) {
+        return res.status(400).json({ error: 'Invalid shortcut data' });
+      }
+
+      // Validate compatibility
+      const compatibilityErrors = validateAppleCompatibility(shortcut);
+      if (compatibilityErrors.length > 0) {
+        return res.status(400).json({
+          error: 'Shortcut not compatible with Apple Shortcuts',
+          details: compatibilityErrors
+        });
+      }
+
+      // Generate metadata
+      const metadata = generateShortcutMetadata(shortcut);
+
+      // Convert to requested format
+      const buffer = format === 'binary' ? convertToBinaryPlist(shortcut) : convertToPlist(shortcut);
+
+      res.set({
+        'Content-Type': 'application/octet-stream',
+        'Content-Disposition': `attachment; filename="${shortcut.name.replace(/[^a-zA-Z0-9]/g, '_')}.shortcut"`,
+        'X-Shortcut-ID': metadata.id,
+        'X-Shortcut-Hash': metadata.hash,
+        'X-Action-Count': metadata.actionCount.toString()
+      });
+
+      res.send(buffer);
+
+    } catch (error) {
+      console.error('Build shortcut error:', error);
+      res.status(500).json({
+        error: 'Failed to build shortcut',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Shortcut signing routes
+
+  // Get signing capability info
+  app.get('/api/shortcuts/signing-info', async (req, res) => {
+    try {
+      const capability = await checkSigningCapability();
+      const info = getSigningInfo();
+
+      res.json({
+        ...info,
+        ...capability
+      });
+    } catch (error) {
+      res.status(500).json({
+        error: 'Failed to get signing info',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Sign shortcut file
+  app.post('/api/shortcuts/sign', upload.single('shortcut'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'No shortcut file provided' });
+      }
+
+      const { mode = 'anyone' } = req.body;
+      const tempDir = '/tmp/shortcut-signing';
+
+      // Create temp directory
+      const fs = await import('fs/promises');
+      await fs.mkdir(tempDir, { recursive: true });
+
+      // Save uploaded file
+      const inputPath = `${tempDir}/${Date.now()}_input.shortcut`;
+      await fs.writeFile(inputPath, req.file.buffer);
+
+      // Sign the shortcut
+      const signingResult = await signShortcut(inputPath, { mode, outputDir: tempDir });
+
+      if (!signingResult.success) {
+        return res.status(400).json({
+          error: 'Signing failed',
+          details: signingResult.error
+        });
+      }
+
+      // Read signed file
+      const signedBuffer = await fs.readFile(signingResult.signedFilePath!);
+
+      res.set({
+        'Content-Type': 'application/octet-stream',
+        'Content-Disposition': `attachment; filename="signed_${req.file.originalname}"`,
+        'X-Signature': signingResult.signature || '',
+        'X-Signing-Mode': mode
+      });
+
+      res.send(signedBuffer);
+
+    } catch (error) {
+      console.error('Sign shortcut error:', error);
+      res.status(500).json({
+        error: 'Failed to sign shortcut',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Verify shortcut signature
+  app.post('/api/shortcuts/verify', upload.single('shortcut'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'No shortcut file provided' });
+      }
+
+      // Save uploaded file temporarily
+      const tempPath = `/tmp/verify_${Date.now()}.shortcut`;
+      const fs = await import('fs/promises');
+      await fs.writeFile(tempPath, req.file.buffer);
+
+      // Verify signature
+      const verification = await verifyShortcutSignature(tempPath);
+
+      // Clean up temp file
+      await fs.unlink(tempPath).catch(() => {}); // Ignore errors
+
+      res.json(verification);
+
+    } catch (error) {
+      console.error('Verify shortcut error:', error);
+      res.status(500).json({
+        error: 'Failed to verify shortcut',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Shortcut sharing routes
+
+  // Create shareable shortcut
+  app.post('/api/shortcuts/share', async (req, res) => {
+    try {
+      const {
+        shortcut,
+        signFile = false,
+        isPublic = true,
+        description,
+        tags = [],
+        author = 'Anonymous'
+      }: {
+        shortcut: Shortcut;
+        signFile?: boolean;
+        isPublic?: boolean;
+        description?: string;
+        tags?: string[];
+        author?: string;
+      } = req.body;
+
+      if (!shortcut || !shortcut.name || !Array.isArray(shortcut.actions)) {
+        return res.status(400).json({ error: 'Invalid shortcut data' });
+      }
+
+      // Build shortcut file
+      const shortcutBuffer = convertToPlist(shortcut);
+      let signedBuffer: Buffer | undefined;
+
+      // Sign if requested and available
+      if (signFile) {
+        const capability = await checkSigningCapability();
+        if (capability.available) {
+          const tempPath = `/tmp/share_${Date.now()}.shortcut`;
+          const fs = await import('fs/promises');
+          await fs.writeFile(tempPath, shortcutBuffer);
+
+          const signingResult = await signShortcut(tempPath);
+          if (signingResult.success && signingResult.signedFilePath) {
+            signedBuffer = await fs.readFile(signingResult.signedFilePath);
+          }
+        }
+      }
+
+      // Create shared shortcut
+      const shared = await createSharedShortcut(
+        shortcut,
+        shortcutBuffer,
+        signedBuffer,
+        { isPublic, description, tags, author }
+      );
+
+      res.json(generateSharingMetadata(shared));
+
+    } catch (error) {
+      console.error('Share shortcut error:', error);
+      res.status(500).json({
+        error: 'Failed to share shortcut',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Get shared shortcut info
+  app.get('/api/shortcuts/share/:id', async (req, res) => {
+    try {
+      const shared = await getSharedShortcut(req.params.id);
+      if (!shared) {
+        return res.status(404).json({ error: 'Shared shortcut not found' });
+      }
+
+      res.json(generateSharingMetadata(shared));
+    } catch (error) {
+      res.status(500).json({
+        error: 'Failed to get shared shortcut',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Download shared shortcut
+  app.get('/api/shortcuts/download/:id', async (req, res) => {
+    try {
+      const { signed = 'false' } = req.query;
+      const shared = await getSharedShortcut(req.params.id);
+
+      if (!shared) {
+        return res.status(404).json({ error: 'Shared shortcut not found' });
+      }
+
+      const wantSigned = signed === 'true';
+      const buffer = await getShortcutFile(req.params.id, wantSigned);
+
+      if (!buffer) {
+        return res.status(404).json({ error: 'Shortcut file not found' });
+      }
+
+      // Increment download count
+      await incrementDownloadCount(req.params.id);
+
+      res.set({
+        'Content-Type': 'application/octet-stream',
+        'Content-Disposition': `attachment; filename="${shared.name.replace(/[^a-zA-Z0-9]/g, '_')}${wantSigned ? '_signed' : ''}.shortcut"`,
+        'X-Shortcut-ID': shared.id,
+        'X-Download-Count': (shared.downloadCount + 1).toString(),
+        'X-Is-Signed': wantSigned.toString()
+      });
+
+      res.send(buffer);
+
+    } catch (error) {
+      console.error('Download shortcut error:', error);
+      res.status(500).json({
+        error: 'Failed to download shortcut',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Get QR code for shared shortcut
+  app.get('/api/qr/:id', async (req, res) => {
+    try {
+      const qrBuffer = await getQRCode(req.params.id);
+      if (!qrBuffer) {
+        return res.status(404).json({ error: 'QR code not found' });
+      }
+
+      res.set({
+        'Content-Type': 'image/png',
+        'Cache-Control': 'public, max-age=3600'
+      });
+
+      res.send(qrBuffer);
+    } catch (error) {
+      res.status(500).json({
+        error: 'Failed to get QR code',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // List public shortcuts
+  app.get('/api/shortcuts/public', async (req, res) => {
+    try {
+      const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
+      const offset = parseInt(req.query.offset as string) || 0;
+
+      const result = await listPublicShortcuts(limit, offset);
+
+      res.json({
+        shortcuts: result.shortcuts.map(generateSharingMetadata),
+        total: result.total,
+        limit,
+        offset
+      });
+    } catch (error) {
+      res.status(500).json({
+        error: 'Failed to list public shortcuts',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Search shortcuts
+  app.get('/api/shortcuts/search', async (req, res) => {
+    try {
+      const query = req.query.q as string || '';
+      const tags = req.query.tags ? (req.query.tags as string).split(',') : undefined;
+      const limit = Math.min(parseInt(req.query.limit as string) || 20, 50);
+
+      const results = await searchShortcuts(query, tags, limit);
+
+      res.json({
+        shortcuts: results.map(generateSharingMetadata),
+        query,
+        tags,
+        count: results.length
+      });
+    } catch (error) {
+      res.status(500).json({
+        error: 'Failed to search shortcuts',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Get sharing statistics
+  app.get('/api/shortcuts/stats', async (req, res) => {
+    try {
+      const stats = await getSharingStats();
+      res.json(stats);
+    } catch (error) {
+      res.status(500).json({
+        error: 'Failed to get sharing stats',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Web interface for shared shortcuts
+  app.get('/share/:id', async (req, res) => {
+    try {
+      const shared = await getSharedShortcut(req.params.id);
+      if (!shared) {
+        return res.status(404).send(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Shortcut Not Found - ShortcutGenius</title>
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+          </head>
+          <body style="font-family: -apple-system, BlinkMacSystemFont, sans-serif; padding: 40px; text-align: center;">
+            <h1>Shortcut Not Found</h1>
+            <p>The shortcut you're looking for doesn't exist or has been removed.</p>
+            <a href="/" style="color: #007AFF;">← Back to ShortcutGenius</a>
+          </body>
+          </html>
+        `);
+      }
+
+      const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
+
+      res.send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>${shared.name} - ShortcutGenius</title>
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <meta name="description" content="${shared.description}">
+          <style>
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+              max-width: 600px;
+              margin: 0 auto;
+              padding: 40px 20px;
+              background: #f5f5f7;
+            }
+            .container {
+              background: white;
+              border-radius: 12px;
+              padding: 30px;
+              box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            }
+            .header { text-align: center; margin-bottom: 30px; }
+            .title { color: #1d1d1f; margin: 0 0 10px; }
+            .description { color: #86868b; margin: 0; }
+            .actions { margin: 20px 0; }
+            .action-item {
+              background: #f6f6f6;
+              padding: 15px;
+              border-radius: 8px;
+              margin: 10px 0;
+              border-left: 4px solid #007AFF;
+            }
+            .download-section { text-align: center; margin-top: 30px; }
+            .btn {
+              background: #007AFF;
+              color: white;
+              padding: 12px 24px;
+              border: none;
+              border-radius: 8px;
+              text-decoration: none;
+              display: inline-block;
+              margin: 5px;
+              font-weight: 600;
+            }
+            .btn:hover { background: #0056d3; }
+            .btn.secondary { background: #34c759; }
+            .btn.secondary:hover { background: #2db14e; }
+            .meta {
+              color: #86868b;
+              font-size: 14px;
+              text-align: center;
+              margin-top: 20px;
+              padding-top: 20px;
+              border-top: 1px solid #e5e5e7;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1 class="title">${shared.name}</h1>
+              <p class="description">${shared.description}</p>
+            </div>
+
+            <div class="actions">
+              <h3>Actions (${shared.originalShortcut.actions.length})</h3>
+              ${shared.originalShortcut.actions.slice(0, 5).map((action, i) => `
+                <div class="action-item">
+                  <strong>${i + 1}. ${action.type}</strong>
+                  ${Object.keys(action.parameters).length > 0 ?
+                    '<br><small>' + Object.entries(action.parameters).slice(0, 2).map(([k,v]) => `${k}: ${v}`).join(', ') + '</small>'
+                    : ''}
+                </div>
+              `).join('')}
+              ${shared.originalShortcut.actions.length > 5 ? `<p><em>... and ${shared.originalShortcut.actions.length - 5} more actions</em></p>` : ''}
+            </div>
+
+            <div class="download-section">
+              <a href="${baseUrl}/api/shortcuts/download/${shared.id}" class="btn">
+                📱 Download Shortcut
+              </a>
+              ${shared.signedFilePath ? `
+                <a href="${baseUrl}/api/shortcuts/download/${shared.id}?signed=true" class="btn secondary">
+                  ✅ Download Signed
+                </a>
+              ` : ''}
+              <br><br>
+              <img src="${baseUrl}/api/qr/${shared.id}" alt="QR Code" style="max-width: 200px; border-radius: 8px;">
+              <p><small>Scan with your iPhone to open directly in Shortcuts app</small></p>
+            </div>
+
+            <div class="meta">
+              By ${shared.author} • ${shared.downloadCount} downloads • ${new Date(shared.createdAt).toLocaleDateString()}
+              <br>
+              ${shared.tags.length > 0 ? `Tags: ${shared.tags.join(', ')}` : ''}
+            </div>
+          </div>
+
+          <div style="text-align: center; margin-top: 30px;">
+            <a href="/" style="color: #007AFF;">← Create your own shortcuts with ShortcutGenius</a>
+          </div>
+        </body>
+        </html>
+      `);
+
+    } catch (error) {
+      console.error('Share page error:', error);
+      res.status(500).send('Error loading shared shortcut');
+    }
   });
 }
 

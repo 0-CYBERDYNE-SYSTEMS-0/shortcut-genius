@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { ResizablePanel, ResizablePanelGroup, ResizableHandle } from '@/components/ui/resizable';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { EditorPane } from '@/components/EditorPane';
 import { PreviewPane } from '@/components/PreviewPane';
 import { Toolbar } from '@/components/Toolbar';
 import { AnalysisPane } from '@/components/AnalysisPane';
+import { ShortcutsGallery } from '@/components/ShortcutsGallery';
 import { useToast } from '@/hooks/use-toast';
 import { AIModel } from '@/lib/types';
 import { processWithAI } from '@/lib/ai';
@@ -21,6 +23,7 @@ export function Editor() {
   const [code, setCode] = useState(JSON.stringify(DEFAULT_SHORTCUT, null, 2));
   const [isProcessing, setIsProcessing] = useState(false);
   const [showAnalysis, setShowAnalysis] = useState(false);
+  const [activeTab, setActiveTab] = useState('editor');
   const { toast } = useToast();
 
   const handleImport = (content: string) => {
@@ -129,6 +132,16 @@ export function Editor() {
     }
   };
 
+  const handleImportFromGallery = (shortcutUrl: string) => {
+    // For now, just switch to editor tab
+    // In a full implementation, you'd fetch the shortcut from the URL
+    setActiveTab('editor');
+    toast({
+      title: 'Import from Gallery',
+      description: 'This feature will be fully implemented to import shortcuts from shared URLs.'
+    });
+  };
+
   return (
     <div className="h-screen flex flex-col">
       <Toolbar
@@ -141,37 +154,51 @@ export function Editor() {
         isProcessing={isProcessing}
         showAnalysis={showAnalysis}
         onToggleAnalysis={() => setShowAnalysis(!showAnalysis)}
+        currentShortcut={shortcut}
       />
-      
-      <ResizablePanelGroup
-        direction="horizontal"
-        className="flex-1"
-      >
-        <ResizablePanel defaultSize={showAnalysis ? 33 : 50}>
-          <EditorPane
-            value={code}
-            onChange={(value) => {
-              setCode(value);
-              try {
-                const parsed = JSON.parse(value);
-                setShortcut(parsed);
-              } catch {} // Ignore parse errors while typing
-            }}
-          />
-        </ResizablePanel>
-        <ResizableHandle />
-        <ResizablePanel defaultSize={showAnalysis ? 33 : 50}>
-          <PreviewPane shortcut={shortcut} />
-        </ResizablePanel>
-        {showAnalysis && (
-          <>
-            <ResizableHandle />
-            <ResizablePanel defaultSize={33}>
-              <AnalysisPane analysis={analyzeShortcut(shortcut)} />
+
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
+        <TabsList className="grid w-full grid-cols-2 h-12 mx-4 mt-4">
+          <TabsTrigger value="editor" className="text-sm">Editor</TabsTrigger>
+          <TabsTrigger value="gallery" className="text-sm">Gallery</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="editor" className="flex-1 mt-0">
+          <ResizablePanelGroup
+            direction="horizontal"
+            className="flex-1"
+          >
+            <ResizablePanel defaultSize={showAnalysis ? 33 : 50}>
+              <EditorPane
+                value={code}
+                onChange={(value) => {
+                  setCode(value);
+                  try {
+                    const parsed = JSON.parse(value);
+                    setShortcut(parsed);
+                  } catch {} // Ignore parse errors while typing
+                }}
+              />
             </ResizablePanel>
-          </>
-        )}
-      </ResizablePanelGroup>
+            <ResizableHandle />
+            <ResizablePanel defaultSize={showAnalysis ? 33 : 50}>
+              <PreviewPane shortcut={shortcut} />
+            </ResizablePanel>
+            {showAnalysis && (
+              <>
+                <ResizableHandle />
+                <ResizablePanel defaultSize={33}>
+                  <AnalysisPane analysis={analyzeShortcut(shortcut)} />
+                </ResizablePanel>
+              </>
+            )}
+          </ResizablePanelGroup>
+        </TabsContent>
+
+        <TabsContent value="gallery" className="flex-1 mt-4 px-4 pb-4 overflow-auto">
+          <ShortcutsGallery onImportShortcut={handleImportFromGallery} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
