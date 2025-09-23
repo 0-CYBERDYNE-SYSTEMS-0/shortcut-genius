@@ -1,0 +1,177 @@
+import { useState } from 'react';
+import { ResizablePanel, ResizablePanelGroup, ResizableHandle } from '@/components/ui/resizable';
+import { EditorPane } from '@/components/EditorPane';
+import { PreviewPane } from '@/components/PreviewPane';
+import { Toolbar } from '@/components/Toolbar';
+import { AnalysisPane } from '@/components/AnalysisPane';
+import { useToast } from '@/hooks/use-toast';
+import { AIModel } from '@/lib/types';
+import { processWithAI } from '@/lib/ai';
+import { Shortcut, parseShortcutFile, exportShortcut } from '@/lib/shortcuts';
+import { analyzeShortcut } from '@/lib/shortcut-analyzer';
+
+const DEFAULT_SHORTCUT: Shortcut = {
+  name: 'New Shortcut',
+  actions: []
+};
+
+export function Editor() {
+  const [model, setModel] = useState<AIModel>('gpt-4o');
+  const [shortcut, setShortcut] = useState<Shortcut>(DEFAULT_SHORTCUT);
+  const [code, setCode] = useState(JSON.stringify(DEFAULT_SHORTCUT, null, 2));
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [showAnalysis, setShowAnalysis] = useState(false);
+  const { toast } = useToast();
+
+  const handleImport = (content: string) => {
+    try {
+      const imported = parseShortcutFile(content);
+      setShortcut(imported);
+      setCode(JSON.stringify(imported, null, 2));
+      // Automatically show analysis when importing
+      setShowAnalysis(true);
+      toast({
+        title: 'Shortcut imported',
+        description: 'The shortcut file was successfully imported.'
+      });
+    } catch (error) {
+      toast({
+        title: 'Import failed',
+        description: error instanceof Error ? error.message : 'Failed to import file',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const handleExport = () => {
+    try {
+      const blob = new Blob([exportShortcut(shortcut)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${shortcut.name}.shortcut`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      toast({
+        title: 'Export failed',
+        description: error instanceof Error ? error.message : 'Failed to export file',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const handleProcess = async () => {
+    setIsProcessing(true);
+    try {
+      const response = await processWithAI(
+        model,
+        `Analyze this iOS shortcut and suggest improvements:\n${code}`,
+        'anonymous',
+        'analyze'
+      );
+      
+      if (response.error) {
+        throw new Error(response.error);
+      }
+
+      toast({
+        title: 'AI Processing Complete',
+        description: response.content
+      });
+      
+      // Show analysis pane after AI processing
+      setShowAnalysis(true);
+    } catch (error) {
+      toast({
+        title: 'Processing failed',
+        description: error instanceof Error ? error.message : 'Failed to process with AI',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleGenerate = async (prompt: string) => {
+    setIsProcessing(true);
+    try {
+      const response = await processWithAI(
+        model,
+        prompt,
+        'anonymous',
+        'generate'
+      );
+      
+      if (response.error) {
+        throw new Error(response.error);
+      }
+
+      const generatedShortcut = JSON.parse(response.content);
+      setShortcut(generatedShortcut);
+      setCode(JSON.stringify(generatedShortcut, null, 2));
+
+      // Show analysis for generated shortcut
+      setShowAnalysis(true);
+
+      toast({
+        title: 'Shortcut Generated',
+        description: 'New shortcut has been created based on your description.'
+      });
+    } catch (error) {
+      toast({
+        title: 'Generation failed',
+        description: error instanceof Error ? error.message : 'Failed to generate shortcut',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  return (
+    <div className="h-screen flex flex-col">
+      <Toolbar
+        model={model}
+        onModelChange={setModel}
+        onImport={handleImport}
+        onExport={handleExport}
+        onProcess={handleProcess}
+        onGenerate={handleGenerate}
+        isProcessing={isProcessing}
+        showAnalysis={showAnalysis}
+        onToggleAnalysis={() => setShowAnalysis(!showAnalysis)}
+      />
+      
+      <ResizablePanelGroup
+        direction="horizontal"
+        className="flex-1"
+      >
+        <ResizablePanel defaultSize={showAnalysis ? 33 : 50}>
+          <EditorPane
+            value={code}
+            onChange={(value) => {
+              setCode(value);
+              try {
+                const parsed = JSON.parse(value);
+                setShortcut(parsed);
+              } catch {} // Ignore parse errors while typing
+            }}
+          />
+        </ResizablePanel>
+        <ResizableHandle />
+        <ResizablePanel defaultSize={showAnalysis ? 33 : 50}>
+          <PreviewPane shortcut={shortcut} />
+        </ResizablePanel>
+        {showAnalysis && (
+          <>
+            <ResizableHandle />
+            <ResizablePanel defaultSize={33}>
+              <AnalysisPane analysis={analyzeShortcut(shortcut)} />
+            </ResizablePanel>
+          </>
+        )}
+      </ResizablePanelGroup>
+    </div>
+  );
+}
