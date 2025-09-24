@@ -240,18 +240,32 @@ class ModelRouter {
   } {
     const taskProfile = this.analyzeTask(prompt, type);
     const availableModels = Object.keys(MODEL_CAPABILITIES);
-    
-    if (userSelectedModel && availableModels.includes(userSelectedModel)) {
-      return {
-        model: userSelectedModel,
-        confidence: 1.0,
-        reasoning: `User-selected model: ${userSelectedModel}`,
-        wasOverridden: true
-      };
+
+    // If user selected a model, check if we should honor their choice
+    if (userSelectedModel) {
+      // Always honor OpenRouter model selections
+      if (userSelectedModel.includes('/') || userSelectedModel.startsWith('openrouter/')) {
+        return {
+          model: userSelectedModel,
+          confidence: 1.0,
+          reasoning: `User-selected OpenRouter model: ${userSelectedModel}`,
+          wasOverridden: true
+        };
+      }
+
+      // Honor other direct model selections if they're in our capabilities
+      if (availableModels.includes(userSelectedModel)) {
+        return {
+          model: userSelectedModel,
+          confidence: 1.0,
+          reasoning: `User-selected model: ${userSelectedModel}`,
+          wasOverridden: true
+        };
+      }
     }
-    
+
     const optimal = this.selectOptimalModel(taskProfile, availableModels);
-    
+
     return {
       ...optimal,
       wasOverridden: false

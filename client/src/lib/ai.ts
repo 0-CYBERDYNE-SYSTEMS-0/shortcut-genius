@@ -1,4 +1,4 @@
-import { AIModel, AIResponse } from './types';
+import { AIModel, AIResponse, ReasoningOptions } from './types';
 import { postData } from './fetcher';
 
 const rateLimits = new Map<string, number>();
@@ -23,23 +23,25 @@ export async function processWithAI(
   model: AIModel,
   prompt: string,
   userId: string,
-  type: 'analyze' | 'generate' = 'analyze'
+  type: 'analyze' | 'generate' = 'analyze',
+  reasoningOptions?: ReasoningOptions
 ): Promise<AIResponse> {
   if (!checkRateLimit(userId)) {
     return { content: '', error: 'Rate limit exceeded. Please try again later.' };
   }
 
   try {
-    const result = await postData('/api/process', { 
-      model, 
+    const result = await postData('/api/process', {
+      model,
       prompt,
-      type
+      type,
+      reasoningOptions
       // Removed API keys - server handles authentication
     });
     return result;
   } catch (error) {
-    return { 
-      content: '', 
+    return {
+      content: '',
       error: error instanceof Error ? error.message : 'An unknown error occurred'
     };
   }

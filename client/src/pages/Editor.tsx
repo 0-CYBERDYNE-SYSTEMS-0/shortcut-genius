@@ -6,8 +6,10 @@ import { PreviewPane } from '@/components/PreviewPane';
 import { Toolbar } from '@/components/Toolbar';
 import { AnalysisPane } from '@/components/AnalysisPane';
 import { ShortcutsGallery } from '@/components/ShortcutsGallery';
+import { ReasoningControls } from '@/components/ReasoningControls';
 import { useToast } from '@/hooks/use-toast';
-import { AIModel } from '@/lib/types';
+import { AIModel, ReasoningOptions } from '@/lib/types';
+import { DEFAULT_REASONING_OPTIONS } from '@/lib/models';
 import { processWithAI } from '@/lib/ai';
 import { Shortcut, parseShortcutFile, exportShortcut } from '@/lib/shortcuts';
 import { analyzeShortcut } from '@/lib/shortcut-analyzer';
@@ -19,6 +21,7 @@ const DEFAULT_SHORTCUT: Shortcut = {
 
 export function Editor() {
   const [model, setModel] = useState<AIModel>('gpt-4o');
+  const [reasoningOptions, setReasoningOptions] = useState<ReasoningOptions>(DEFAULT_REASONING_OPTIONS);
   const [shortcut, setShortcut] = useState<Shortcut>(DEFAULT_SHORTCUT);
   const [code, setCode] = useState(JSON.stringify(DEFAULT_SHORTCUT, null, 2));
   const [isProcessing, setIsProcessing] = useState(false);
@@ -71,7 +74,8 @@ export function Editor() {
         model,
         `Analyze this iOS shortcut and suggest improvements:\n${code}`,
         'anonymous',
-        'analyze'
+        'analyze',
+        reasoningOptions
       );
       
       if (response.error) {
@@ -103,7 +107,8 @@ export function Editor() {
         model,
         prompt,
         'anonymous',
-        'generate'
+        'generate',
+        reasoningOptions
       );
       
       if (response.error) {
@@ -147,6 +152,8 @@ export function Editor() {
       <Toolbar
         model={model}
         onModelChange={setModel}
+        reasoningOptions={reasoningOptions}
+        onReasoningOptionsChange={setReasoningOptions}
         onImport={handleImport}
         onExport={handleExport}
         onProcess={handleProcess}
@@ -164,22 +171,34 @@ export function Editor() {
         </TabsList>
 
         <TabsContent value="editor" className="flex-1 mt-0">
-          <ResizablePanelGroup
-            direction="horizontal"
-            className="flex-1"
-          >
-            <ResizablePanel defaultSize={showAnalysis ? 33 : 50}>
-              <EditorPane
-                value={code}
-                onChange={(value) => {
-                  setCode(value);
-                  try {
-                    const parsed = JSON.parse(value);
-                    setShortcut(parsed);
-                  } catch {} // Ignore parse errors while typing
-                }}
-              />
-            </ResizablePanel>
+          <div className="flex flex-col h-full">
+            <ResizablePanelGroup
+              direction="horizontal"
+              className="flex-1"
+            >
+              <ResizablePanel defaultSize={showAnalysis ? 33 : 50}>
+                <div className="h-full flex flex-col">
+                  <div className="flex-1">
+                    <EditorPane
+                      value={code}
+                      onChange={(value) => {
+                        setCode(value);
+                        try {
+                          const parsed = JSON.parse(value);
+                          setShortcut(parsed);
+                        } catch {} // Ignore parse errors while typing
+                      }}
+                    />
+                  </div>
+                  <div className="p-4">
+                    <ReasoningControls
+                      model={model}
+                      options={reasoningOptions}
+                      onChange={setReasoningOptions}
+                    />
+                  </div>
+                </div>
+              </ResizablePanel>
             <ResizableHandle />
             <ResizablePanel defaultSize={showAnalysis ? 33 : 50}>
               <PreviewPane shortcut={shortcut} />
@@ -192,7 +211,8 @@ export function Editor() {
                 </ResizablePanel>
               </>
             )}
-          </ResizablePanelGroup>
+            </ResizablePanelGroup>
+          </div>
         </TabsContent>
 
         <TabsContent value="gallery" className="flex-1 mt-4 px-4 pb-4 overflow-auto">

@@ -1,0 +1,409 @@
+import OpenAI from 'openai';
+import Anthropic from '@anthropic-ai/sdk';
+import { OpenRouterClient } from './openrouter-client';
+import { WebSearchTool } from './web-search-tool';
+import {
+  getModelConfig,
+  isOpenRouterModel,
+  getOpenRouterModelName,
+  supportsReasoning,
+  supportsVerbosity,
+  DEFAULT_REASONING_OPTIONS
+} from '../client/src/lib/models';
+import { AIModel, ReasoningOptions } from '../client/src/lib/types';
+
+interface AIProcessorOptions {
+  openai: OpenAI;
+  anthropic: Anthropic;
+  openrouter: OpenRouterClient;
+  webSearchTool?: WebSearchTool;
+}
+
+interface ProcessRequest {
+  model: AIModel;
+  prompt: string;
+  type: 'generate' | 'analyze';
+  systemPrompt: string;
+  reasoningOptions?: ReasoningOptions;
+}
+
+interface ProcessResult {
+  content: string;
+  usage?: {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+    reasoning_tokens?: number;
+  };
+}
+
+export class AIProcessor {
+  private openai: OpenAI;
+  private anthropic: Anthropic;
+  private openrouter: OpenRouterClient;
+  private webSearchTool?: WebSearchTool;
+
+  constructor(options: AIProcessorOptions) {
+    this.openai = options.openai;
+    this.anthropic = options.anthropic;
+    this.openrouter = options.openrouter;
+    this.webSearchTool = options.webSearchTool;
+  }
+
+  async process(request: ProcessRequest): Promise<ProcessResult> {
+    const { model, prompt, type, systemPrompt, reasoningOptions } = request;
+    const modelConfig = getModelConfig(model);
+
+    if (isOpenRouterModel(model)) {
+      return this.processOpenRouter(request);
+    }
+
+    if (modelConfig.provider === 'openai') {
+      return this.processOpenAI(request);
+    }
+
+    if (modelConfig.provider === 'anthropic') {
+      return this.processAnthropic(request);
+    }
+
+    throw new Error(`Unsupported model: ${model}`);
+  }
+
+  private async processOpenAI(request: ProcessRequest): Promise<ProcessResult> {
+    const { model, prompt, type, systemPrompt, reasoningOptions } = request;
+    const modelConfig = getModelConfig(model);
+
+    // Prepare messages
+    const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
+      { role: 'system', content: this.buildSystemPrompt(systemPrompt, type) },
+      { role: 'user', content: this.buildUserPrompt(prompt, type) }
+    ];
+
+    // Build request parameters
+    const requestParams: any = {
+      model: this.getOpenAIModelName(model),
+      messages,
+      temperature: 0.7,
+      max_tokens: modelConfig.capabilities.maxTokens || 4096
+    };
+
+    // Add web search tool if available
+    if (this.webSearchTool) {
+      requestParams.tools = [this.webSearchTool.getToolDefinition()];
+      requestParams.tool_choice = 'auto';
+    }
+
+    // Add reasoning parameters for models that support it
+    if (supportsReasoning(model) && reasoningOptions) {
+      if (reasoningOptions.reasoning_effort) {
+        requestParams.reasoning_effort = reasoningOptions.reasoning_effort;
+      }
+      if (reasoningOptions.verbosity) {
+        requestParams.verbosity = reasoningOptions.verbosity;
+      }
+    }
+
+    // Add JSON mode for generation (but not when using tools)
+    if ((type === 'generate' || type === 'analyze') && !this.webSearchTool) {
+      requestParams.response_format = { type: 'json_object' };
+    }
+
+    try {
+      let response = await this.openai.chat.completions.create(requestParams);
+      let content = response.choices[0].message.content || '';
+
+      // Handle function calls
+      const toolCalls = response.choices[0].message.tool_calls;
+      if (toolCalls && this.webSearchTool) {
+        for (const toolCall of toolCalls) {
+          if (toolCall.function.name === 'web_search') {
+            try {
+              const args = JSON.parse(toolCall.function.arguments);
+              const searchResults = await this.webSearchTool.executeToolCall(args);
+
+              // Add the tool result to the conversation
+              messages.push(response.choices[0].message);
+              messages.push({
+                role: 'tool',
+                tool_call_id: toolCall.id,
+                content: searchResults
+              });
+
+              // Make another request with the search results
+              const followUpParams = {
+                ...requestParams,
+                messages,
+                tools: undefined, // Remove tools to avoid infinite loops
+                tool_choice: undefined
+              };
+
+              // Add JSON mode back for final response
+              if (type === 'generate' || type === 'analyze') {
+                followUpParams.response_format = { type: 'json_object' };
+              }
+
+              response = await this.openai.chat.completions.create(followUpParams);
+              content = response.choices[0].message.content || '';
+            } catch (toolError) {
+              console.error('Tool execution error:', toolError);
+              // Continue with original response if tool fails
+            }
+          }
+        }
+      }
+
+      return {
+        content,
+        usage: {
+          prompt_tokens: response.usage?.prompt_tokens || 0,
+          completion_tokens: response.usage?.completion_tokens || 0,
+          total_tokens: response.usage?.total_tokens || 0,
+          reasoning_tokens: (response.usage as any)?.completion_tokens_details?.reasoning_tokens
+        }
+      };
+    } catch (error: any) {
+      throw new Error(`OpenAI API error: ${error.message}`);
+    }
+  }
+
+  private async processAnthropic(request: ProcessRequest): Promise<ProcessResult> {
+    const { model, prompt, type, systemPrompt } = request;
+    const modelConfig = getModelConfig(model);
+
+    const messages: any[] = [{
+      role: 'user',
+      content: this.buildUserPrompt(prompt, type)
+    }];
+
+    const requestParams: any = {
+      model: this.getAnthropicModelName(model),
+      system: this.buildSystemPrompt(systemPrompt, type),
+      messages,
+      temperature: 0.7,
+      max_tokens: modelConfig.capabilities.maxTokens || 8192
+    };
+
+    // Add web search tool if available
+    if (this.webSearchTool) {
+      requestParams.tools = [{
+        name: this.webSearchTool.getOpenRouterToolDefinition().name,
+        description: this.webSearchTool.getOpenRouterToolDefinition().description,
+        input_schema: this.webSearchTool.getOpenRouterToolDefinition().parameters
+      }];
+    }
+
+    try {
+      let response = await this.anthropic.messages.create(requestParams);
+      let content = (response.content[0] as any)?.text || '';
+
+      // Handle function calls
+      const toolUse = response.content.find((c: any) => c.type === 'tool_use');
+      if (toolUse && this.webSearchTool) {
+        try {
+          const searchResults = await this.webSearchTool.executeToolCall(toolUse.input);
+
+          // Add the tool result to the conversation
+          messages.push({ role: 'assistant', content: response.content });
+          messages.push({
+            role: 'user',
+            content: [{
+              type: 'tool_result',
+              tool_use_id: toolUse.id,
+              content: searchResults
+            }]
+          });
+
+          // Make another request with the search results
+          response = await this.anthropic.messages.create({
+            ...requestParams,
+            messages,
+            tools: undefined // Remove tools to avoid infinite loops
+          });
+
+          content = (response.content[0] as any)?.text || '';
+        } catch (toolError) {
+          console.error('Tool execution error:', toolError);
+          // Continue with original response if tool fails
+        }
+      }
+
+      return {
+        content,
+        usage: {
+          prompt_tokens: response.usage.input_tokens,
+          completion_tokens: response.usage.output_tokens,
+          total_tokens: response.usage.input_tokens + response.usage.output_tokens
+        }
+      };
+    } catch (error: any) {
+      throw new Error(`Anthropic API error: ${error.message}`);
+    }
+  }
+
+  private async processOpenRouter(request: ProcessRequest): Promise<ProcessResult> {
+    const { model, prompt, type, systemPrompt, reasoningOptions } = request;
+    const modelConfig = getModelConfig(model);
+    const openRouterModelName = getOpenRouterModelName(model);
+
+    const messages = [
+      { role: 'system' as const, content: this.buildSystemPrompt(systemPrompt, type) },
+      { role: 'user' as const, content: this.buildUserPrompt(prompt, type) }
+    ];
+
+    const requestData: any = {
+      model: openRouterModelName,
+      messages,
+      temperature: 0.7,
+      max_tokens: modelConfig.capabilities.maxTokens || 4096,
+      ...reasoningOptions
+    };
+
+    // Add web search tool if available (OpenRouter function calling format)
+    if (this.webSearchTool) {
+      requestData.tools = [this.webSearchTool.getOpenRouterToolDefinition()];
+      requestData.tool_choice = 'auto';
+    }
+
+    try {
+      let response = await this.openrouter.createChatCompletion(requestData);
+      let content = response.choices[0].message.content || '';
+
+      // Handle function calls (OpenRouter format)
+      const toolCalls = response.choices[0].message.tool_calls;
+      if (toolCalls && this.webSearchTool) {
+        for (const toolCall of toolCalls) {
+          if (toolCall.function.name === 'web_search') {
+            try {
+              const args = JSON.parse(toolCall.function.arguments);
+              const searchResults = await this.webSearchTool.executeToolCall(args);
+
+              // Add the tool result to the conversation
+              messages.push(response.choices[0].message);
+              messages.push({
+                role: 'tool',
+                tool_call_id: toolCall.id,
+                content: searchResults
+              });
+
+              // Make another request with the search results
+              const followUpData = {
+                ...requestData,
+                messages,
+                tools: undefined, // Remove tools to avoid infinite loops
+                tool_choice: undefined
+              };
+
+              response = await this.openrouter.createChatCompletion(followUpData);
+              content = response.choices[0].message.content || '';
+            } catch (toolError) {
+              console.error('Tool execution error:', toolError);
+              // Continue with original response if tool fails
+            }
+          }
+        }
+      }
+
+      return {
+        content,
+        usage: {
+          prompt_tokens: response.usage.prompt_tokens,
+          completion_tokens: response.usage.completion_tokens,
+          total_tokens: response.usage.total_tokens
+        }
+      };
+    } catch (error: any) {
+      throw new Error(`OpenRouter API error: ${error.message}`);
+    }
+  }
+
+  private buildSystemPrompt(basePrompt: string, type: string): string {
+    if (type === 'generate') {
+      return basePrompt + '\nRespond ONLY with a valid JSON shortcut object following the exact structure from the example.';
+    } else {
+      return basePrompt + '\nAnalyze the shortcut and respond with a valid JSON analysis object.';
+    }
+  }
+
+  private buildUserPrompt(prompt: string, type: string): string {
+    if (type === 'generate') {
+      return `Create a shortcut that ${prompt}. Return only valid JSON in this exact format:
+{
+  "name": "Shortcut Name",
+  "actions": [
+    {
+      "type": "notification",
+      "parameters": {
+        "title": "Title",
+        "body": "Message",
+        "sound": true
+      }
+    }
+  ]
+}`;
+    } else {
+      return `Analyze this shortcut and suggest improvements: ${prompt}`;
+    }
+  }
+
+  private getOpenAIModelName(model: AIModel): string {
+    // Map internal model names to OpenAI API names
+    switch (model) {
+      case 'gpt-4o': return 'gpt-4o';
+      case 'gpt-4-1': return 'gpt-4.1';
+      case 'gpt-4-1-mini': return 'gpt-4.1-mini';
+      case 'gpt-4-1-nano': return 'gpt-4.1-nano';
+      case 'gpt-5': return 'gpt-5';
+      case 'gpt-5-mini': return 'gpt-5-mini';
+      case 'gpt-5-nano': return 'gpt-5-nano';
+      case 'o3': return 'o3';
+      case 'o3-mini': return 'o3-mini';
+      case 'o4-mini': return 'o4-mini';
+      default: return model;
+    }
+  }
+
+  private getAnthropicModelName(model: AIModel): string {
+    // Map internal model names to Anthropic API names
+    switch (model) {
+      case 'claude-3-5-sonnet-20241022': return 'claude-3-5-sonnet-20241022';
+      default: return model;
+    }
+  }
+
+  getAvailableModels(): AIModel[] {
+    return [
+      // OpenAI Direct Models
+      'gpt-4o', 'gpt-4-1', 'gpt-4-1-mini', 'gpt-4-1-nano',
+      'gpt-5', 'gpt-5-mini', 'gpt-5-nano',
+      'o3', 'o3-mini', 'o4-mini',
+      // Anthropic Direct Models
+      'claude-3-5-sonnet-20241022',
+      // OpenRouter Models
+      'openrouter/openai/gpt-4o', 'openrouter/openai/gpt-5',
+      'openrouter/anthropic/claude-3-5-sonnet', 'openrouter/anthropic/claude-4',
+      'openrouter/google/gemini-2-5-pro', 'openrouter/meta/llama-3-3-70b-instruct',
+      'openrouter/mistralai/mistral-large-2411', 'openrouter/qwen/qwen-2-5-72b-instruct',
+      'openrouter/deepseek/deepseek-v3'
+    ];
+  }
+
+  checkApiKeyAvailability(model: AIModel): { available: boolean; error?: string } {
+    const modelConfig = getModelConfig(model);
+
+    if (isOpenRouterModel(model)) {
+      if (!process.env.OPENROUTER_API_KEY) {
+        return { available: false, error: 'OpenRouter API key not configured' };
+      }
+    } else if (modelConfig.provider === 'openai') {
+      if (!process.env.OPENAI_API_KEY) {
+        return { available: false, error: 'OpenAI API key not configured' };
+      }
+    } else if (modelConfig.provider === 'anthropic') {
+      if (!process.env.ANTHROPIC_API_KEY) {
+        return { available: false, error: 'Anthropic API key not configured' };
+      }
+    }
+
+    return { available: true };
+  }
+}

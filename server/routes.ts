@@ -8,6 +8,18 @@ import { analyzeShortcut } from '../client/src/lib/shortcut-analyzer';
 import { responseCache } from './cache';
 import { openAICircuitBreaker, anthropicCircuitBreaker } from './circuit-breaker';
 import { modelRouter } from './model-router';
+import { OpenRouterClient } from './openrouter-client';
+import { AIProcessor } from './ai-processor';
+import { OpenRouterModelsService } from './openrouter-models';
+import { WebSearchTool } from './web-search-tool';
+import {
+  getModelConfig,
+  isOpenRouterModel,
+  getOpenRouterModelName,
+  supportsReasoning,
+  supportsVerbosity,
+  DEFAULT_REASONING_OPTIONS
+} from '../client/src/lib/models';
 import {
   convertToPlist,
   convertToBinaryPlist,
@@ -34,13 +46,32 @@ import {
   generateSharingMetadata
 } from './shortcut-sharing';
 
-// the newest OpenAI model is "gpt-4o" which was released May 13, 2024
-// the newest Anthropic model is "claude-3-5-sonnet-20241022" which was released February 29, 2024
-
+// AI Model Clients - Direct APIs and OpenRouter
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || '' });
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY || '' });
+const openrouter = new OpenRouterClient(process.env.OPENROUTER_API_KEY || '');
+
+// Initialize services
+const openRouterModelsService = new OpenRouterModelsService(process.env.OPENROUTER_API_KEY || '');
+const webSearchTool = new WebSearchTool(
+  process.env.TAVILY_API_KEY || process.env.SERPER_API_KEY || process.env.BRAVE_API_KEY,
+  process.env.SEARCH_ENGINE as 'tavily' | 'serper' | 'duckduckgo' | 'brave' || 'duckduckgo'
+);
+
+// Initialize AI Processor with web search tool
+const aiProcessor = new AIProcessor({
+  openai,
+  anthropic,
+  openrouter,
+  webSearchTool
+});
+
+// Get supported models from AI processor
+const SUPPORTED_MODELS = aiProcessor.getAvailableModels();
 
 const SYSTEM_PROMPT = `You are an iOS Shortcuts expert who specializes in reverse engineering and optimizing shortcuts.
+
+You have access to web search functionality to help you find current information, latest iOS features, new shortcut actions, or any other up-to-date information that might be relevant to creating or analyzing shortcuts. Use this capability when you need recent information or when the user asks about current events, latest versions, or anything that might have changed recently.
 
 Example valid shortcut:
 {
@@ -170,8 +201,10 @@ export function registerRoutes(app: Express) {
     }
 
     // Validate model selection
-    const allowedModels = ['gpt-4o', 'claude-3-5-sonnet-20241022'];
-    if (!allowedModels.includes(model)) {
+    const allowedModels = SUPPORTED_MODELS;
+    const isOpenRouterModel = model.includes('/') && !model.startsWith('openrouter/');
+
+    if (!allowedModels.includes(model) && !isOpenRouterModel) {
       return res.status(400).json({
         error: 'Invalid model specified'
       });
@@ -200,16 +233,11 @@ export function registerRoutes(app: Express) {
       });
     }
 
-    // Check for API key availability
-    if (model === 'gpt-4o' && !process.env.OPENAI_API_KEY) {
+    // Check for API key availability using AI processor
+    const keyCheck = aiProcessor.checkApiKeyAvailability(model);
+    if (!keyCheck.available) {
       return res.status(503).json({
-        error: 'OpenAI service unavailable - API key not configured'
-      });
-    }
-
-    if (model === 'claude-3-5-sonnet-20241022' && !process.env.ANTHROPIC_API_KEY) {
-      return res.status(503).json({
-        error: 'Anthropic service unavailable - API key not configured'
+        error: `Service unavailable - ${keyCheck.error}`
       });
     }
 
@@ -228,259 +256,79 @@ export function registerRoutes(app: Express) {
         });
       }
 
+      // Prepare reasoning options for models that support it
+      const reasoningOptions = supportsReasoning(model) ?
+        { ...DEFAULT_REASONING_OPTIONS, ...req.body.reasoningOptions } :
+        undefined;
+
       let result: ProcessResult;
-      
-      // For analysis requests, run AI analysis and local analysis in parallel
+
+      // Use the new AI processor for both analysis and generation
       if (type === 'analyze') {
         try {
           // Parse input shortcut for local analysis
           const inputShortcut = JSON.parse(prompt);
-          
-          // Run AI analysis and local analysis in parallel
-          const [aiResult, localAnalysis] = await Promise.all([
-            // AI Analysis with Circuit Breaker
-            (async () => {
-              if (model === 'gpt-4o') {
-                return await openAICircuitBreaker.execute(
-                  async () => {
-                    const response = await openai.chat.completions.create({
-                      model: "gpt-4o",
-                      temperature: 0.7,
-                      messages: [
-                        { 
-                          role: "system", 
-                          content: SYSTEM_PROMPT + "\nAnalyze the shortcut and respond with a valid JSON analysis object."
-                        },
-                        { 
-                          role: "user", 
-                          content: `Analyze this shortcut and suggest improvements: ${prompt}`
-                        }
-                      ],
-                      response_format: { type: "json_object" }
-                    });
-                    
-                    const content = response.choices[0].message.content || '';
-                    const validation = validateAndParseJSON(content, type);
-                    
-                    if (!validation.valid) {
-                      throw new Error(`Invalid analysis generated: ${validation.error}`);
-                    }
-                    
-                    return JSON.stringify(validation.data);
-                  },
-                  // Fallback to local analysis only
-                  async () => {
-                    console.log('OpenAI circuit breaker open - using local analysis only');
-                    return JSON.stringify({
-                      patterns: [],
-                      dependencies: [],
-                      optimizations: [{ type: "service_unavailable", description: "AI analysis temporarily unavailable, showing local analysis only", impact: "low" }],
-                      security: [],
-                      permissions: []
-                    });
-                  }
-                );
-              } else if (model === 'claude-3-5-sonnet-20241022') {
-                return await anthropicCircuitBreaker.execute(
-                  async () => {
-                    const response = await anthropic.messages.create({
-                      model: 'claude-3-5-sonnet-20241022',
-                      system: SYSTEM_PROMPT + "\nAnalyze the shortcut and respond with a valid JSON analysis object.",
-                      messages: [{ 
-                        role: 'user', 
-                        content: `Analyze this shortcut in detail: ${prompt}`
-                      }],
-                      temperature: 0.7,
-                      max_tokens: 4000
-                    });
 
-                    const messageContent = response.content[0] as TextBlock;
-                    if (!messageContent || messageContent.type !== 'text' || !messageContent.text) {
-                      throw new Error('Empty or invalid response from Claude');
-                    }
-                    
-                    const validation = validateAndParseJSON(messageContent.text, type);
-                    if (!validation.valid) {
-                      throw new Error(`Invalid analysis generated: ${validation.error}`);
-                    }
-                    
-                    return JSON.stringify(validation.data);
-                  },
-                  // Fallback to local analysis only
-                  async () => {
-                    console.log('Anthropic circuit breaker open - using local analysis only');
-                    return JSON.stringify({
-                      patterns: [],
-                      dependencies: [],
-                      optimizations: [{ type: "service_unavailable", description: "AI analysis temporarily unavailable, showing local analysis only", impact: "low" }],
-                      security: [],
-                      permissions: []
-                    });
-                  }
-                );
-              } else {
-                throw new Error('Invalid model specified');
-              }
-            })(),
-            // Local Analysis
-            (async () => {
-              return analyzeShortcut(inputShortcut);
-            })()
+          // Run AI analysis and local analysis in parallel
+          const [aiProcessorResult, localAnalysis] = await Promise.all([
+            aiProcessor.process({
+              model,
+              prompt,
+              type,
+              systemPrompt: SYSTEM_PROMPT,
+              reasoningOptions
+            }),
+            analyzeShortcut(inputShortcut)
           ]);
-          
-          result = { 
-            content: aiResult, 
-            localAnalysis 
+
+          // Validate AI analysis response
+          const validation = validateAndParseJSON(aiProcessorResult.content, type);
+          if (!validation.valid) {
+            throw new Error(`Invalid analysis generated: ${validation.error}`);
+          }
+
+          result = {
+            content: JSON.stringify(validation.data),
+            localAnalysis,
+            usage: aiProcessorResult.usage
           };
-          
+
         } catch (error: any) {
-          const errorMessage = error?.response?.data?.error?.message || 
-                             error?.response?.body?.error?.message || 
+          const errorMessage = error?.response?.data?.error?.message ||
+                             error?.response?.body?.error?.message ||
                              error.message;
           return res.status(500).json({
             error: `AI Analysis Error: ${errorMessage}`
           });
         }
       } else {
-        // Generation requests with circuit breaker protection
-        if (model === 'gpt-4o') {
-          try {
-            const content = await openAICircuitBreaker.execute(
-              async () => {
-                const response = await openai.chat.completions.create({
-                  model: "gpt-4o",
-                  temperature: 0.7,
-                  messages: [
-                    { 
-                      role: "system", 
-                      content: SYSTEM_PROMPT + "\nRespond ONLY with a valid JSON shortcut object following the exact structure from the example."
-                    },
-                    { 
-                      role: "user", 
-                      content: `Create a shortcut that ${prompt}. Return only valid JSON in this exact format:
-{
-  "name": "Shortcut Name",
-  "actions": [
-    {
-      "type": "notification",
-      "parameters": {
-        "title": "Title",
-        "body": "Message",
-        "sound": true
-      }
-    }
-  ]
-}`
-                    }
-                  ],
-                  response_format: { type: "json_object" }
-                });
-                
-                return response.choices[0].message.content || '';
-              },
-              // Fallback for generation
-              async () => {
-                console.log('OpenAI circuit breaker open - providing basic shortcut template');
-                return JSON.stringify({
-                  name: "Service Unavailable - Template Shortcut",
-                  actions: [{
-                    type: "notification",
-                    parameters: {
-                      title: "AI Service Unavailable",
-                      body: "Please try again later or edit this template manually",
-                      sound: false
-                    }
-                  }]
-                });
-              }
-            );
-            
-            const validation = validateAndParseJSON(content, type);
-            
-            if (!validation.valid) {
-              return res.status(422).json({
-                error: `Invalid shortcut generated: ${validation.error}`
-              });
-            }
-            
-            result = { content: JSON.stringify(validation.data) };
-            
-          } catch (error: any) {
-            const errorMessage = error?.message || 'Unknown error';
-            return res.status(500).json({
-              error: `OpenAI API Error: ${errorMessage}`
-            });
-          }
-        } else if (model === 'claude-3-5-sonnet-20241022') {
-          try {
-            const content = await anthropicCircuitBreaker.execute(
-              async () => {
-                const response = await anthropic.messages.create({
-                  model: 'claude-3-5-sonnet-20241022',
-                  system: SYSTEM_PROMPT + "\nRespond ONLY with a valid JSON shortcut object.",
-                  messages: [{ 
-                    role: 'user', 
-                    content: `Create a shortcut that ${prompt}. Return only valid JSON in this exact format:
-{
-  "name": "Shortcut Name",
-  "actions": [
-    {
-      "type": "notification",
-      "parameters": {
-        "title": "Title",
-        "body": "Message",
-        "sound": true
-      }
-    }
-  ]
-}`
-                  }],
-                  temperature: 0.7,
-                  max_tokens: 4000
-                });
+        // Generation requests
+        try {
+          const aiProcessorResult = await aiProcessor.process({
+            model,
+            prompt,
+            type,
+            systemPrompt: SYSTEM_PROMPT,
+            reasoningOptions
+          });
 
-                const messageContent = response.content[0] as TextBlock;
-                if (!messageContent || messageContent.type !== 'text' || !messageContent.text) {
-                  throw new Error('Empty or invalid response from Claude');
-                }
-                
-                return messageContent.text;
-              },
-              // Fallback for generation
-              async () => {
-                console.log('Anthropic circuit breaker open - providing basic shortcut template');
-                return JSON.stringify({
-                  name: "Service Unavailable - Template Shortcut",
-                  actions: [{
-                    type: "notification",
-                    parameters: {
-                      title: "AI Service Unavailable",
-                      body: "Please try again later or edit this template manually",
-                      sound: false
-                    }
-                  }]
-                });
-              }
-            );
-            
-            const validation = validateAndParseJSON(content, type);
-            if (!validation.valid) {
-              return res.status(422).json({
-                error: `Invalid shortcut generated: ${validation.error}`
-              });
-            }
-            
-            result = { content: JSON.stringify(validation.data) };
-            
-          } catch (error: any) {
-            const errorMessage = error?.message || 'Unknown error';
-            return res.status(500).json({
-              error: `Claude API Error: ${errorMessage}`
+          // Validate generated shortcut
+          const validation = validateAndParseJSON(aiProcessorResult.content, type);
+          if (!validation.valid) {
+            return res.status(422).json({
+              error: `Invalid shortcut generated: ${validation.error}`
             });
           }
-        } else {
-          return res.status(400).json({
-            error: 'Invalid model specified'
+
+          result = {
+            content: JSON.stringify(validation.data),
+            usage: aiProcessorResult.usage
+          };
+
+        } catch (error: any) {
+          const errorMessage = error?.message || 'Unknown error';
+          return res.status(500).json({
+            error: `AI Processing Error: ${errorMessage}`
           });
         }
       }
@@ -1028,6 +876,92 @@ export function registerRoutes(app: Express) {
     } catch (error) {
       console.error('Share page error:', error);
       res.status(500).send('Error loading shared shortcut');
+    }
+  });
+
+  // OpenRouter models API endpoints
+  app.get('/api/models/openrouter', async (req, res) => {
+    try {
+      const models = await openRouterModelsService.fetchAvailableModels();
+      const categorized = openRouterModelsService.categorizeModels(models);
+
+      res.json({
+        models,
+        categorized,
+        total: models.length,
+        lastUpdated: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Failed to fetch OpenRouter models:', error);
+      res.status(500).json({
+        error: 'Failed to fetch OpenRouter models',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Search OpenRouter models
+  app.get('/api/models/openrouter/search', async (req, res) => {
+    try {
+      const query = req.query.q as string || '';
+      const models = await openRouterModelsService.searchModels(query);
+
+      res.json({
+        models,
+        query,
+        total: models.length
+      });
+    } catch (error) {
+      console.error('Failed to search OpenRouter models:', error);
+      res.status(500).json({
+        error: 'Failed to search OpenRouter models',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Get specific OpenRouter model details
+  app.get('/api/models/openrouter/:modelId(*)', async (req, res) => {
+    try {
+      const modelId = req.params.modelId;
+      const model = await openRouterModelsService.getModelById(modelId);
+
+      if (!model) {
+        return res.status(404).json({
+          error: 'Model not found',
+          modelId
+        });
+      }
+
+      res.json(model);
+    } catch (error) {
+      console.error('Failed to get OpenRouter model:', error);
+      res.status(500).json({
+        error: 'Failed to get OpenRouter model',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Web search API endpoint for testing
+  app.post('/api/search', async (req, res) => {
+    try {
+      const { query, max_results = 5 } = req.body;
+
+      if (!query) {
+        return res.status(400).json({
+          error: 'Query parameter is required'
+        });
+      }
+
+      const results = await webSearchTool.search(query, max_results);
+      res.json(results);
+    } catch (error) {
+      console.error('Web search error:', error);
+      res.status(500).json({
+        error: 'Web search failed',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   });
 }

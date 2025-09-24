@@ -4,13 +4,15 @@ import { Input } from '@/components/ui/input';
 import { ModelSelector } from './ModelSelector';
 import { FileUpload } from './FileUpload';
 import { ShareDialog } from './ShareDialog';
-import { AIModel } from '@/lib/types';
+import { AIModel, ReasoningOptions } from '@/lib/types';
 import { Shortcut } from '@/lib/shortcuts';
 import { BarChart2, Share2, Download } from 'lucide-react';
 
 interface ToolbarProps {
   model: AIModel;
   onModelChange: (model: AIModel) => void;
+  reasoningOptions: ReasoningOptions;
+  onReasoningOptionsChange: (options: ReasoningOptions) => void;
   onImport: (content: string) => void;
   onExport: () => void;
   onProcess: () => void;
@@ -24,6 +26,8 @@ interface ToolbarProps {
 export function Toolbar({
   model,
   onModelChange,
+  reasoningOptions,
+  onReasoningOptionsChange,
   onImport,
   onExport,
   onProcess,
