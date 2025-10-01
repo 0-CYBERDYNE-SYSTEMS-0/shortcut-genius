@@ -8,6 +8,7 @@ import { AnalysisPane } from '@/components/AnalysisPane';
 import { ShortcutsGallery } from '@/components/ShortcutsGallery';
 import { ReasoningControls } from '@/components/ReasoningControls';
 import { useToast } from '@/hooks/use-toast';
+import { useBreakpoint } from '@/hooks/use-mobile';
 import { AIModel, ReasoningOptions } from '@/lib/types';
 import { DEFAULT_REASONING_OPTIONS } from '@/lib/models';
 import { processWithAI } from '@/lib/ai';
@@ -27,7 +28,9 @@ export function Editor() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [activeTab, setActiveTab] = useState('editor');
+  const [mobileActiveTab, setMobileActiveTab] = useState('editor');
   const { toast } = useToast();
+  const { isMobile, isTablet } = useBreakpoint();
 
   const handleImport = (content: string) => {
     try {
@@ -147,6 +150,171 @@ export function Editor() {
     });
   };
 
+  // Mobile Layout: Tab-based interface
+  if (isMobile) {
+    return (
+      <div className="h-screen flex flex-col">
+        <Toolbar
+          model={model}
+          onModelChange={setModel}
+          reasoningOptions={reasoningOptions}
+          onReasoningOptionsChange={setReasoningOptions}
+          onImport={handleImport}
+          onExport={handleExport}
+          onProcess={handleProcess}
+          onGenerate={handleGenerate}
+          isProcessing={isProcessing}
+          showAnalysis={showAnalysis}
+          onToggleAnalysis={() => setShowAnalysis(!showAnalysis)}
+          currentShortcut={shortcut}
+        />
+
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
+          <TabsList className="grid w-full grid-cols-2 h-12 mx-3 mt-3">
+            <TabsTrigger value="editor" className="text-sm">Editor</TabsTrigger>
+            <TabsTrigger value="gallery" className="text-sm">Gallery</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="editor" className="flex-1 mt-0">
+            <Tabs value={mobileActiveTab} onValueChange={setMobileActiveTab} className="flex-1 flex flex-col">
+              <TabsList className={`grid w-full h-12 mx-3 mt-3 ${showAnalysis ? 'grid-cols-3' : 'grid-cols-2'}`}>
+                <TabsTrigger value="editor" className="text-sm">Edit</TabsTrigger>
+                <TabsTrigger value="preview" className="text-sm">Preview</TabsTrigger>
+                {showAnalysis && <TabsTrigger value="analysis" className="text-sm">Analysis</TabsTrigger>}
+              </TabsList>
+
+              <TabsContent value="editor" className="flex-1 mt-0">
+                <div className="flex flex-col h-full px-3 pt-3">
+                  <div className="flex-1">
+                    <EditorPane
+                      value={code}
+                      onChange={(value) => {
+                        setCode(value);
+                        try {
+                          const parsed = JSON.parse(value);
+                          setShortcut(parsed);
+                        } catch {} // Ignore parse errors while typing
+                      }}
+                    />
+                  </div>
+                  <div className="py-3">
+                    <ReasoningControls
+                      model={model}
+                      options={reasoningOptions}
+                      onChange={setReasoningOptions}
+                    />
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="preview" className="flex-1 mt-0">
+                <div className="h-full px-3 pt-3">
+                  <PreviewPane shortcut={shortcut} />
+                </div>
+              </TabsContent>
+
+              {showAnalysis && (
+                <TabsContent value="analysis" className="flex-1 mt-0">
+                  <div className="h-full px-3 pt-3">
+                    <AnalysisPane analysis={analyzeShortcut(shortcut)} />
+                  </div>
+                </TabsContent>
+              )}
+            </Tabs>
+          </TabsContent>
+
+          <TabsContent value="gallery" className="flex-1 mt-3 px-3 pb-3 overflow-auto">
+            <ShortcutsGallery onImportShortcut={handleImportFromGallery} />
+          </TabsContent>
+        </Tabs>
+      </div>
+    );
+  }
+
+  // Tablet Layout: Two-column with optional third
+  if (isTablet) {
+    return (
+      <div className="h-screen flex flex-col">
+        <Toolbar
+          model={model}
+          onModelChange={setModel}
+          reasoningOptions={reasoningOptions}
+          onReasoningOptionsChange={setReasoningOptions}
+          onImport={handleImport}
+          onExport={handleExport}
+          onProcess={handleProcess}
+          onGenerate={handleGenerate}
+          isProcessing={isProcessing}
+          showAnalysis={showAnalysis}
+          onToggleAnalysis={() => setShowAnalysis(!showAnalysis)}
+          currentShortcut={shortcut}
+        />
+
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
+          <TabsList className="grid w-full grid-cols-2 h-12 mx-4 mt-4">
+            <TabsTrigger value="editor" className="text-sm">Editor</TabsTrigger>
+            <TabsTrigger value="gallery" className="text-sm">Gallery</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="editor" className="flex-1 mt-0">
+            <div className="flex flex-col h-full">
+              <ResizablePanelGroup
+                direction="horizontal"
+                className="flex-1"
+              >
+                <ResizablePanel defaultSize={50}>
+                  <div className="h-full flex flex-col">
+                    <div className="flex-1">
+                      <EditorPane
+                        value={code}
+                        onChange={(value) => {
+                          setCode(value);
+                          try {
+                            const parsed = JSON.parse(value);
+                            setShortcut(parsed);
+                          } catch {} // Ignore parse errors while typing
+                        }}
+                      />
+                    </div>
+                    <div className="p-3">
+                      <ReasoningControls
+                        model={model}
+                        options={reasoningOptions}
+                        onChange={setReasoningOptions}
+                      />
+                    </div>
+                  </div>
+                </ResizablePanel>
+                <ResizableHandle />
+                <ResizablePanel defaultSize={50}>
+                  <Tabs defaultValue="preview" className="h-full flex flex-col">
+                    <TabsList className={`grid w-full h-12 m-3 ${showAnalysis ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                      <TabsTrigger value="preview" className="text-sm">Preview</TabsTrigger>
+                      {showAnalysis && <TabsTrigger value="analysis" className="text-sm">Analysis</TabsTrigger>}
+                    </TabsList>
+                    <TabsContent value="preview" className="flex-1 mt-0 px-3">
+                      <PreviewPane shortcut={shortcut} />
+                    </TabsContent>
+                    {showAnalysis && (
+                      <TabsContent value="analysis" className="flex-1 mt-0 px-3">
+                        <AnalysisPane analysis={analyzeShortcut(shortcut)} />
+                      </TabsContent>
+                    )}
+                  </Tabs>
+                </ResizablePanel>
+              </ResizablePanelGroup>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="gallery" className="flex-1 mt-4 px-4 pb-4 overflow-auto">
+            <ShortcutsGallery onImportShortcut={handleImportFromGallery} />
+          </TabsContent>
+        </Tabs>
+      </div>
+    );
+  }
+
+  // Desktop Layout: Original resizable panels
   return (
     <div className="h-screen flex flex-col">
       <Toolbar

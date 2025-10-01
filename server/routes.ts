@@ -2,6 +2,10 @@ import type { Express } from "express";
 import multer from 'multer';
 import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
+import dotenv from 'dotenv';
+
+// Ensure environment variables are loaded before any other initialization
+dotenv.config();
 import { validateShortcut, SHORTCUT_ACTIONS } from '../client/src/lib/shortcuts';
 import { Shortcut } from '../client/src/lib/shortcuts';
 import { analyzeShortcut } from '../client/src/lib/shortcut-analyzer';

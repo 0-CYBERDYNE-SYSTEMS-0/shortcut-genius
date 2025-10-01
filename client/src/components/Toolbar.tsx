@@ -6,7 +6,14 @@ import { FileUpload } from './FileUpload';
 import { ShareDialog } from './ShareDialog';
 import { AIModel, ReasoningOptions } from '@/lib/types';
 import { Shortcut } from '@/lib/shortcuts';
-import { BarChart2, Share2, Download } from 'lucide-react';
+import { BarChart2, Share2, Download, Mic, MoreVertical } from 'lucide-react';
+import { useBreakpoint } from '@/hooks/use-mobile';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface ToolbarProps {
   model: AIModel;
@@ -39,6 +46,9 @@ export function Toolbar({
 }: ToolbarProps) {
   const [prompt, setPrompt] = useState('');
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [inputExpanded, setInputExpanded] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const { isMobile, isTablet, isTouch } = useBreakpoint();
 
   const handleDownloadShortcut = async () => {
     if (!currentShortcut) return;
@@ -70,30 +80,232 @@ export function Toolbar({
     }
   };
 
+  const handleVoiceInput = () => {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      alert('Speech recognition is not supported in your browser');
+      return;
+    }
+
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = 'en-US';
+
+    recognition.onstart = () => {
+      setIsListening(true);
+    };
+
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript;
+      setPrompt(transcript);
+      setIsListening(false);
+    };
+
+    recognition.onerror = () => {
+      setIsListening(false);
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+
+    recognition.start();
+  };
+
+  const handleGenerate = () => {
+    if (prompt.trim()) {
+      onGenerate(prompt);
+      setPrompt('');
+      setInputExpanded(false);
+    }
+  };
+
+  // Mobile Layout
+  if (isMobile) {
+    return (
+      <>
+        <div className="flex flex-col border-b bg-background">
+          {/* Row 1: Essential actions */}
+          <div className="flex items-center justify-between px-3 py-2 border-b">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              <ModelSelector value={model} onChange={onModelChange} />
+              <Button
+                size="sm"
+                onClick={onProcess}
+                disabled={isProcessing}
+                className="whitespace-nowrap"
+              >
+                {isProcessing ? '...' : 'Process'}
+              </Button>
+            </div>
+            <div className="flex items-center gap-1">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={onToggleAnalysis}
+                className="px-2"
+              >
+                <BarChart2 className="h-4 w-4" />
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="sm" variant="outline" className="px-2">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setShareDialogOpen(true)} disabled={!currentShortcut}>
+                    <Share2 className="mr-2 h-4 w-4" />
+                    Share
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleDownloadShortcut} disabled={!currentShortcut}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Download
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={onExport}>
+                    Export
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => {}}>
+                    Import
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+
+          {/* Row 2: Expandable input */}
+          <div className="px-3 py-2">
+            <div className={`transition-all duration-200 ${inputExpanded ? 'min-h-[80px]' : 'h-10'}`}>
+              <div className="relative">
+                <Input
+                  placeholder="Describe your shortcut..."
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  onFocus={() => setInputExpanded(true)}
+                  onBlur={() => setInputExpanded(false)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey && prompt.trim()) {
+                      handleGenerate();
+                    }
+                  }}
+                  className="pr-20 text-base min-h-10"
+                />
+                <div className="absolute right-1 top-1/2 -translate-y-1/2 flex gap-1">
+                  {isTouch && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={handleVoiceInput}
+                      disabled={isListening}
+                      className="h-8 w-8 p-0"
+                    >
+                      <Mic className={`h-4 w-4 ${isListening ? 'text-red-500 animate-pulse' : ''}`} />
+                    </Button>
+                  )}
+                  <Button
+                    size="sm"
+                    onClick={handleGenerate}
+                    disabled={isProcessing || !prompt.trim()}
+                    className="h-8 px-3"
+                  >
+                    Generate
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <ShareDialog
+          open={shareDialogOpen}
+          onOpenChange={setShareDialogOpen}
+          shortcut={currentShortcut}
+        />
+      </>
+    );
+  }
+
+  // Tablet Layout
+  if (isTablet) {
+    return (
+      <>
+        <div className="h-16 border-b px-4 flex items-center gap-3">
+          <ModelSelector value={model} onChange={onModelChange} />
+
+          <div className="flex-1 flex items-center gap-2 min-w-0">
+            <Input
+              placeholder="Describe your shortcut..."
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey && prompt.trim()) {
+                  handleGenerate();
+                }
+              }}
+              className="flex-1"
+            />
+            <Button
+              onClick={handleGenerate}
+              disabled={isProcessing || !prompt.trim()}
+              size="sm"
+            >
+              Generate
+            </Button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <FileUpload onUpload={onImport} />
+            <Button size="sm" variant="outline" onClick={onExport}>Export</Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onToggleAnalysis}
+            >
+              <BarChart2 className="mr-1 h-4 w-4" />
+              {showAnalysis ? 'Hide' : 'Show'}
+            </Button>
+            <Button
+              onClick={onProcess}
+              disabled={isProcessing}
+              size="sm"
+            >
+              {isProcessing ? 'Processing...' : 'Process'}
+            </Button>
+          </div>
+        </div>
+
+        <ShareDialog
+          open={shareDialogOpen}
+          onOpenChange={setShareDialogOpen}
+          shortcut={currentShortcut}
+        />
+      </>
+    );
+  }
+
+  // Desktop Layout (original)
   return (
     <>
       <div className="h-14 border-b px-4 flex items-center gap-4">
         <ModelSelector value={model} onChange={onModelChange} />
 
-        <div className="flex-1 flex items-center gap-2">
+        <div className="flex-1 flex items-center gap-2 min-w-0">
           <Input
             placeholder="Describe your shortcut in natural language..."
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey && prompt.trim()) {
-                onGenerate(prompt);
-                setPrompt('');
+                handleGenerate();
               }
             }}
             className="flex-1"
           />
           <Button
-            onClick={() => {
-              onGenerate(prompt);
-              setPrompt('');
-            }}
-            disabled={isProcessing || !prompt}
+            onClick={handleGenerate}
+            disabled={isProcessing || !prompt.trim()}
           >
             Generate
           </Button>

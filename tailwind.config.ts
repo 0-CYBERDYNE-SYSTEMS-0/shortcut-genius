@@ -5,6 +5,18 @@ export default {
     content: ["./client/index.html", "./client/src/**/*.{js,jsx,ts,tsx}"],
   theme: {
   	extend: {
+  		screens: {
+  			'xs': '475px',    // Extra small mobile
+  			'sm': '640px',    // Large mobile
+  			'md': '768px',    // Tablet
+  			'lg': '1024px',   // Small desktop
+  			'xl': '1280px',   // Desktop
+  			'2xl': '1536px',  // Large desktop
+  		},
+  		spacing: {
+  			'18': '4.5rem',
+  			'88': '22rem',
+  		},
   		borderRadius: {
   			lg: 'var(--radius)',
   			md: 'calc(var(--radius) - 2px)',

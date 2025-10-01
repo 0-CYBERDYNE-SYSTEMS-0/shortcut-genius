@@ -47,10 +47,9 @@ export class OpenRouterClient {
   private fallbackClient: AxiosInstance;
 
   constructor(apiKey: string) {
-    // Debug: Log the API key being passed
-    console.log('🔧 OpenRouter Client Constructor:');
-    console.log('- API Key passed:', apiKey ? `exists (${apiKey.substring(0, 15)}...)` : 'undefined or empty');
-    console.log('- Process env OPENROUTER_API_KEY:', process.env.OPENROUTER_API_KEY ? `exists (${process.env.OPENROUTER_API_KEY.substring(0, 15)}...)` : 'undefined');
+    if (!apiKey) {
+      console.warn('⚠️ OpenRouter API key not provided - OpenRouter features will be limited');
+    }
 
     // Use OpenAI SDK with OpenRouter base URL (recommended by OpenRouter)
     this.openaiClient = new OpenAI({
