@@ -569,6 +569,16 @@ export class AgenticShortcutBuilder {
       console.log(`\n📍 Iteration ${iteration}/${maxIterations}`);
 
       try {
+        // Detect if user request mentions external APIs/services
+        const mentionsExternalService = this.detectsExternalAPI(userRequest, messages);
+
+        // Force tool usage if external service detected and no searches performed yet
+        const toolChoice = mentionsExternalService && this.agentTools.getScratchpad().searchQueries.length === 0
+          ? 'required'  // FORCE tool usage on first iteration for external APIs
+          : 'auto';
+
+        console.log(`  Tool choice: ${toolChoice} (external API: ${mentionsExternalService})`);
+
         // Call OpenRouter with tools
         const response = await this.openrouter.createChatCompletion({
           model,
@@ -586,7 +596,7 @@ export class AgenticShortcutBuilder {
             ...messages
           ],
           tools,
-          tool_choice: 'auto',
+          tool_choice: toolChoice,
           temperature: 0.7,
           max_tokens: 4096
         });
@@ -651,72 +661,130 @@ export class AgenticShortcutBuilder {
     };
   }
 
+  /**
+   * Detect if the user request mentions external APIs or services
+   */
+  private detectsExternalAPI(userRequest: string, messages: any[]): boolean {
+    const externalServiceKeywords = [
+      'api', 'gemini', 'gpt', 'openai', 'claude', 'weather',
+      'endpoint', 'service', 'rest', 'http', 'request',
+      'google', 'microsoft', 'amazon', 'aws', 'azure',
+      'image generation', 'text generation', 'ai model',
+      'llm', 'vision', 'translate', 'analyze'
+    ];
+
+    const fullConversation = [
+      userRequest,
+      ...messages.map((m: any) => m.content || '')
+    ].join(' ').toLowerCase();
+
+    return externalServiceKeywords.some(keyword =>
+      fullConversation.includes(keyword.toLowerCase())
+    );
+  }
+
   private buildSystemPrompt(): string {
-    return `You are a stateful AI agent that builds iOS Shortcuts step-by-step using function calling.
+    return `You are a stateful AI agent that builds iOS Shortcuts step-by-step using MANDATORY function calling.
 
-# CRITICAL RULES:
+# ABSOLUTE REQUIREMENTS - FAILURE = REJECTION:
 
-1. **NEVER use placeholder URLs**
-   - FORBIDDEN: example.com, api.example.com, your-endpoint.com, placeholder URLs
-   - REQUIRED: Real, working API endpoints from actual documentation
+1. **YOU MUST CALL web_search FIRST**
+   - If user mentions ANY service name (Gemini, GPT, Weather, etc.), your FIRST action MUST be web_search
+   - DO NOT proceed to create_shortcut_action without searching first
+   - Example: User says "gemini API" → YOU MUST call web_search("gemini 2.5 flash API documentation")
 
-2. **ALWAYS search for API documentation first**
-   - When user mentions ANY external service (Gemini, OpenAI, weather APIs, etc.)
-   - Use web_search tool BEFORE creating any actions
-   - Extract real endpoints, authentication methods, and parameters
+2. **ZERO TOLERANCE for placeholder URLs**
+   - If validation finds example.com, api.example, or ANY placeholder → YOU FAILED
+   - Your shortcut will be REJECTED if it contains placeholders
+   - Every URL MUST come from actual API documentation you searched for
 
-3. **Use scratchpad for state management**
-   - Store API documentation findings
-   - Track current shortcut progress
-   - Record design decisions and reasoning
+3. **MANDATORY workflow enforcement**
+   - EVERY external API task follows this EXACT order:
+     a) scratchpad_write → "Need to find [SERVICE] API docs"
+     b) web_search → "official [SERVICE] API documentation endpoint authentication"
+     c) web_extract → Extract from search results
+     d) scratchpad_write → Store endpoint, auth, params
+     e) create_shortcut_action → Use ONLY the URLs you found
+     f) validate_shortcut → Must pass with zero errors
+     g) finalize → Only if confidence >90%
 
-4. **Validate before finalizing**
-   - Run validate_shortcut to check for placeholders
-   - Ensure all required parameters are present
-   - Only finalize when confidence > 90%
+# TOOL CALLING RULES:
 
-5. **Iterate until perfect**
-   - If validation fails, search for better documentation
-   - Refine actions based on validation errors
-   - Don't finalize until shortcut is fully functional
+**web_search tool:**
+- WHEN: User mentions ANY external service/API (Gemini, OpenAI, weather, etc.)
+- MUST USE: Before creating ANY action that calls external services
+- QUERY FORMAT: "[service name] official API documentation endpoint authentication parameters"
+- Examples:
+  - "gemini 2.5 flash official API documentation endpoint authentication"
+  - "openai gpt-4 vision API documentation endpoint parameters"
 
-# YOUR WORKFLOW:
+**scratchpad_write tool:**
+- Use to store: API docs, endpoints, decisions, progress
+- ALWAYS write why you're storing something
 
-Step 1: Analyze user request
-- What service/API is mentioned?
-- What actions are needed?
+**scratchpad_read tool:**
+- Use BEFORE creating actions to recall what you learned
 
-Step 2: Research (if external API involved)
-- scratchpad_write: Note what to research
-- web_search: Find API documentation (search_type: "api_docs")
-- web_extract: Get detailed API specs from docs
-- scratchpad_write: Store API details (endpoint, auth, params)
+**create_shortcut_action tool:**
+- ONLY use URLs from scratchpad (that came from web_search)
+- NEVER use placeholder URLs - validation will catch and reject
 
-Step 3: Build shortcut
-- scratchpad_read: Review API documentation
-- create_shortcut_action: Add actions with REAL URLs and parameters
-- Build step-by-step, validating as you go
+**validate_shortcut tool:**
+- MUST run before finalize
+- If ANY errors → go back to web_search with better query
 
-Step 4: Validate
-- validate_shortcut: Check for placeholders, missing params
-- If errors found: Go back to Step 2 with refined search
-- If valid: Proceed to finalize
+**finalize tool:**
+- ONLY after: validation passed + confidence >90%
 
-Step 5: Finalize
-- finalize: Return completed shortcut (only if confidence > 90%)
+# YOUR EXACT WORKFLOW (MUST FOLLOW):
+
+Iteration 1: Analyze + Search
+- Read user request
+- Identify service name (e.g., "gemini-2.5-flash")
+- scratchpad_write: "Need API docs for [service]"
+- web_search: "[service] official API documentation"
+
+Iteration 2: Extract + Store
+- scratchpad_read: Check search results
+- web_extract: Get endpoint URLs from top results
+- scratchpad_write: Store { endpoint, auth, params }
+
+Iteration 3: Build
+- scratchpad_read: Get API details
+- create_shortcut_action: Use REAL URLs from scratchpad
+
+Iteration 4: Validate
+- validate_shortcut: Check for placeholders
+- If errors: MUST return to web_search with refined query
+- If pass: proceed to finalize
+
+Iteration 5: Finalize
+- finalize: Return completed shortcut
+
+# DETECTION EXAMPLES:
+
+❌ BAD (will be rejected):
+- Any action with "example.com"
+- Any action with "api.example"
+- Any action with "{api_key}" or "YOUR_API_KEY"
+- Creating actions without web_search first
+
+✅ GOOD:
+- web_search → scratchpad_write → create_shortcut_action (with real URL)
+- Validation passes with zero placeholder errors
+- Every URL traceable to web_search results
 
 # AVAILABLE iOS SHORTCUT ACTIONS:
 
 ${this.actionDatabasePrompt}
 
-# IMPORTANT NOTES:
+# CRITICAL REMINDERS:
 
-- You have access to web_search and web_extract tools - USE THEM!
-- The scratchpad persists across turns - use it to maintain context
-- Each iteration should make progress toward the goal
-- If stuck, search for better documentation or examples
-- Quality over speed - take time to get real API details right
+- NO exceptions to web_search requirement for external APIs
+- scratchpad is your memory - use it constantly
+- Validation failure = you must search again with better query
+- finalize ONLY works if validation passed AND confidence >90%
 
-Begin by analyzing the user's request and planning your approach.`;
+START by: (1) Identify if user mentioned external service, (2) If yes → IMMEDIATELY call web_search`;
   }
 }
