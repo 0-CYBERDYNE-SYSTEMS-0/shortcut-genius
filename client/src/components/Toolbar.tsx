@@ -48,7 +48,7 @@ export function Toolbar({
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [inputExpanded, setInputExpanded] = useState(false);
   const [isListening, setIsListening] = useState(false);
-  const { isMobile, isTablet, isTouch } = useBreakpoint();
+  const { isMobile, isTablet, isDesktop, isLargeDesktop, isTouch } = useBreakpoint();
 
   const handleDownloadShortcut = async () => {
     if (!currentShortcut) return;
@@ -285,15 +285,15 @@ export function Toolbar({
     );
   }
 
-  // Desktop Layout (original)
+  // Desktop Layout with responsive breakpoints
   return (
     <>
-      <div className="h-14 border-b px-4 flex items-center gap-4">
+      <div className={`border-b flex items-center ${isLargeDesktop ? 'px-6 gap-4' : 'px-4 gap-3'} ${isDesktop && !isLargeDesktop ? 'h-16' : 'h-14'}`}>
         <ModelSelector value={model} onChange={onModelChange} />
 
         <div className="flex-1 flex items-center gap-2 min-w-0">
           <Input
-            placeholder="Describe your shortcut in natural language..."
+            placeholder={isLargeDesktop ? "Describe your shortcut in natural language..." : "Describe your shortcut..."}
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             onKeyDown={(e) => {
@@ -301,59 +301,85 @@ export function Toolbar({
                 handleGenerate();
               }
             }}
-            className="flex-1"
+            className="flex-1 min-w-[200px]"
           />
           <Button
             onClick={handleGenerate}
             disabled={isProcessing || !prompt.trim()}
+            size={isLargeDesktop ? 'default' : 'sm'}
           >
             Generate
           </Button>
         </div>
 
-        <FileUpload onUpload={onImport} />
+        {/* Primary Actions - Always Visible */}
+        <div className="flex items-center gap-2">
+          <FileUpload onUpload={onImport} />
 
-        <Button
-          variant="secondary"
-          onClick={onExport}
-        >
-          Export
-        </Button>
+          {isLargeDesktop ? (
+            <>
+              <Button variant="secondary" onClick={onExport}>
+                Export
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={handleDownloadShortcut}
+                disabled={!currentShortcut}
+                title="Download as .shortcut file"
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Download
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => setShareDialogOpen(true)}
+                disabled={!currentShortcut}
+                title="Share shortcut with others"
+              >
+                <Share2 className="mr-2 h-4 w-4" />
+                Share
+              </Button>
+            </>
+          ) : (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="secondary" size="sm">
+                  More
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={onExport}>
+                  Export
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleDownloadShortcut} disabled={!currentShortcut}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Download
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setShareDialogOpen(true)} disabled={!currentShortcut}>
+                  <Share2 className="mr-2 h-4 w-4" />
+                  Share
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
 
-        <Button
-          variant="secondary"
-          onClick={handleDownloadShortcut}
-          disabled={!currentShortcut}
-          title="Download as .shortcut file"
-        >
-          <Download className="mr-2 h-4 w-4" />
-          Download
-        </Button>
+          <Button
+            variant="secondary"
+            onClick={onToggleAnalysis}
+            size={isLargeDesktop ? 'default' : 'sm'}
+          >
+            <BarChart2 className={isLargeDesktop ? "mr-2 h-4 w-4" : "h-4 w-4"} />
+            {isLargeDesktop && (showAnalysis ? 'Hide' : 'Show')}{isLargeDesktop && ' '}Analysis
+          </Button>
 
-        <Button
-          variant="secondary"
-          onClick={() => setShareDialogOpen(true)}
-          disabled={!currentShortcut}
-          title="Share shortcut with others"
-        >
-          <Share2 className="mr-2 h-4 w-4" />
-          Share
-        </Button>
-
-        <Button
-          variant="secondary"
-          onClick={onToggleAnalysis}
-        >
-          <BarChart2 className="mr-2 h-4 w-4" />
-          {showAnalysis ? 'Hide' : 'Show'} Analysis
-        </Button>
-
-        <Button
-          onClick={onProcess}
-          disabled={isProcessing}
-        >
-          {isProcessing ? 'Processing...' : 'Process with AI'}
-        </Button>
+          <Button
+            onClick={onProcess}
+            disabled={isProcessing}
+            size={isLargeDesktop ? 'default' : 'sm'}
+          >
+            {isProcessing ? 'Processing...' : isLargeDesktop ? 'Process with AI' : 'Process'}
+          </Button>
+        </div>
       </div>
 
       <ShareDialog

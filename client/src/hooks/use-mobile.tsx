@@ -7,6 +7,7 @@ export interface BreakpointReturn {
   isMobile: boolean
   isTablet: boolean
   isDesktop: boolean
+  isLargeDesktop: boolean
   isTouch: boolean
   isSmallScreen: boolean
 }
@@ -50,7 +51,8 @@ export function useBreakpoint(): BreakpointReturn {
 
   const isMobile = breakpoint === 'xs' || breakpoint === 'sm'
   const isTablet = breakpoint === 'md'
-  const isDesktop = breakpoint === 'lg' || breakpoint === 'xl' || breakpoint === '2xl'
+  const isDesktop = breakpoint === 'lg' || breakpoint === 'xl'
+  const isLargeDesktop = breakpoint === '2xl'
   const isSmallScreen = !isDesktop
 
   return {
@@ -58,6 +60,7 @@ export function useBreakpoint(): BreakpointReturn {
     isMobile,
     isTablet,
     isDesktop,
+    isLargeDesktop,
     isTouch,
     isSmallScreen
   }

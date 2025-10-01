@@ -30,7 +30,7 @@ export function Editor() {
   const [activeTab, setActiveTab] = useState('editor');
   const [mobileActiveTab, setMobileActiveTab] = useState('editor');
   const { toast } = useToast();
-  const { isMobile, isTablet } = useBreakpoint();
+  const { isMobile, isTablet, isDesktop, isLargeDesktop } = useBreakpoint();
 
   const handleImport = (content: string) => {
     try {
@@ -314,7 +314,7 @@ export function Editor() {
     );
   }
 
-  // Desktop Layout: Original resizable panels
+  // Desktop Layout: Responsive resizable panels
   return (
     <div className="h-screen flex flex-col">
       <Toolbar
@@ -333,7 +333,7 @@ export function Editor() {
       />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-        <TabsList className="grid w-full grid-cols-2 h-12 mx-4 mt-4">
+        <TabsList className={`grid w-full grid-cols-2 ${isLargeDesktop ? 'h-12 mx-6 mt-6' : 'h-12 mx-4 mt-4'}`}>
           <TabsTrigger value="editor" className="text-sm">Editor</TabsTrigger>
           <TabsTrigger value="gallery" className="text-sm">Gallery</TabsTrigger>
         </TabsList>
@@ -358,7 +358,7 @@ export function Editor() {
                       }}
                     />
                   </div>
-                  <div className="p-4">
+                  <div className={isLargeDesktop ? "p-6" : "p-4"}>
                     <ReasoningControls
                       model={model}
                       options={reasoningOptions}
@@ -367,23 +367,23 @@ export function Editor() {
                   </div>
                 </div>
               </ResizablePanel>
-            <ResizableHandle />
-            <ResizablePanel defaultSize={showAnalysis ? 33 : 50}>
-              <PreviewPane shortcut={shortcut} />
-            </ResizablePanel>
-            {showAnalysis && (
-              <>
-                <ResizableHandle />
-                <ResizablePanel defaultSize={33}>
-                  <AnalysisPane analysis={analyzeShortcut(shortcut)} />
-                </ResizablePanel>
-              </>
-            )}
+              <ResizableHandle />
+              <ResizablePanel defaultSize={showAnalysis ? 33 : 50}>
+                <PreviewPane shortcut={shortcut} />
+              </ResizablePanel>
+              {showAnalysis && (
+                <>
+                  <ResizableHandle />
+                  <ResizablePanel defaultSize={33}>
+                    <AnalysisPane analysis={analyzeShortcut(shortcut)} />
+                  </ResizablePanel>
+                </>
+              )}
             </ResizablePanelGroup>
           </div>
         </TabsContent>
 
-        <TabsContent value="gallery" className="flex-1 mt-4 px-4 pb-4 overflow-auto">
+        <TabsContent value="gallery" className={`flex-1 overflow-auto ${isLargeDesktop ? 'mt-6 px-6 pb-6' : 'mt-4 px-4 pb-4'}`}>
           <ShortcutsGallery onImportShortcut={handleImportFromGallery} />
         </TabsContent>
       </Tabs>
