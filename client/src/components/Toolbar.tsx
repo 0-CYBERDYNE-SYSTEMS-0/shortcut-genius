@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { ModelSelector } from './ModelSelector';
 import { FileUpload } from './FileUpload';
 import { ShareDialog } from './ShareDialog';
+import { ThemeToggle } from './theme-toggle';
 import { AIModel, ReasoningOptions } from '@/lib/types';
 import { Shortcut } from '@/lib/shortcuts';
 import { BarChart2, Share2, Download, Mic, MoreVertical } from 'lucide-react';
@@ -141,6 +142,7 @@ export function Toolbar({
               </Button>
             </div>
             <div className="flex items-center gap-1">
+              <ThemeToggle />
               <Button
                 size="sm"
                 variant="outline"
@@ -257,6 +259,7 @@ export function Toolbar({
 
           <div className="flex items-center gap-2">
             <FileUpload onUpload={onImport} />
+            <ThemeToggle />
             <Button size="sm" variant="outline" onClick={onExport}>Export</Button>
             <Button
               size="sm"
@@ -315,6 +318,7 @@ export function Toolbar({
         {/* Primary Actions - Always Visible */}
         <div className="flex items-center gap-2">
           <FileUpload onUpload={onImport} />
+          <ThemeToggle />
 
           {isLargeDesktop ? (
             <>
