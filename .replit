@@ -6,9 +6,13 @@ hidden = [".config", ".git", "generated-icon.png", "node_modules", "dist"]
 channel = "stable-24_05"
 
 [deployment]
-deploymentTarget = "cloudrun"
+deploymentTarget = "autoscale"
 build = ["npm", "run", "build"]
 run = ["npm", "run", "start"]
+
+[[ports]]
+localPort = 4321
+externalPort = 3000
 
 [[ports]]
 localPort = 5000
@@ -39,6 +43,10 @@ author = "agent"
 task = "workflow.run"
 args = "Web IDE"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Start application"
+
 [[workflows.workflow]]
 name = "Web IDE"
 author = "agent"
@@ -48,6 +56,15 @@ agentRequireRestartOnSave = false
 
 [[workflows.workflow.tasks]]
 task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run dev"
+waitForPort = 5000
+
+[[workflows.workflow]]
+name = "Start application"
+author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"

@@ -1,6 +1,7 @@
 import OpenAI from 'openai';
 import Anthropic from '@anthropic-ai/sdk';
 import fs from 'fs/promises';
+import path from 'path';
 import { OpenRouterClient } from './openrouter-client';
 import { WebSearchTool } from './web-search-tool';
 import { AIActionEnhancer } from './ai-action-enhancer';
@@ -71,12 +72,12 @@ export class AIProcessor {
   private async loadComprehensiveActionDatabase(): Promise<void> {
     try {
       // Load final comprehensive database
-      const databasePath = '/Users/scrimwiggins/shortcut-genius-main/final-action-database.json';
+      const databasePath = path.join(process.cwd(), 'final-action-database.json');
       const data = await fs.readFile(databasePath, 'utf8');
       this.comprehensiveActionDatabase = JSON.parse(data);
 
       // Load optimized AI prompt
-      const promptPath = '/Users/scrimwiggins/shortcut-genius-main/ai-action-prompt.md';
+      const promptPath = path.join(process.cwd(), 'ai-action-prompt.md');
       const promptData = await fs.readFile(promptPath, 'utf8');
       this.aiPrompt = promptData;
 

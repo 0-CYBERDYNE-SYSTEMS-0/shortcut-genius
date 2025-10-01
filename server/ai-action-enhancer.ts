@@ -70,11 +70,11 @@ export class AIActionEnhancer {
   private webSearch: WebSearchTool;
   private actionDatabasePath: string;
 
-  constructor(actionDatabasePath: string = '/Users/scrimwiggins/shortcut-genius-main/action-database.json') {
+  constructor(actionDatabasePath?: string) {
     this.extractor = new ShortcutActionExtractor();
     this.glyphSystem = new GlyphMappingSystem();
     this.webSearch = new WebSearchTool();
-    this.actionDatabasePath = actionDatabasePath;
+    this.actionDatabasePath = actionDatabasePath || path.join(process.cwd(), 'action-database.json');
   }
 
   async initialize(): Promise<void> {
