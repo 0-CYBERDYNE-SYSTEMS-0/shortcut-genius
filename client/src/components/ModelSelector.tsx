@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { AIModel, OpenRouterModel } from "@/lib/types";
 import { MODEL_CONFIGS } from "@/lib/models";
 import { fetchOpenRouterModels } from "@/lib/openrouter-api";
@@ -19,20 +19,104 @@ interface ModelSelectorProps {
   onChange: (model: AIModel) => void;
 }
 
+// Memoized search input component to prevent re-renders
+const SearchInput = React.memo(({
+  searchQuery,
+  onSearchChange,
+  isOpen
+}: {
+  searchQuery: string;
+  onSearchChange: (value: string) => void;
+  isOpen: boolean;
+}) => {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Focus the input when the dropdown opens
+  useEffect(() => {
+    if (isOpen && inputRef.current) {
+      // Use a small timeout to ensure the dropdown is fully rendered
+      const timeoutId = setTimeout(() => {
+        if (inputRef.current) {
+          inputRef.current.focus();
+        }
+      }, 50);
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [isOpen]);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Escape') {
+      onSearchChange('');
+      e.preventDefault();
+    }
+    // Prevent the select from intercepting key events
+    e.stopPropagation();
+  }, [onSearchChange]);
+
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    onSearchChange(e.target.value);
+  }, [onSearchChange]);
+
+  return (
+    <div className="sticky top-0 z-10 p-3 bg-white border-b shadow-sm">
+      <div className="relative">
+        <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+        <Input
+          ref={inputRef}
+          placeholder="🔍 Quick search models (e.g., 'gpt-4', 'claude', 'llama')..."
+          value={searchQuery}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+          className="pl-10 pr-10 h-9 text-sm border-2 focus:border-blue-300 transition-colors"
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck="false"
+        />
+        {searchQuery && (
+          <button
+            onClick={() => onSearchChange("")}
+            className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground hover:text-foreground transition-colors"
+            onMouseDown={(e) => e.preventDefault()} // Prevent input blur
+          >
+            ×
+          </button>
+        )}
+      </div>
+      {searchQuery && (
+        <div className="mt-2 text-xs text-muted-foreground">
+          Press Enter to search • Press Esc to clear
+        </div>
+      )}
+    </div>
+  );
+});
+
+SearchInput.displayName = 'SearchInput';
+
 export function ModelSelector({ value, onChange }: ModelSelectorProps) {
   const [openRouterModels, setOpenRouterModels] = useState<Record<string, OpenRouterModel[]>>({});
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
 
+  // Memoized callbacks to prevent unnecessary re-renders
+  const handleSearchChange = useCallback((newSearchQuery: string) => {
+    setSearchQuery(newSearchQuery);
+  }, []);
+
+  const handleOpenChange = useCallback((newIsOpen: boolean) => {
+    setIsOpen(newIsOpen);
+  }, []);
+
   // Load OpenRouter models when component mounts or when selector opens
   useEffect(() => {
     if (isOpen && Object.keys(openRouterModels).length === 0) {
       loadOpenRouterModels();
     }
-  }, [isOpen]);
+  }, [isOpen, openRouterModels]);
 
-  const loadOpenRouterModels = async () => {
+  const loadOpenRouterModels = useCallback(async () => {
     if (loading) return;
 
     setLoading(true);
@@ -46,15 +130,17 @@ export function ModelSelector({ value, onChange }: ModelSelectorProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [loading]);
 
-  // Group static models by provider
-  const openaiModels = Object.values(MODEL_CONFIGS).filter(m => m.provider === 'openai');
-  const anthropicModels = Object.values(MODEL_CONFIGS).filter(m => m.provider === 'anthropic');
-  const staticOpenrouterModels = Object.values(MODEL_CONFIGS).filter(m => m.provider === 'openrouter');
+  // Group static models by provider (memoized)
+  const staticModels = useMemo(() => ({
+    openai: Object.values(MODEL_CONFIGS).filter(m => m.provider === 'openai'),
+    anthropic: Object.values(MODEL_CONFIGS).filter(m => m.provider === 'anthropic'),
+    openrouter: Object.values(MODEL_CONFIGS).filter(m => m.provider === 'openrouter')
+  }), []);
 
-  // Enhanced filter function with better matching
-  const filterModels = (models: any[], query: string) => {
+  // Enhanced filter function with better matching (memoized)
+  const filterModels = useCallback((models: any[], query: string) => {
     if (!query) return models;
     const lowerQuery = query.toLowerCase();
 
@@ -90,62 +176,37 @@ export function ModelSelector({ value, onChange }: ModelSelectorProps) {
 
       return 0;
     });
-  };
+  }, []);
 
-  const filteredOpenAI = filterModels(openaiModels, searchQuery);
-  const filteredAnthropic = filterModels(anthropicModels, searchQuery);
+  // Memoized filtered models
+  const filteredModels = useMemo(() => ({
+    openai: filterModels(staticModels.openai, searchQuery),
+    anthropic: filterModels(staticModels.anthropic, searchQuery),
+    openrouter: filterModels(staticModels.openrouter, searchQuery)
+  }), [staticModels, searchQuery, filterModels]);
 
   return (
     <Select
       value={value}
       onValueChange={onChange as (value: string) => void}
-      onOpenChange={setIsOpen}
+      onOpenChange={handleOpenChange}
     >
       <SelectTrigger className="w-[320px]">
         <SelectValue placeholder="Select AI Model" />
       </SelectTrigger>
       <SelectContent className="max-h-[600px] w-[380px]">
-        {/* Enhanced Search Bar */}
-        <div className="sticky top-0 z-10 p-3 bg-white border-b shadow-sm">
-          <div className="relative">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="🔍 Quick search models (e.g., 'gpt-4', 'claude', 'llama')..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Escape') {
-                  setSearchQuery('');
-                  e.preventDefault();
-                }
-              }}
-              className="pl-10 pr-10 h-9 text-sm border-2 focus:border-blue-300 transition-colors"
-              autoComplete="off"
-              autoCorrect="off"
-              spellCheck="false"
-              autoFocus={isOpen}
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery("")}
-                className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground hover:text-foreground transition-colors"
-              >
-                ×
-              </button>
-            )}
-          </div>
-          {searchQuery && (
-            <div className="mt-2 text-xs text-muted-foreground">
-              Press Enter to search • Press Esc to clear
-            </div>
-          )}
-        </div>
+        {/* Memoized Search Input */}
+        <SearchInput
+          searchQuery={searchQuery}
+          onSearchChange={handleSearchChange}
+          isOpen={isOpen}
+        />
 
         {/* OpenAI Direct Models */}
-        {filteredOpenAI.length > 0 && (
+        {filteredModels.openai.length > 0 && (
           <SelectGroup>
             <SelectLabel>OpenAI Direct</SelectLabel>
-            {filteredOpenAI.map(model => (
+            {filteredModels.openai.map(model => (
               <SelectItem key={model.id} value={model.id}>
                 <div className="flex items-center justify-between w-full">
                   <span>{model.name}</span>
@@ -161,10 +222,10 @@ export function ModelSelector({ value, onChange }: ModelSelectorProps) {
         )}
 
         {/* Anthropic Direct Models */}
-        {filteredAnthropic.length > 0 && (
+        {filteredModels.anthropic.length > 0 && (
           <SelectGroup>
             <SelectLabel>Anthropic Direct</SelectLabel>
-            {filteredAnthropic.map(model => (
+            {filteredModels.anthropic.map(model => (
               <SelectItem key={model.id} value={model.id}>
                 <div className="flex items-center justify-between w-full">
                   <span>{model.name}</span>
@@ -188,13 +249,13 @@ export function ModelSelector({ value, onChange }: ModelSelectorProps) {
         {!loading && Object.keys(openRouterModels).length > 0 && (
           <>
             {Object.entries(openRouterModels).map(([category, models]) => {
-              const filteredModels = filterModels(models, searchQuery);
-              if (filteredModels.length === 0) return null;
+              const categoryFilteredModels = filterModels(models, searchQuery);
+              if (categoryFilteredModels.length === 0) return null;
 
               return (
                 <SelectGroup key={category}>
                   <SelectLabel>OpenRouter - {category}</SelectLabel>
-                  {filteredModels.slice(0, searchQuery ? 50 : 15).map(model => (
+                  {categoryFilteredModels.slice(0, searchQuery ? 50 : 15).map(model => (
                     <SelectItem key={model.id} value={model.id}>
                       <div className="flex flex-col items-start w-full">
                         <div className="flex items-center justify-between w-full">
@@ -213,9 +274,9 @@ export function ModelSelector({ value, onChange }: ModelSelectorProps) {
                       </div>
                     </SelectItem>
                   ))}
-                  {filteredModels.length > (searchQuery ? 50 : 15) && (
+                  {categoryFilteredModels.length > (searchQuery ? 50 : 15) && (
                     <div className="px-2 py-1 text-xs text-muted-foreground">
-                      ... and {filteredModels.length - (searchQuery ? 50 : 15)} more (search to see more)
+                      ... and {categoryFilteredModels.length - (searchQuery ? 50 : 15)} more (search to see more)
                     </div>
                   )}
                 </SelectGroup>
@@ -225,10 +286,10 @@ export function ModelSelector({ value, onChange }: ModelSelectorProps) {
         )}
 
         {/* Fallback static OpenRouter models if dynamic loading failed */}
-        {!loading && Object.keys(openRouterModels).length === 0 && staticOpenrouterModels.length > 0 && (
+        {!loading && Object.keys(openRouterModels).length === 0 && filteredModels.openrouter.length > 0 && (
           <SelectGroup>
             <SelectLabel>OpenRouter (Fallback)</SelectLabel>
-            {filterModels(staticOpenrouterModels, searchQuery).map(model => (
+            {filteredModels.openrouter.map(model => (
               <SelectItem key={model.id} value={model.id}>
                 <div className="flex items-center justify-between w-full">
                   <span>{model.name}</span>
@@ -243,8 +304,8 @@ export function ModelSelector({ value, onChange }: ModelSelectorProps) {
 
         {/* No results message */}
         {searchQuery &&
-         filteredOpenAI.length === 0 &&
-         filteredAnthropic.length === 0 &&
+         filteredModels.openai.length === 0 &&
+         filteredModels.anthropic.length === 0 &&
          Object.values(openRouterModels).flat().filter(m => filterModels([m], searchQuery).length > 0).length === 0 && (
           <div className="p-4 text-center text-sm text-muted-foreground">
             No models found matching "{searchQuery}"
