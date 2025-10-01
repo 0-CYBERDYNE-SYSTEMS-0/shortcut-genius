@@ -3,6 +3,7 @@ import * as monaco from 'monaco-editor';
 import { registerShortcutLanguage } from '@/lib/monaco';
 import { Card } from '@/components/ui/card';
 import { useBreakpoint } from '@/hooks/use-mobile';
+import { useTheme } from '@/components/theme-provider';
 
 interface EditorPaneProps {
   value: string;
@@ -13,6 +14,7 @@ export function EditorPane({ value, onChange }: EditorPaneProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const editor = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const { isMobile, isTablet, isTouch } = useBreakpoint();
+  const { theme } = useTheme();
 
   useEffect(() => {
     if (editorRef.current) {
@@ -22,7 +24,7 @@ export function EditorPane({ value, onChange }: EditorPaneProps) {
       const editorOptions: monaco.editor.IStandaloneEditorConstructionOptions = {
         value,
         language: 'shortcut',
-        theme: 'shortcut-theme',
+        theme: theme === 'dark' ? 'shortcut-dark-theme' : 'shortcut-light-theme',
         minimap: { enabled: !isMobile },
         fontSize: isMobile ? 16 : (isTablet ? 15 : 14),
         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
@@ -76,7 +78,7 @@ export function EditorPane({ value, onChange }: EditorPaneProps) {
         editor.current?.dispose();
       };
     }
-  }, [isMobile, isTablet, isTouch]);
+  }, [isMobile, isTablet, isTouch, theme]);
 
   useEffect(() => {
     if (editor.current && value !== editor.current.getValue()) {
@@ -88,6 +90,14 @@ export function EditorPane({ value, onChange }: EditorPaneProps) {
       }
     }
   }, [value]);
+
+  // Update editor theme when global theme changes
+  useEffect(() => {
+    if (editor.current) {
+      const editorTheme = theme === 'dark' ? 'shortcut-dark-theme' : 'shortcut-light-theme';
+      editor.current.updateOptions({ theme: editorTheme });
+    }
+  }, [theme]);
 
   return (
     <Card className={`h-full overflow-hidden ${isMobile ? 'rounded-none border-x-0 border-t-0' : ''}`}>
