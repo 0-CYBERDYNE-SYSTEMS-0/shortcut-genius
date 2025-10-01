@@ -1,0 +1,1412 @@
+{
+  "actions": {
+    "is.workflow.actions.gettext": {
+      "identifier": "is.workflow.actions.gettext",
+      "name": "Text",
+      "description": "Displays text on the screen",
+      "category": "text",
+      "parameters": [
+        {
+          "key": "WFTextActionText",
+          "type": "string",
+          "description": "The text to display",
+          "required": true,
+          "defaultValue": "Hello World!"
+        }
+      ],
+      "inputTypes": [],
+      "outputTypes": [
+        "WFStringContentItem"
+      ],
+      "permissions": "none"
+    },
+    "is.workflow.actions.notification": {
+      "identifier": "is.workflow.actions.notification",
+      "name": "Show Notification",
+      "description": "Displays a notification",
+      "category": "notification",
+      "parameters": [
+        {
+          "key": "WFNotificationActionBody",
+          "type": "string",
+          "description": "Notification body text",
+          "required": true,
+          "defaultValue": "Notification"
+        },
+        {
+          "key": "WFNotificationActionTitle",
+          "type": "string",
+          "description": "Notification title",
+          "required": false,
+          "defaultValue": "Shortcut"
+        },
+        {
+          "key": "WFNotificationActionSound",
+          "type": "boolean",
+          "description": "Play sound",
+          "required": false,
+          "defaultValue": false
+        }
+      ],
+      "inputTypes": [],
+      "outputTypes": [],
+      "permissions": "notification"
+    },
+    "is.workflow.actions.url": {
+      "identifier": "is.workflow.actions.url",
+      "name": "Open URL",
+      "description": "Opens a URL in the default browser",
+      "category": "web",
+      "parameters": [
+        {
+          "key": "WFURLActionURL",
+          "type": "string",
+          "description": "The URL to open",
+          "required": true,
+          "defaultValue": "https://example.com"
+        }
+      ],
+      "inputTypes": [
+        "WFURLContentItem"
+      ],
+      "outputTypes": [],
+      "permissions": "none"
+    },
+    "is.workflow.actions.wait": {
+      "identifier": "is.workflow.actions.wait",
+      "name": "Wait",
+      "description": "Waits for a specified duration",
+      "category": "scripting",
+      "parameters": [
+        {
+          "key": "WFWaitActionWaitTime",
+          "type": "number",
+          "description": "Time to wait in seconds",
+          "required": true,
+          "defaultValue": 1
+        }
+      ],
+      "inputTypes": [],
+      "outputTypes": [],
+      "permissions": "none"
+    },
+    "is.workflow.actions.speak": {
+      "identifier": "is.workflow.actions.speak",
+      "name": "Speak Text",
+      "description": "Speaks text using text-to-speech",
+      "category": "media",
+      "parameters": [
+        {
+          "key": "WFSpeakTextActionText",
+          "type": "string",
+          "description": "Text to speak",
+          "required": true,
+          "defaultValue": "Hello World!"
+        },
+        {
+          "key": "WFSpeakTextActionLanguage",
+          "type": "string",
+          "description": "Language code",
+          "required": false,
+          "defaultValue": "en-US"
+        },
+        {
+          "key": "WFSpeakTextActionPitch",
+          "type": "number",
+          "description": "Voice pitch (0.5-2.0)",
+          "required": false,
+          "defaultValue": 1
+        },
+        {
+          "key": "WFSpeakTextActionRate",
+          "type": "number",
+          "description": "Speech rate (0.5-2.0)",
+          "required": false,
+          "defaultValue": 1
+        }
+      ],
+      "inputTypes": [
+        "WFStringContentItem"
+      ],
+      "outputTypes": [],
+      "permissions": "media"
+    },
+    "is.workflow.actions.copy": {
+      "identifier": "is.workflow.actions.copy",
+      "name": "Copy to Clipboard",
+      "description": "Copies content to the clipboard",
+      "category": "clipboard",
+      "parameters": [
+        {
+          "key": "WFCopyActionCopyText",
+          "type": "any",
+          "description": "Content to copy",
+          "required": true
+        }
+      ],
+      "inputTypes": [
+        "WFStringContentItem",
+        "WFURLContentItem",
+        "WFImageContentItem"
+      ],
+      "outputTypes": [],
+      "permissions": "none"
+    },
+    "is.workflow.actions.setvariable": {
+      "identifier": "is.workflow.actions.setvariable",
+      "name": "Set Variable",
+      "description": "Sets a variable to a value",
+      "category": "scripting",
+      "parameters": [
+        {
+          "key": "WFVariableName",
+          "type": "string",
+          "description": "Variable name",
+          "required": true,
+          "defaultValue": "Variable"
+        },
+        {
+          "key": "WFVariableInput",
+          "type": "any",
+          "description": "Variable value",
+          "required": true
+        }
+      ],
+      "inputTypes": [
+        "any"
+      ],
+      "outputTypes": [
+        "any"
+      ],
+      "permissions": "none"
+    },
+    "is.workflow.actions.getvariable": {
+      "identifier": "is.workflow.actions.getvariable",
+      "name": "Get Variable",
+      "description": "Gets the value of a variable",
+      "category": "scripting",
+      "parameters": [
+        {
+          "key": "WFVariableName",
+          "type": "string",
+          "description": "Variable name",
+          "required": true,
+          "defaultValue": "Variable"
+        }
+      ],
+      "inputTypes": [],
+      "outputTypes": [
+        "any"
+      ],
+      "permissions": "none"
+    },
+    "is.workflow.actions.conditional": {
+      "identifier": "is.workflow.actions.conditional",
+      "name": "If",
+      "description": "Performs actions conditionally",
+      "category": "scripting",
+      "parameters": [
+        {
+          "key": "WFConditionalActionCondition",
+          "type": "object",
+          "description": "Condition to evaluate",
+          "required": true
+        }
+      ],
+      "inputTypes": [
+        "any"
+      ],
+      "outputTypes": [
+        "any"
+      ],
+      "permissions": "none"
+    },
+    "is.workflow.actions.repeat": {
+      "identifier": "is.workflow.actions.repeat",
+      "name": "Repeat",
+      "description": "Repeats actions multiple times",
+      "category": "scripting",
+      "parameters": [
+        {
+          "key": "WFRepeatActionCount",
+          "type": "number",
+          "description": "Number of times to repeat",
+          "required": true,
+          "defaultValue": 1
+        }
+      ],
+      "inputTypes": [
+        "any"
+      ],
+      "outputTypes": [
+        "any"
+      ],
+      "permissions": "none"
+    },
+    "is.workflow.actions.ask": {
+      "identifier": "is.workflow.actions.ask",
+      "name": "Ask for Input",
+      "description": "Asks the user for input",
+      "category": "scripting",
+      "parameters": [
+        {
+          "key": "WFAskActionPrompt",
+          "type": "string",
+          "description": "Prompt text",
+          "required": true,
+          "defaultValue": "Enter input:"
+        },
+        {
+          "key": "WFAskActionDefaultAnswer",
+          "type": "string",
+          "description": "Default answer",
+          "required": false,
+          "defaultValue": ""
+        }
+      ],
+      "inputTypes": [],
+      "outputTypes": [
+        "WFStringContentItem"
+      ],
+      "permissions": "none"
+    },
+    "is.workflow.actions.showresult": {
+      "identifier": "is.workflow.actions.showresult",
+      "name": "Show Result",
+      "description": "Shows the result of previous actions",
+      "category": "scripting",
+      "parameters": [],
+      "inputTypes": [
+        "any"
+      ],
+      "outputTypes": [],
+      "permissions": "none"
+    },
+    "is.workflow.actions.comment": {
+      "identifier": "is.workflow.actions.comment",
+      "name": "Comment",
+      "description": "Adds a comment to the shortcut",
+      "category": "scripting",
+      "parameters": [
+        {
+          "key": "WFCommentActionText",
+          "type": "string",
+          "description": "Comment text",
+          "required": true,
+          "defaultValue": "Comment"
+        }
+      ],
+      "inputTypes": [],
+      "outputTypes": [],
+      "permissions": "none"
+    },
+    "is.workflow.actions.exit": {
+      "identifier": "is.workflow.actions.exit",
+      "name": "Exit Shortcut",
+      "description": "Exits the shortcut immediately",
+      "category": "scripting",
+      "parameters": [],
+      "inputTypes": [],
+      "outputTypes": [],
+      "permissions": "none"
+    },
+    "is.workflow.actions.showalert": {
+      "identifier": "is.workflow.actions.showalert",
+      "name": "Show Alert",
+      "description": "Shows an alert dialog with options",
+      "category": "scripting",
+      "parameters": [
+        {
+          "key": "WFAlertActionTitle",
+          "type": "string",
+          "description": "Alert title",
+          "required": true,
+          "defaultValue": "Alert"
+        },
+        {
+          "key": "WFAlertActionMessage",
+          "type": "string",
+          "description": "Alert message",
+          "required": true,
+          "defaultValue": "Message"
+        }
+      ],
+      "inputTypes": [],
+      "outputTypes": [],
+      "permissions": "none"
+    },
+    "is.workflow.actions.getcurrentlocation": {
+      "identifier": "is.workflow.actions.getcurrentlocation",
+      "name": "Get Current Location",
+      "description": "Gets the device's current location",
+      "category": "location",
+      "parameters": [],
+      "inputTypes": [],
+      "outputTypes": [
+        "WFLocationContentItem"
+      ],
+      "permissions": "location"
+    },
+    "is.workflow.actions.getcurrentweather": {
+      "identifier": "is.workflow.actions.getcurrentweather",
+      "name": "Get Current Weather",
+      "description": "Gets current weather conditions",
+      "category": "location",
+      "parameters": [],
+      "inputTypes": [],
+      "outputTypes": [
+        "WFWeatherContentItem"
+      ],
+      "permissions": "location"
+    },
+    "is.workflow.actions.openapp": {
+      "identifier": "is.workflow.actions.openapp",
+      "name": "Open App",
+      "description": "Opens a specific app",
+      "category": "apps",
+      "parameters": [
+        {
+          "key": "WFOpenAppActionAppIdentifier",
+          "type": "string",
+          "description": "App bundle identifier",
+          "required": true
+        }
+      ],
+      "inputTypes": [],
+      "outputTypes": [],
+      "permissions": "none"
+    },
+    "is.workflow.actions.createnote": {
+      "identifier": "is.workflow.actions.createnote",
+      "name": "Create Note",
+      "description": "Creates a note in the Notes app",
+      "category": "apps",
+      "parameters": [
+        {
+          "key": "WFNoteActionNote",
+          "type": "string",
+          "description": "Note content",
+          "required": true
+        },
+        {
+          "key": "WFNoteActionTitle",
+          "type": "string",
+          "description": "Note title",
+          "required": false
+        }
+      ],
+      "inputTypes": [
+        "WFStringContentItem"
+      ],
+      "outputTypes": [],
+      "permissions": "none"
+    },
+    "is.workflow.actions.sendmessage": {
+      "identifier": "is.workflow.actions.sendmessage",
+      "name": "Send Message",
+      "description": "Sends a message via Messages",
+      "category": "apps",
+      "parameters": [
+        {
+          "key": "WFSendMessageActionRecipients",
+          "type": "array",
+          "description": "Recipients",
+          "required": true
+        },
+        {
+          "key": "WFSendMessageActionMessage",
+          "type": "string",
+          "description": "Message text",
+          "required": true
+        }
+      ],
+      "inputTypes": [
+        "WFStringContentItem"
+      ],
+      "outputTypes": [],
+      "permissions": "contacts"
+    },
+    "is.workflow.actions.makephonecall": {
+      "identifier": "is.workflow.actions.makephonecall",
+      "name": "Make Phone Call",
+      "description": "Makes a phone call",
+      "category": "apps",
+      "parameters": [
+        {
+          "key": "WFMakePhoneCallActionPhoneNumber",
+          "type": "string",
+          "description": "Phone number",
+          "required": true
+        }
+      ],
+      "inputTypes": [],
+      "outputTypes": [],
+      "permissions": "contacts"
+    },
+    "is.workflow.actions.takephoto": {
+      "identifier": "is.workflow.actions.takephoto",
+      "name": "Take Photo",
+      "description": "Takes a photo with the camera",
+      "category": "camera",
+      "parameters": [],
+      "inputTypes": [],
+      "outputTypes": [
+        "WFImageContentItem"
+      ],
+      "permissions": "camera"
+    },
+    "is.workflow.actions.setbrightness": {
+      "identifier": "is.workflow.actions.setbrightness",
+      "name": "Set Brightness",
+      "description": "Sets the screen brightness",
+      "category": "device",
+      "parameters": [
+        {
+          "key": "WFSetBrightnessActionValue",
+          "type": "number",
+          "description": "Brightness level (0-100)",
+          "required": true,
+          "defaultValue": 50
+        }
+      ],
+      "inputTypes": [],
+      "outputTypes": [],
+      "permissions": "device"
+    },
+    "is.workflow.actions.getclipboard": {
+      "identifier": "is.workflow.actions.getclipboard",
+      "name": "Get Clipboard",
+      "description": "Gets content from the clipboard",
+      "category": "clipboard",
+      "parameters": [],
+      "inputTypes": [],
+      "outputTypes": [
+        "any"
+      ],
+      "permissions": "none"
+    },
+    "is.workflow.actions.calculate": {
+      "identifier": "is.workflow.actions.calculate",
+      "name": "Calculate",
+      "description": "Performs mathematical calculations",
+      "category": "data",
+      "parameters": [
+        {
+          "key": "WFCalculateActionOperand1",
+          "type": "number",
+          "description": "First operand",
+          "required": true
+        },
+        {
+          "key": "WFCalculateActionOperand2",
+          "type": "number",
+          "description": "Second operand",
+          "required": true
+        },
+        {
+          "key": "WFCalculateActionOperation",
+          "type": "string",
+          "description": "Operation (+, -, *, /)",
+          "required": true,
+          "defaultValue": "+"
+        }
+      ],
+      "inputTypes": [
+        "number"
+      ],
+      "outputTypes": [
+        "WFNumberContentItem"
+      ],
+      "permissions": "none"
+    },
+    "is.workflow.actions.date": {
+      "identifier": "is.workflow.actions.date",
+      "name": "Date",
+      "description": "Gets the current date or creates a date",
+      "category": "data",
+      "parameters": [
+        {
+          "key": "WFDateActionDate",
+          "type": "string",
+          "description": "Date string",
+          "required": false,
+          "defaultValue": "now"
+        }
+      ],
+      "inputTypes": [],
+      "outputTypes": [
+        "WFDateContentItem"
+      ],
+      "permissions": "none"
+    },
+    "is.workflow.actions.time": {
+      "identifier": "is.workflow.actions.time",
+      "name": "Time",
+      "description": "Gets the current time or creates a time",
+      "category": "data",
+      "parameters": [
+        {
+          "key": "WFTimeActionTime",
+          "type": "string",
+          "description": "Time string",
+          "required": false,
+          "defaultValue": "now"
+        }
+      ],
+      "inputTypes": [],
+      "outputTypes": [
+        "WFDateContentItem"
+      ],
+      "permissions": "none"
+    }
+  },
+  "glyphs": {
+    "glyphs": {
+      "59511": {
+        "number": 59511,
+        "name": "Text Bubble",
+        "category": "text",
+        "description": "Speech bubble with text lines",
+        "colorCompatibility": true,
+        "commonActions": [
+          "text",
+          "notification"
+        ]
+      },
+      "59512": {
+        "number": 59512,
+        "name": "Chat",
+        "category": "communication",
+        "description": "Conversation bubbles",
+        "colorCompatibility": true,
+        "commonActions": [
+          "sendmessage"
+        ]
+      },
+      "59513": {
+        "number": 59513,
+        "name": "Mail",
+        "category": "communication",
+        "description": "Envelope icon",
+        "colorCompatibility": true,
+        "commonActions": [
+          "sendemail"
+        ]
+      },
+      "59514": {
+        "number": 59514,
+        "name": "Phone",
+        "category": "communication",
+        "description": "Telephone handset",
+        "colorCompatibility": true,
+        "commonActions": [
+          "makephonecall"
+        ]
+      },
+      "59515": {
+        "number": 59515,
+        "name": "Play",
+        "category": "media",
+        "description": "Play button triangle",
+        "colorCompatibility": true,
+        "commonActions": [
+          "playmusic"
+        ]
+      },
+      "59516": {
+        "number": 59516,
+        "name": "Pause",
+        "category": "media",
+        "description": "Pause bars",
+        "colorCompatibility": true,
+        "commonActions": [
+          "playmusic"
+        ]
+      },
+      "59517": {
+        "number": 59517,
+        "name": "Stop",
+        "category": "media",
+        "description": "Square stop button",
+        "colorCompatibility": true,
+        "commonActions": [
+          "stop"
+        ]
+      },
+      "59518": {
+        "number": 59518,
+        "name": "Record",
+        "category": "media",
+        "description": "Record button circle",
+        "colorCompatibility": true,
+        "commonActions": [
+          "recordaudio"
+        ]
+      },
+      "59519": {
+        "number": 59519,
+        "name": "Location",
+        "category": "location",
+        "description": "Map pin",
+        "colorCompatibility": true,
+        "commonActions": [
+          "getcurrentlocation"
+        ]
+      },
+      "59520": {
+        "number": 59520,
+        "name": "Map",
+        "category": "location",
+        "description": "Map icon",
+        "colorCompatibility": true,
+        "commonActions": [
+          "showmap"
+        ]
+      },
+      "59521": {
+        "number": 59521,
+        "name": "Direction",
+        "category": "location",
+        "description": "Direction arrow",
+        "colorCompatibility": true,
+        "commonActions": [
+          "getdirections"
+        ]
+      },
+      "59522": {
+        "number": 59522,
+        "name": "Globe",
+        "category": "web",
+        "description": "World globe",
+        "colorCompatibility": true,
+        "commonActions": [
+          "url",
+          "getcontentsofurl"
+        ]
+      },
+      "59523": {
+        "number": 59523,
+        "name": "Search",
+        "category": "web",
+        "description": "Magnifying glass",
+        "colorCompatibility": true,
+        "commonActions": [
+          "searchweb"
+        ]
+      },
+      "59524": {
+        "number": 59524,
+        "name": "Download",
+        "category": "web",
+        "description": "Download arrow",
+        "colorCompatibility": true,
+        "commonActions": [
+          "getcontentsofurl"
+        ]
+      },
+      "59525": {
+        "number": 59525,
+        "name": "Settings",
+        "category": "device",
+        "description": "Gear icon",
+        "colorCompatibility": true,
+        "commonActions": [
+          "setbrightness",
+          "setwifi"
+        ]
+      },
+      "59526": {
+        "number": 59526,
+        "name": "Battery",
+        "category": "device",
+        "description": "Battery indicator",
+        "colorCompatibility": true,
+        "commonActions": [
+          "getbatterylevel"
+        ]
+      },
+      "59527": {
+        "number": 59527,
+        "name": "Wi-Fi",
+        "category": "device",
+        "description": "Wi-Fi signal waves",
+        "colorCompatibility": true,
+        "commonActions": [
+          "getwifi",
+          "setwifi"
+        ]
+      },
+      "59528": {
+        "number": 59528,
+        "name": "Bluetooth",
+        "category": "device",
+        "description": "Bluetooth symbol",
+        "colorCompatibility": true,
+        "commonActions": [
+          "setbluetooth"
+        ]
+      },
+      "59529": {
+        "number": 59529,
+        "name": "Camera",
+        "category": "camera",
+        "description": "Camera icon",
+        "colorCompatibility": true,
+        "commonActions": [
+          "takephoto"
+        ]
+      },
+      "59530": {
+        "number": 59530,
+        "name": "Photo",
+        "category": "camera",
+        "description": "Photo/mountain icon",
+        "colorCompatibility": true,
+        "commonActions": [
+          "selectphoto"
+        ]
+      },
+      "59531": {
+        "number": 59531,
+        "name": "Music Note",
+        "category": "media",
+        "description": "Musical note",
+        "colorCompatibility": true,
+        "commonActions": [
+          "playmusic"
+        ]
+      },
+      "59532": {
+        "number": 59532,
+        "name": "Video",
+        "category": "media",
+        "description": "Video camera",
+        "colorCompatibility": true,
+        "commonActions": [
+          "recordvideo"
+        ]
+      },
+      "59533": {
+        "number": 59533,
+        "name": "Calendar",
+        "category": "data",
+        "description": "Calendar page",
+        "colorCompatibility": true,
+        "commonActions": [
+          "date",
+          "createcalendarevent"
+        ]
+      },
+      "59534": {
+        "number": 59534,
+        "name": "Clock",
+        "category": "data",
+        "description": "Clock face",
+        "colorCompatibility": true,
+        "commonActions": [
+          "time",
+          "wait"
+        ]
+      },
+      "59535": {
+        "number": 59535,
+        "name": "Calculator",
+        "category": "data",
+        "description": "Calculator icon",
+        "colorCompatibility": true,
+        "commonActions": [
+          "calculate"
+        ]
+      },
+      "59536": {
+        "number": 59536,
+        "name": "Weather",
+        "category": "data",
+        "description": "Cloud/sun icon",
+        "colorCompatibility": true,
+        "commonActions": [
+          "getcurrentweather"
+        ]
+      },
+      "59537": {
+        "number": 59537,
+        "name": "Code",
+        "category": "scripting",
+        "description": "Code brackets",
+        "colorCompatibility": true,
+        "commonActions": [
+          "runscript",
+          "runjavascript"
+        ]
+      },
+      "59538": {
+        "number": 59538,
+        "name": "Logic",
+        "category": "scripting",
+        "description": "Logic gate symbol",
+        "colorCompatibility": true,
+        "commonActions": [
+          "if",
+          "conditional"
+        ]
+      },
+      "59539": {
+        "number": 59539,
+        "name": "Loop",
+        "category": "scripting",
+        "description": "Circular arrows",
+        "colorCompatibility": true,
+        "commonActions": [
+          "repeat",
+          "loop"
+        ]
+      },
+      "59540": {
+        "number": 59540,
+        "name": "Variable",
+        "category": "scripting",
+        "description": "Variable/x symbol",
+        "colorCompatibility": true,
+        "commonActions": [
+          "setvariable",
+          "getvariable"
+        ]
+      },
+      "59541": {
+        "number": 59541,
+        "name": "Document",
+        "category": "files",
+        "description": "Document page",
+        "colorCompatibility": true,
+        "commonActions": [
+          "createnote",
+          "getfile"
+        ]
+      },
+      "59542": {
+        "number": 59542,
+        "name": "Folder",
+        "category": "files",
+        "description": "Folder icon",
+        "colorCompatibility": true,
+        "commonActions": [
+          "getfile",
+          "savefile"
+        ]
+      },
+      "59543": {
+        "number": 59543,
+        "name": "PDF",
+        "category": "files",
+        "description": "PDF document icon",
+        "colorCompatibility": true,
+        "commonActions": [
+          "createpdf"
+        ]
+      },
+      "59544": {
+        "number": 59544,
+        "name": "Archive",
+        "category": "files",
+        "description": "Zip/archive icon",
+        "colorCompatibility": true,
+        "commonActions": [
+          "archive"
+        ]
+      },
+      "59545": {
+        "number": 59545,
+        "name": "Alert",
+        "category": "ui",
+        "description": "Warning triangle",
+        "colorCompatibility": true,
+        "commonActions": [
+          "showalert",
+          "notification"
+        ]
+      },
+      "59546": {
+        "number": 59546,
+        "name": "Question",
+        "category": "ui",
+        "description": "Question mark in circle",
+        "colorCompatibility": true,
+        "commonActions": [
+          "askforinput"
+        ]
+      },
+      "59547": {
+        "number": 59547,
+        "name": "Checkmark",
+        "category": "ui",
+        "description": "Green checkmark",
+        "colorCompatibility": true,
+        "commonActions": [
+          "showresult"
+        ]
+      },
+      "59548": {
+        "number": 59548,
+        "name": "Heart",
+        "category": "ui",
+        "description": "Heart icon",
+        "colorCompatibility": true,
+        "commonActions": [
+          "favorite"
+        ]
+      },
+      "59549": {
+        "number": 59549,
+        "name": "Clipboard",
+        "category": "utilities",
+        "description": "Clipboard with document",
+        "colorCompatibility": true,
+        "commonActions": [
+          "copy",
+          "getclipboard"
+        ]
+      },
+      "59550": {
+        "number": 59550,
+        "name": "Speaker",
+        "category": "utilities",
+        "description": "Speaker icon",
+        "colorCompatibility": true,
+        "commonActions": [
+          "speak",
+          "setvolume"
+        ]
+      },
+      "59551": {
+        "number": 59551,
+        "name": "Microphone",
+        "category": "utilities",
+        "description": "Microphone icon",
+        "colorCompatibility": true,
+        "commonActions": [
+          "recordaudio",
+          "speak"
+        ]
+      },
+      "59552": {
+        "number": 59552,
+        "name": "Volume",
+        "category": "utilities",
+        "description": "Volume control",
+        "colorCompatibility": true,
+        "commonActions": [
+          "setvolume"
+        ]
+      },
+      "59553": {
+        "number": 59553,
+        "name": "App Store",
+        "category": "apps",
+        "description": "App Store \"A\" icon",
+        "colorCompatibility": true,
+        "commonActions": [
+          "openapp"
+        ]
+      },
+      "59554": {
+        "number": 59554,
+        "name": "Safari",
+        "category": "apps",
+        "description": "Safari compass icon",
+        "colorCompatibility": true,
+        "commonActions": [
+          "openurl"
+        ]
+      },
+      "59555": {
+        "number": 59555,
+        "name": "Messages",
+        "category": "apps",
+        "description": "Messages speech bubble",
+        "colorCompatibility": true,
+        "commonActions": [
+          "sendmessage"
+        ]
+      },
+      "59556": {
+        "number": 59556,
+        "name": "Phone App",
+        "category": "apps",
+        "description": "Phone app icon",
+        "colorCompatibility": true,
+        "commonActions": [
+          "makephonecall"
+        ]
+      },
+      "59557": {
+        "number": 59557,
+        "name": "Home",
+        "category": "system",
+        "description": "Home icon",
+        "colorCompatibility": true,
+        "commonActions": [
+          "home"
+        ]
+      },
+      "59558": {
+        "number": 59558,
+        "name": "Lock",
+        "category": "system",
+        "description": "Lock icon",
+        "colorCompatibility": true,
+        "commonActions": [
+          "lockscreen"
+        ]
+      },
+      "59559": {
+        "number": 59559,
+        "name": "Power",
+        "category": "system",
+        "description": "Power button",
+        "colorCompatibility": true,
+        "commonActions": [
+          "shutdown",
+          "restart"
+        ]
+      },
+      "59560": {
+        "number": 59560,
+        "name": "Settings Advanced",
+        "category": "system",
+        "description": "Advanced settings",
+        "colorCompatibility": true,
+        "commonActions": [
+          "setdnd"
+        ]
+      },
+      "59561": {
+        "number": 59561,
+        "name": "Star",
+        "category": "ui",
+        "description": "Star icon",
+        "colorCompatibility": true,
+        "commonActions": [
+          "favorite"
+        ]
+      },
+      "59562": {
+        "number": 59562,
+        "name": "Flag",
+        "category": "ui",
+        "description": "Flag icon",
+        "colorCompatibility": true,
+        "commonActions": [
+          "mark"
+        ]
+      },
+      "59563": {
+        "number": 59563,
+        "name": "Tag",
+        "category": "ui",
+        "description": "Price tag",
+        "colorCompatibility": true,
+        "commonActions": [
+          "tag"
+        ]
+      },
+      "59564": {
+        "number": 59564,
+        "name": "Bookmark",
+        "category": "ui",
+        "description": "Bookmark icon",
+        "colorCompatibility": true,
+        "commonActions": [
+          "bookmark"
+        ]
+      },
+      "59565": {
+        "number": 59565,
+        "name": "Chart",
+        "category": "data",
+        "description": "Bar chart",
+        "colorCompatibility": true,
+        "commonActions": [
+          "showchart"
+        ]
+      },
+      "59566": {
+        "number": 59566,
+        "name": "Graph",
+        "category": "data",
+        "description": "Line graph",
+        "colorCompatibility": true,
+        "commonActions": [
+          "showgraph"
+        ]
+      },
+      "59567": {
+        "number": 59567,
+        "name": "Statistics",
+        "category": "data",
+        "description": "Statistics icon",
+        "colorCompatibility": true,
+        "commonActions": [
+          "getstats"
+        ]
+      },
+      "59568": {
+        "number": 59568,
+        "name": "Shield",
+        "category": "security",
+        "description": "Security shield",
+        "colorCompatibility": true,
+        "commonActions": [
+          "security"
+        ]
+      },
+      "59569": {
+        "number": 59569,
+        "name": "Key",
+        "category": "security",
+        "description": "Key icon",
+        "colorCompatibility": true,
+        "commonActions": [
+          "authentication"
+        ]
+      },
+      "59570": {
+        "number": 59570,
+        "name": "Fingerprint",
+        "category": "security",
+        "description": "Fingerprint",
+        "colorCompatibility": true,
+        "commonActions": [
+          "authentication"
+        ]
+      },
+      "59571": {
+        "number": 59571,
+        "name": "Share",
+        "category": "social",
+        "description": "Share arrow",
+        "colorCompatibility": true,
+        "commonActions": [
+          "share"
+        ]
+      },
+      "59572": {
+        "number": 59572,
+        "name": "Like",
+        "category": "social",
+        "description": "Thumbs up",
+        "colorCompatibility": true,
+        "commonActions": [
+          "like"
+        ]
+      },
+      "59573": {
+        "number": 59573,
+        "name": "Comment",
+        "category": "social",
+        "description": "Speech bubble",
+        "colorCompatibility": true,
+        "commonActions": [
+          "comment"
+        ]
+      },
+      "59574": {
+        "number": 59574,
+        "name": "Heart Rate",
+        "category": "health",
+        "description": "Heart rate monitor",
+        "colorCompatibility": true,
+        "commonActions": [
+          "getheartrate"
+        ]
+      },
+      "59575": {
+        "number": 59575,
+        "name": "Steps",
+        "category": "health",
+        "description": "Footsteps",
+        "colorCompatibility": true,
+        "commonActions": [
+          "getsteps"
+        ]
+      },
+      "59576": {
+        "number": 59576,
+        "name": "Workout",
+        "category": "health",
+        "description": "Dumbbell",
+        "colorCompatibility": true,
+        "commonActions": [
+          "startworkout"
+        ]
+      },
+      "59577": {
+        "number": 59577,
+        "name": "Home Kit",
+        "category": "smarthome",
+        "description": "Home icon",
+        "colorCompatibility": true,
+        "commonActions": [
+          "homekit"
+        ]
+      },
+      "59578": {
+        "number": 59578,
+        "name": "Light",
+        "category": "smarthome",
+        "description": "Light bulb",
+        "colorCompatibility": true,
+        "commonActions": [
+          "setlight"
+        ]
+      },
+      "59579": {
+        "number": 59579,
+        "name": "Thermostat",
+        "category": "smarthome",
+        "description": "Thermostat",
+        "colorCompatibility": true,
+        "commonActions": [
+          "settemperature"
+        ]
+      },
+      "59580": {
+        "number": 59580,
+        "name": "AR",
+        "category": "advanced",
+        "description": "AR cube",
+        "colorCompatibility": true,
+        "commonActions": [
+          "ar"
+        ]
+      },
+      "59581": {
+        "number": 59581,
+        "name": "Machine Learning",
+        "category": "advanced",
+        "description": "Brain/neural network",
+        "colorCompatibility": true,
+        "commonActions": [
+          "ml",
+          "ai"
+        ]
+      },
+      "59582": {
+        "number": 59582,
+        "name": "Blockchain",
+        "category": "advanced",
+        "description": "Blockchain link",
+        "colorCompatibility": true,
+        "commonActions": [
+          "blockchain"
+        ]
+      },
+      "59583": {
+        "number": 59583,
+        "name": "Generic",
+        "category": "generic",
+        "description": "Generic app icon",
+        "colorCompatibility": true,
+        "commonActions": [
+          "generic"
+        ]
+      },
+      "59584": {
+        "number": 59584,
+        "name": "Circle",
+        "category": "generic",
+        "description": "Plain circle",
+        "colorCompatibility": true,
+        "commonActions": [
+          "generic"
+        ]
+      },
+      "59585": {
+        "number": 59585,
+        "name": "Square",
+        "category": "generic",
+        "description": "Plain square",
+        "colorCompatibility": true,
+        "commonActions": [
+          "generic"
+        ]
+      }
+    },
+    "actionMappings": {
+      "is.workflow.actions.gettext": 59511,
+      "is.workflow.actions.settext": 59511,
+      "is.workflow.actions.sendmessage": 59512,
+      "is.workflow.actions.sendemail": 59513,
+      "is.workflow.actions.makephonecall": 59514,
+      "is.workflow.actions.playmusic": 59531,
+      "is.workflow.actions.pausemusic": 59516,
+      "is.workflow.actions.stop": 59517,
+      "is.workflow.actions.recordaudio": 59551,
+      "is.workflow.actions.getcurrentlocation": 59519,
+      "is.workflow.actions.showmap": 59520,
+      "is.workflow.actions.getdirections": 59521,
+      "is.workflow.actions.url": 59522,
+      "is.workflow.actions.getcontentsofurl": 59524,
+      "is.workflow.actions.searchweb": 59523,
+      "is.workflow.actions.setbrightness": 59525,
+      "is.workflow.actions.setwifi": 59527,
+      "is.workflow.actions.setbluetooth": 59528,
+      "is.workflow.actions.takephoto": 59529,
+      "is.workflow.actions.selectphoto": 59530,
+      "is.workflow.actions.recordvideo": 59532,
+      "is.workflow.actions.date": 59533,
+      "is.workflow.actions.time": 59534,
+      "is.workflow.actions.calculate": 59535,
+      "is.workflow.actions.getcurrentweather": 59536,
+      "is.workflow.actions.runscript": 59537,
+      "is.workflow.actions.conditional": 59538,
+      "is.workflow.actions.repeat": 59539,
+      "is.workflow.actions.setvariable": 59540,
+      "is.workflow.actions.getvariable": 59540,
+      "is.workflow.actions.createnote": 59541,
+      "is.workflow.actions.getfile": 59542,
+      "is.workflow.actions.createpdf": 59543,
+      "is.workflow.actions.showalert": 59545,
+      "is.workflow.actions.askforinput": 59546,
+      "is.workflow.actions.showresult": 59547,
+      "is.workflow.actions.copy": 59549,
+      "is.workflow.actions.getclipboard": 59549,
+      "is.workflow.actions.speak": 59550,
+      "is.workflow.actions.setvolume": 59552,
+      "is.workflow.actions.openapp": 59553,
+      "is.workflow.actions.notification": 59511,
+      "is.workflow.actions.setdnd": 59560,
+      "is.workflow.actions.lockscreen": 59558,
+      "is.workflow.actions.wait": 59534,
+      "is.workflow.actions.exit": 59517,
+      "is.workflow.actions.comment": 59573
+    },
+    "categories": [
+      "text",
+      "communication",
+      "media",
+      "location",
+      "web",
+      "device",
+      "camera",
+      "data",
+      "scripting",
+      "files",
+      "ui",
+      "utilities",
+      "apps",
+      "system",
+      "security",
+      "social",
+      "health",
+      "smarthome",
+      "advanced",
+      "generic"
+    ],
+    "stats": {
+      "totalGlyphs": 75,
+      "totalMappings": 47
+    }
+  },
+  "exportedAt": "2025-09-24T17:38:32.717Z",
+  "version": "1.0.0"
+}

@@ -1,0 +1,4196 @@
+{
+  "is.workflow.actions.gettext": {
+    "identifier": "is.workflow.actions.gettext",
+    "name": "Text",
+    "description": "Displays text on the screen",
+    "category": "text",
+    "parameters": [
+      {
+        "key": "WFTextActionText",
+        "type": "string",
+        "description": "The text to display",
+        "required": true,
+        "defaultValue": "Hello World!"
+      }
+    ],
+    "inputTypes": [],
+    "outputTypes": [
+      "WFStringContentItem"
+    ],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [],
+    "usageExamples": [],
+    "relatedActions": [
+      "is.workflow.actions.ask",
+      "is.workflow.actions.getclipboard"
+    ],
+    "alternatives": [
+      "is.workflow.actions.ask"
+    ]
+  },
+  "is.workflow.actions.notification": {
+    "identifier": "is.workflow.actions.notification",
+    "name": "Show Notification",
+    "description": "Displays a notification",
+    "category": "notification",
+    "parameters": [
+      {
+        "key": "WFNotificationActionTitle",
+        "type": "string",
+        "description": "Notification title",
+        "required": false,
+        "defaultValue": "Shortcut"
+      },
+      {
+        "key": "WFNotificationActionBody",
+        "type": "string",
+        "description": "Notification message",
+        "required": true,
+        "defaultValue": ""
+      },
+      {
+        "key": "WFNotificationActionSound",
+        "type": "boolean",
+        "description": "Play notification sound",
+        "required": false,
+        "defaultValue": false
+      },
+      {
+        "key": "WFConditionalActionCondition",
+        "type": "object",
+        "description": "Condition to evaluate",
+        "required": true
+      }
+    ],
+    "inputTypes": [],
+    "outputTypes": [],
+    "permissions": "notification",
+    "confidence": "low",
+    "discoveredFrom": [],
+    "usageExamples": [],
+    "relatedActions": [
+      "is.workflow.actions.speak",
+      "is.workflow.actions.showresult"
+    ],
+    "alternatives": [
+      "is.workflow.actions.speak"
+    ]
+  },
+  "is.workflow.actions.url": {
+    "identifier": "is.workflow.actions.url",
+    "name": "Open URL",
+    "description": "Opens a URL in the default browser",
+    "category": "web",
+    "parameters": [
+      {
+        "key": "WFURLActionURL",
+        "type": "string",
+        "description": "URL to open",
+        "required": true,
+        "validation": {
+          "pattern": "^https?://.+"
+        }
+      }
+    ],
+    "inputTypes": [
+      "WFURLContentItem"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [],
+    "usageExamples": [],
+    "relatedActions": [
+      "is.workflow.actions.getcontentsofurl"
+    ],
+    "alternatives": [
+      "is.workflow.actions.getcontentsofurl"
+    ]
+  },
+  "is.workflow.actions.wait": {
+    "identifier": "is.workflow.actions.wait",
+    "name": "Wait",
+    "description": "Waits for a specified duration",
+    "category": "scripting",
+    "parameters": [
+      {
+        "key": "WFWaitActionWaitTime",
+        "type": "number",
+        "description": "Time to wait in seconds",
+        "required": true,
+        "defaultValue": 1,
+        "validation": {
+          "min": 0,
+          "max": 3600
+        }
+      }
+    ],
+    "inputTypes": [],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.speak": {
+    "identifier": "is.workflow.actions.speak",
+    "name": "Speak Text",
+    "description": "Speaks text using text-to-speech",
+    "category": "media",
+    "parameters": [
+      {
+        "key": "WFSpeakTextActionText",
+        "type": "string",
+        "description": "Text to speak aloud",
+        "required": true,
+        "defaultValue": "Hello World!"
+      },
+      {
+        "key": "WFSpeakTextActionLanguage",
+        "type": "string",
+        "description": "Language code for speech synthesis",
+        "required": false,
+        "defaultValue": "en-US",
+        "options": [
+          "en-US",
+          "es-ES",
+          "fr-FR",
+          "de-DE",
+          "it-IT",
+          "ja-JP",
+          "zh-CN",
+          "ko-KR"
+        ]
+      },
+      {
+        "key": "WFSpeakTextActionPitch",
+        "type": "number",
+        "description": "Voice pitch multiplier",
+        "required": false,
+        "defaultValue": 1,
+        "validation": {
+          "min": 0.5,
+          "max": 2
+        }
+      },
+      {
+        "key": "WFSpeakTextActionRate",
+        "type": "number",
+        "description": "Speech rate multiplier",
+        "required": false,
+        "defaultValue": 1,
+        "validation": {
+          "min": 0.5,
+          "max": 2
+        }
+      }
+    ],
+    "inputTypes": [
+      "WFStringContentItem"
+    ],
+    "outputTypes": [],
+    "permissions": "media",
+    "confidence": "low",
+    "discoveredFrom": [],
+    "usageExamples": [],
+    "relatedActions": [
+      "is.workflow.actions.notification",
+      "is.workflow.actions.showresult"
+    ],
+    "alternatives": []
+  },
+  "is.workflow.actions.copy": {
+    "identifier": "is.workflow.actions.copy",
+    "name": "Copy to Clipboard",
+    "description": "Copies content to the clipboard",
+    "category": "clipboard",
+    "parameters": [
+      {
+        "key": "WFCopyActionCopyText",
+        "type": "any",
+        "description": "Content to copy",
+        "required": true
+      }
+    ],
+    "inputTypes": [
+      "WFStringContentItem",
+      "WFURLContentItem",
+      "WFImageContentItem"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.setvariable": {
+    "identifier": "is.workflow.actions.setvariable",
+    "name": "Set Variable",
+    "description": "Sets a variable to a value",
+    "category": "scripting",
+    "parameters": [
+      {
+        "key": "WFVariableName",
+        "type": "string",
+        "description": "Variable name",
+        "required": true,
+        "defaultValue": "Variable"
+      },
+      {
+        "key": "WFVariableInput",
+        "type": "any",
+        "description": "Variable value",
+        "required": true
+      }
+    ],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [
+      "any"
+    ],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [],
+    "usageExamples": [],
+    "relatedActions": [
+      "is.workflow.actions.getvariable",
+      "is.workflow.actions.calculate"
+    ],
+    "alternatives": []
+  },
+  "is.workflow.actions.getvariable": {
+    "identifier": "is.workflow.actions.getvariable",
+    "name": "Get Variable",
+    "description": "Gets the value of a variable",
+    "category": "scripting",
+    "parameters": [
+      {
+        "key": "WFVariableName",
+        "type": "string",
+        "description": "Variable name",
+        "required": true,
+        "defaultValue": "Variable"
+      }
+    ],
+    "inputTypes": [],
+    "outputTypes": [
+      "any"
+    ],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.conditional": {
+    "identifier": "is.workflow.actions.conditional",
+    "name": "If",
+    "description": "Performs actions conditionally",
+    "category": "scripting",
+    "parameters": [
+      {
+        "key": "WFConditionalActionCondition",
+        "type": "object",
+        "description": "Condition to evaluate",
+        "required": true
+      }
+    ],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [
+      "any"
+    ],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [],
+    "usageExamples": [],
+    "relatedActions": [
+      "is.workflow.actions.repeat"
+    ],
+    "alternatives": []
+  },
+  "is.workflow.actions.repeat": {
+    "identifier": "is.workflow.actions.repeat",
+    "name": "Repeat",
+    "description": "Repeats actions multiple times",
+    "category": "scripting",
+    "parameters": [
+      {
+        "key": "WFRepeatActionCount",
+        "type": "number",
+        "description": "Number of times to repeat",
+        "required": true,
+        "defaultValue": 1,
+        "validation": {
+          "min": 1,
+          "max": 1000
+        }
+      },
+      {
+        "key": "WFRepeatActionTime",
+        "type": "number",
+        "description": "Repeat for this many seconds (optional)",
+        "required": false,
+        "validation": {
+          "min": 1,
+          "max": 3600
+        }
+      }
+    ],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [
+      "any"
+    ],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.ask": {
+    "identifier": "is.workflow.actions.ask",
+    "name": "Ask for Input",
+    "description": "Asks the user for input",
+    "category": "scripting",
+    "parameters": [
+      {
+        "key": "WFAskActionPrompt",
+        "type": "string",
+        "description": "Prompt text to show user",
+        "required": true,
+        "defaultValue": "Enter input:"
+      },
+      {
+        "key": "WFAskActionDefaultAnswer",
+        "type": "string",
+        "description": "Default answer",
+        "required": false,
+        "defaultValue": ""
+      }
+    ],
+    "inputTypes": [],
+    "outputTypes": [
+      "WFStringContentItem"
+    ],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.showresult": {
+    "identifier": "is.workflow.actions.showresult",
+    "name": "Show Result",
+    "description": "Shows the result of previous actions",
+    "category": "scripting",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.comment": {
+    "identifier": "is.workflow.actions.comment",
+    "name": "Comment",
+    "description": "Adds a comment to the shortcut",
+    "category": "scripting",
+    "parameters": [
+      {
+        "key": "WFCommentActionText",
+        "type": "string",
+        "description": "Comment text",
+        "required": true,
+        "defaultValue": "Comment"
+      }
+    ],
+    "inputTypes": [],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.exit": {
+    "identifier": "is.workflow.actions.exit",
+    "name": "Exit Shortcut",
+    "description": "Exits the shortcut immediately",
+    "category": "scripting",
+    "parameters": [],
+    "inputTypes": [],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.showalert": {
+    "identifier": "is.workflow.actions.showalert",
+    "name": "Show Alert",
+    "description": "Shows an alert dialog with options",
+    "category": "scripting",
+    "parameters": [
+      {
+        "key": "WFAlertActionTitle",
+        "type": "string",
+        "description": "Alert title",
+        "required": true,
+        "defaultValue": "Alert"
+      },
+      {
+        "key": "WFAlertActionMessage",
+        "type": "string",
+        "description": "Alert message",
+        "required": true,
+        "defaultValue": "Message"
+      }
+    ],
+    "inputTypes": [],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.getcurrentlocation": {
+    "identifier": "is.workflow.actions.getcurrentlocation",
+    "name": "Get Current Location",
+    "description": "Gets the device's current location",
+    "category": "location",
+    "parameters": [],
+    "inputTypes": [],
+    "outputTypes": [
+      "WFLocationContentItem"
+    ],
+    "permissions": "location",
+    "confidence": "low",
+    "discoveredFrom": [],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.getcurrentweather": {
+    "identifier": "is.workflow.actions.getcurrentweather",
+    "name": "Get Current Weather",
+    "description": "Gets current weather conditions",
+    "category": "location",
+    "parameters": [
+      {
+        "key": "WFWeatherActionLocation",
+        "type": "any",
+        "description": "Location to get weather for (defaults to current location)",
+        "required": false
+      },
+      {
+        "key": "WFWeatherActionUnits",
+        "type": "string",
+        "description": "Temperature units",
+        "required": false,
+        "defaultValue": "auto",
+        "options": [
+          "auto",
+          "celsius",
+          "fahrenheit"
+        ]
+      }
+    ],
+    "inputTypes": [],
+    "outputTypes": [
+      "WFWeatherContentItem"
+    ],
+    "permissions": "location",
+    "confidence": "low",
+    "discoveredFrom": [],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.openapp": {
+    "identifier": "is.workflow.actions.openapp",
+    "name": "Open App",
+    "description": "Opens a specific app",
+    "category": "apps",
+    "parameters": [
+      {
+        "key": "WFOpenAppActionAppIdentifier",
+        "type": "string",
+        "description": "App bundle identifier",
+        "required": true
+      },
+      {
+        "key": "WFOpenAppActionApplication",
+        "type": "any",
+        "description": "Application to open",
+        "required": false
+      }
+    ],
+    "inputTypes": [],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.createnote": {
+    "identifier": "is.workflow.actions.createnote",
+    "name": "Create Note",
+    "description": "Creates a note in the Notes app",
+    "category": "apps",
+    "parameters": [
+      {
+        "key": "WFNoteActionNote",
+        "type": "string",
+        "description": "Note content",
+        "required": true
+      },
+      {
+        "key": "WFNoteActionTitle",
+        "type": "string",
+        "description": "Note title",
+        "required": false
+      }
+    ],
+    "inputTypes": [
+      "WFStringContentItem"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.sendmessage": {
+    "identifier": "is.workflow.actions.sendmessage",
+    "name": "Send Message",
+    "description": "Sends a message via Messages",
+    "category": "apps",
+    "parameters": [
+      {
+        "key": "WFSendMessageActionRecipients",
+        "type": "array",
+        "description": "Recipients",
+        "required": true
+      },
+      {
+        "key": "WFSendMessageActionMessage",
+        "type": "string",
+        "description": "Message text",
+        "required": true
+      }
+    ],
+    "inputTypes": [
+      "WFStringContentItem"
+    ],
+    "outputTypes": [],
+    "permissions": "contacts",
+    "confidence": "low",
+    "discoveredFrom": [],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.makephonecall": {
+    "identifier": "is.workflow.actions.makephonecall",
+    "name": "Make Phone Call",
+    "description": "Makes a phone call",
+    "category": "apps",
+    "parameters": [
+      {
+        "key": "WFMakePhoneCallActionPhoneNumber",
+        "type": "string",
+        "description": "Phone number",
+        "required": true
+      }
+    ],
+    "inputTypes": [],
+    "outputTypes": [],
+    "permissions": "contacts",
+    "confidence": "low",
+    "discoveredFrom": [],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.takephoto": {
+    "identifier": "is.workflow.actions.takephoto",
+    "name": "Take Photo",
+    "description": "Takes a photo with the camera",
+    "category": "camera",
+    "parameters": [],
+    "inputTypes": [],
+    "outputTypes": [
+      "WFImageContentItem"
+    ],
+    "permissions": "camera",
+    "confidence": "low",
+    "discoveredFrom": [],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.setbrightness": {
+    "identifier": "is.workflow.actions.setbrightness",
+    "name": "Set Brightness",
+    "description": "Sets the screen brightness",
+    "category": "device",
+    "parameters": [
+      {
+        "key": "WFSetValue",
+        "type": "number",
+        "description": "Brightness level (0-100)",
+        "required": true,
+        "validation": {
+          "min": 0,
+          "max": 100
+        }
+      },
+      {
+        "key": "WFSetBrightnessActionValue",
+        "type": "number",
+        "description": "Brightness level (0-100)",
+        "required": true,
+        "defaultValue": 50
+      }
+    ],
+    "inputTypes": [],
+    "outputTypes": [],
+    "permissions": "device",
+    "confidence": "low",
+    "discoveredFrom": [],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.getclipboard": {
+    "identifier": "is.workflow.actions.getclipboard",
+    "name": "Get Clipboard",
+    "description": "Gets content from the clipboard",
+    "category": "clipboard",
+    "parameters": [],
+    "inputTypes": [],
+    "outputTypes": [
+      "any"
+    ],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.calculate": {
+    "identifier": "is.workflow.actions.calculate",
+    "name": "Calculate",
+    "description": "Performs mathematical calculations",
+    "category": "data",
+    "parameters": [
+      {
+        "key": "WFCalculateActionOperand1",
+        "type": "number",
+        "description": "First operand",
+        "required": true
+      },
+      {
+        "key": "WFCalculateActionOperand2",
+        "type": "number",
+        "description": "Second operand",
+        "required": true
+      },
+      {
+        "key": "WFCalculateActionOperation",
+        "type": "string",
+        "description": "Operation (+, -, *, /)",
+        "required": true,
+        "defaultValue": "+"
+      }
+    ],
+    "inputTypes": [
+      "number"
+    ],
+    "outputTypes": [
+      "WFNumberContentItem"
+    ],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.date": {
+    "identifier": "is.workflow.actions.date",
+    "name": "Date",
+    "description": "Gets the current date or creates a date",
+    "category": "data",
+    "parameters": [
+      {
+        "key": "WFDateActionDate",
+        "type": "string",
+        "description": "Date string",
+        "required": false,
+        "defaultValue": "now"
+      }
+    ],
+    "inputTypes": [],
+    "outputTypes": [
+      "WFDateContentItem"
+    ],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.time": {
+    "identifier": "is.workflow.actions.time",
+    "name": "Time",
+    "description": "Gets the current time or creates a time",
+    "category": "data",
+    "parameters": [
+      {
+        "key": "WFTimeActionTime",
+        "type": "string",
+        "description": "Time string",
+        "required": false,
+        "defaultValue": "now"
+      }
+    ],
+    "inputTypes": [],
+    "outputTypes": [
+      "WFDateContentItem"
+    ],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.createfolder": {
+    "identifier": "is.workflow.actions.createfolder",
+    "name": "Createfolder",
+    "description": "Action: Createfolder",
+    "category": "general",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.getfile": {
+    "identifier": "is.workflow.actions.getfile",
+    "name": "Getfile",
+    "description": "Action: Getfile",
+    "category": "scripting",
+    "parameters": [],
+    "inputTypes": [
+      "WFGenericFileContentItem"
+    ],
+    "outputTypes": [
+      "WFGenericFileContentItem"
+    ],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.savefile": {
+    "identifier": "is.workflow.actions.savefile",
+    "name": "Savefile",
+    "description": "Action: Savefile",
+    "category": "files",
+    "parameters": [],
+    "inputTypes": [
+      "WFGenericFileContentItem"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.deletefiles": {
+    "identifier": "is.workflow.actions.deletefiles",
+    "name": "Deletefiles",
+    "description": "Action: Deletefiles",
+    "category": "files",
+    "parameters": [],
+    "inputTypes": [
+      "WFGenericFileContentItem"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.movefile": {
+    "identifier": "is.workflow.actions.movefile",
+    "name": "Movefile",
+    "description": "Action: Movefile",
+    "category": "files",
+    "parameters": [],
+    "inputTypes": [
+      "WFGenericFileContentItem"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.copyfile": {
+    "identifier": "is.workflow.actions.copyfile",
+    "name": "Copyfile",
+    "description": "Action: Copyfile",
+    "category": "clipboard",
+    "parameters": [],
+    "inputTypes": [
+      "WFGenericFileContentItem"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.getcontentsoffile": {
+    "identifier": "is.workflow.actions.getcontentsoffile",
+    "name": "Getcontentsoffile",
+    "description": "Action: Getcontentsoffile",
+    "category": "scripting",
+    "parameters": [],
+    "inputTypes": [
+      "WFGenericFileContentItem"
+    ],
+    "outputTypes": [
+      "WFGenericFileContentItem"
+    ],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.appendtofile": {
+    "identifier": "is.workflow.actions.appendtofile",
+    "name": "Appendtofile",
+    "description": "Action: Appendtofile",
+    "category": "files",
+    "parameters": [],
+    "inputTypes": [
+      "WFGenericFileContentItem"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.archive": {
+    "identifier": "is.workflow.actions.archive",
+    "name": "Archive",
+    "description": "Action: Archive",
+    "category": "general",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.unarchive": {
+    "identifier": "is.workflow.actions.unarchive",
+    "name": "Unarchive",
+    "description": "Action: Unarchive",
+    "category": "general",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.gettextfrominput": {
+    "identifier": "is.workflow.actions.gettextfrominput",
+    "name": "Gettextfrominput",
+    "description": "Action: Gettextfrominput",
+    "category": "text",
+    "parameters": [],
+    "inputTypes": [
+      "WFStringContentItem"
+    ],
+    "outputTypes": [
+      "WFStringContentItem"
+    ],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.matchtext": {
+    "identifier": "is.workflow.actions.matchtext",
+    "name": "Matchtext",
+    "description": "Action: Matchtext",
+    "category": "text",
+    "parameters": [
+      {
+        "key": "WFTextActionText",
+        "type": "string",
+        "description": "The text to display or process",
+        "required": true,
+        "defaultValue": ""
+      }
+    ],
+    "inputTypes": [
+      "WFStringContentItem"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.replacetext": {
+    "identifier": "is.workflow.actions.replacetext",
+    "name": "Replacetext",
+    "description": "Action: Replacetext",
+    "category": "text",
+    "parameters": [
+      {
+        "key": "WFTextActionText",
+        "type": "string",
+        "description": "The text to display or process",
+        "required": true,
+        "defaultValue": ""
+      }
+    ],
+    "inputTypes": [
+      "WFStringContentItem"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.changecase": {
+    "identifier": "is.workflow.actions.changecase",
+    "name": "Changecase",
+    "description": "Action: Changecase",
+    "category": "general",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.splittext": {
+    "identifier": "is.workflow.actions.splittext",
+    "name": "Splittext",
+    "description": "Action: Splittext",
+    "category": "text",
+    "parameters": [
+      {
+        "key": "WFTextActionText",
+        "type": "string",
+        "description": "The text to display or process",
+        "required": true,
+        "defaultValue": ""
+      }
+    ],
+    "inputTypes": [
+      "WFStringContentItem"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.combinetext": {
+    "identifier": "is.workflow.actions.combinetext",
+    "name": "Combinetext",
+    "description": "Action: Combinetext",
+    "category": "text",
+    "parameters": [
+      {
+        "key": "WFTextActionText",
+        "type": "string",
+        "description": "The text to display or process",
+        "required": true,
+        "defaultValue": ""
+      }
+    ],
+    "inputTypes": [
+      "WFStringContentItem"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.count": {
+    "identifier": "is.workflow.actions.count",
+    "name": "Count",
+    "description": "Action: Count",
+    "category": "data",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.formatnumber": {
+    "identifier": "is.workflow.actions.formatnumber",
+    "name": "Formatnumber",
+    "description": "Action: Formatnumber",
+    "category": "data",
+    "parameters": [],
+    "inputTypes": [
+      "WFNumberContentItem"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.formatdate": {
+    "identifier": "is.workflow.actions.formatdate",
+    "name": "Formatdate",
+    "description": "Action: Formatdate",
+    "category": "data",
+    "parameters": [],
+    "inputTypes": [
+      "WFDateContentItem"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.detectlanguage": {
+    "identifier": "is.workflow.actions.detectlanguage",
+    "name": "Detectlanguage",
+    "description": "Action: Detectlanguage",
+    "category": "general",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [
+      "any"
+    ],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.translatetext": {
+    "identifier": "is.workflow.actions.translatetext",
+    "name": "Translatetext",
+    "description": "Action: Translatetext",
+    "category": "text",
+    "parameters": [
+      {
+        "key": "WFTextActionText",
+        "type": "string",
+        "description": "The text to display or process",
+        "required": true,
+        "defaultValue": ""
+      }
+    ],
+    "inputTypes": [
+      "WFStringContentItem"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.getcontentsofspreadsheet": {
+    "identifier": "is.workflow.actions.getcontentsofspreadsheet",
+    "name": "Getcontentsofspreadsheet",
+    "description": "Action: Getcontentsofspreadsheet",
+    "category": "scripting",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [
+      "any"
+    ],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.setspreadsheetcell": {
+    "identifier": "is.workflow.actions.setspreadsheetcell",
+    "name": "Setspreadsheetcell",
+    "description": "Action: Setspreadsheetcell",
+    "category": "scripting",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.addrowstospreadsheet": {
+    "identifier": "is.workflow.actions.addrowstospreadsheet",
+    "name": "Addrowstospreadsheet",
+    "description": "Action: Addrowstospreadsheet",
+    "category": "files",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.createspreadsheet": {
+    "identifier": "is.workflow.actions.createspreadsheet",
+    "name": "Createspreadsheet",
+    "description": "Action: Createspreadsheet",
+    "category": "files",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.filterspreadsheet": {
+    "identifier": "is.workflow.actions.filterspreadsheet",
+    "name": "Filterspreadsheet",
+    "description": "Action: Filterspreadsheet",
+    "category": "files",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.sortspreadsheet": {
+    "identifier": "is.workflow.actions.sortspreadsheet",
+    "name": "Sortspreadsheet",
+    "description": "Action: Sortspreadsheet",
+    "category": "files",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.createcalendarevent": {
+    "identifier": "is.workflow.actions.createcalendarevent",
+    "name": "Createcalendarevent",
+    "description": "Action: Createcalendarevent",
+    "category": "data",
+    "parameters": [
+      {
+        "key": "WFEventName",
+        "type": "string",
+        "description": "Event title",
+        "required": true,
+        "defaultValue": "New Event"
+      },
+      {
+        "key": "WFEventStartDate",
+        "type": "date",
+        "description": "Event start date and time",
+        "required": true
+      },
+      {
+        "key": "WFEventEndDate",
+        "type": "date",
+        "description": "Event end date and time",
+        "required": true
+      },
+      {
+        "key": "WFEventAllDay",
+        "type": "boolean",
+        "description": "All-day event",
+        "required": false,
+        "defaultValue": false
+      },
+      {
+        "key": "WFEventCalendar",
+        "type": "any",
+        "description": "Calendar to add event to",
+        "required": false
+      },
+      {
+        "key": "WFEventAlertType",
+        "type": "string",
+        "description": "Alert type",
+        "required": false,
+        "defaultValue": "none",
+        "options": [
+          "none",
+          "at time of event",
+          "5 minutes before",
+          "15 minutes before",
+          "30 minutes before",
+          "1 hour before",
+          "2 hours before",
+          "1 day before",
+          "2 days before",
+          "1 week before"
+        ]
+      }
+    ],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.getcalendarevents": {
+    "identifier": "is.workflow.actions.getcalendarevents",
+    "name": "Getcalendarevents",
+    "description": "Action: Getcalendarevents",
+    "category": "scripting",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [
+      "any"
+    ],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.modifycalendarevents": {
+    "identifier": "is.workflow.actions.modifycalendarevents",
+    "name": "Modifycalendarevents",
+    "description": "Action: Modifycalendarevents",
+    "category": "scripting",
+    "parameters": [
+      {
+        "key": "WFConditionalActionCondition",
+        "type": "object",
+        "description": "Condition to evaluate",
+        "required": true
+      }
+    ],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.deletecalendarevents": {
+    "identifier": "is.workflow.actions.deletecalendarevents",
+    "name": "Deletecalendarevents",
+    "description": "Action: Deletecalendarevents",
+    "category": "data",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.findcalendars": {
+    "identifier": "is.workflow.actions.findcalendars",
+    "name": "Findcalendars",
+    "description": "Action: Findcalendars",
+    "category": "data",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.createreminder": {
+    "identifier": "is.workflow.actions.createreminder",
+    "name": "Createreminder",
+    "description": "Action: Createreminder",
+    "category": "general",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.getreminders": {
+    "identifier": "is.workflow.actions.getreminders",
+    "name": "Getreminders",
+    "description": "Action: Getreminders",
+    "category": "scripting",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [
+      "any"
+    ],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.modifyreminders": {
+    "identifier": "is.workflow.actions.modifyreminders",
+    "name": "Modifyreminders",
+    "description": "Action: Modifyreminders",
+    "category": "scripting",
+    "parameters": [
+      {
+        "key": "WFConditionalActionCondition",
+        "type": "object",
+        "description": "Condition to evaluate",
+        "required": true
+      }
+    ],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.deletereminders": {
+    "identifier": "is.workflow.actions.deletereminders",
+    "name": "Deletereminders",
+    "description": "Action: Deletereminders",
+    "category": "general",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.findreminderlists": {
+    "identifier": "is.workflow.actions.findreminderlists",
+    "name": "Findreminderlists",
+    "description": "Action: Findreminderlists",
+    "category": "general",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.findcontacts": {
+    "identifier": "is.workflow.actions.findcontacts",
+    "name": "Findcontacts",
+    "description": "Action: Findcontacts",
+    "category": "communication",
+    "parameters": [],
+    "inputTypes": [
+      "WFContactContentItem"
+    ],
+    "outputTypes": [],
+    "permissions": "contacts",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.getcontactdetails": {
+    "identifier": "is.workflow.actions.getcontactdetails",
+    "name": "Getcontactdetails",
+    "description": "Action: Getcontactdetails",
+    "category": "scripting",
+    "parameters": [],
+    "inputTypes": [
+      "WFContactContentItem"
+    ],
+    "outputTypes": [
+      "WFContactContentItem"
+    ],
+    "permissions": "contacts",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.createcontact": {
+    "identifier": "is.workflow.actions.createcontact",
+    "name": "Createcontact",
+    "description": "Action: Createcontact",
+    "category": "communication",
+    "parameters": [],
+    "inputTypes": [
+      "WFContactContentItem"
+    ],
+    "outputTypes": [],
+    "permissions": "contacts",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.modifycontact": {
+    "identifier": "is.workflow.actions.modifycontact",
+    "name": "Modifycontact",
+    "description": "Action: Modifycontact",
+    "category": "scripting",
+    "parameters": [
+      {
+        "key": "WFConditionalActionCondition",
+        "type": "object",
+        "description": "Condition to evaluate",
+        "required": true
+      }
+    ],
+    "inputTypes": [
+      "WFContactContentItem"
+    ],
+    "outputTypes": [],
+    "permissions": "contacts",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.deletecontact": {
+    "identifier": "is.workflow.actions.deletecontact",
+    "name": "Deletecontact",
+    "description": "Action: Deletecontact",
+    "category": "communication",
+    "parameters": [],
+    "inputTypes": [
+      "WFContactContentItem"
+    ],
+    "outputTypes": [],
+    "permissions": "contacts",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.loghealthsample": {
+    "identifier": "is.workflow.actions.loghealthsample",
+    "name": "Loghealthsample",
+    "description": "Action: Loghealthsample",
+    "category": "health",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "health",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.gethealthsample": {
+    "identifier": "is.workflow.actions.gethealthsample",
+    "name": "Gethealthsample",
+    "description": "Action: Gethealthsample",
+    "category": "scripting",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [
+      "any"
+    ],
+    "permissions": "health",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.gethealthquantitytype": {
+    "identifier": "is.workflow.actions.gethealthquantitytype",
+    "name": "Gethealthquantitytype",
+    "description": "Action: Gethealthquantitytype",
+    "category": "scripting",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [
+      "any"
+    ],
+    "permissions": "health",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.starthealthworkout": {
+    "identifier": "is.workflow.actions.starthealthworkout",
+    "name": "Starthealthworkout",
+    "description": "Action: Starthealthworkout",
+    "category": "health",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "health",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.stophealthworkout": {
+    "identifier": "is.workflow.actions.stophealthworkout",
+    "name": "Stophealthworkout",
+    "description": "Action: Stophealthworkout",
+    "category": "health",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "health",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.pausehealthworkout": {
+    "identifier": "is.workflow.actions.pausehealthworkout",
+    "name": "Pausehealthworkout",
+    "description": "Action: Pausehealthworkout",
+    "category": "health",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "health",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.resumehealthworkout": {
+    "identifier": "is.workflow.actions.resumehealthworkout",
+    "name": "Resumehealthworkout",
+    "description": "Action: Resumehealthworkout",
+    "category": "health",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "health",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.controlhomeaccessory": {
+    "identifier": "is.workflow.actions.controlhomeaccessory",
+    "name": "Controlhomeaccessory",
+    "description": "Action: Controlhomeaccessory",
+    "category": "smarthome",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "home",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.gethomeaccessorystate": {
+    "identifier": "is.workflow.actions.gethomeaccessorystate",
+    "name": "Gethomeaccessorystate",
+    "description": "Action: Gethomeaccessorystate",
+    "category": "scripting",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [
+      "any"
+    ],
+    "permissions": "home",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.findhomeaccessories": {
+    "identifier": "is.workflow.actions.findhomeaccessories",
+    "name": "Findhomeaccessories",
+    "description": "Action: Findhomeaccessories",
+    "category": "smarthome",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "home",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.findhomes": {
+    "identifier": "is.workflow.actions.findhomes",
+    "name": "Findhomes",
+    "description": "Action: Findhomes",
+    "category": "smarthome",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "home",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.gethomeroomstate": {
+    "identifier": "is.workflow.actions.gethomeroomstate",
+    "name": "Gethomeroomstate",
+    "description": "Action: Gethomeroomstate",
+    "category": "scripting",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [
+      "any"
+    ],
+    "permissions": "home",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.controlhomeroom": {
+    "identifier": "is.workflow.actions.controlhomeroom",
+    "name": "Controlhomeroom",
+    "description": "Action: Controlhomeroom",
+    "category": "smarthome",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "home",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.getdirections": {
+    "identifier": "is.workflow.actions.getdirections",
+    "name": "Getdirections",
+    "description": "Action: Getdirections",
+    "category": "scripting",
+    "parameters": [
+      {
+        "key": "WFDirectionsActionDestination",
+        "type": "any",
+        "description": "Destination location",
+        "required": true
+      },
+      {
+        "key": "WFDirectionsActionTransportType",
+        "type": "string",
+        "description": "Transportation method",
+        "required": true,
+        "defaultValue": "driving",
+        "options": [
+          "driving",
+          "walking",
+          "transit"
+        ]
+      },
+      {
+        "key": "WFDirectionsActionShowRoute",
+        "type": "boolean",
+        "description": "Show route in Maps",
+        "required": false,
+        "defaultValue": true
+      }
+    ],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [
+      "any"
+    ],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.getdistancetravelled": {
+    "identifier": "is.workflow.actions.getdistancetravelled",
+    "name": "Getdistancetravelled",
+    "description": "Action: Getdistancetravelled",
+    "category": "scripting",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [
+      "any"
+    ],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.gettraveltime": {
+    "identifier": "is.workflow.actions.gettraveltime",
+    "name": "Gettraveltime",
+    "description": "Action: Gettraveltime",
+    "category": "scripting",
+    "parameters": [],
+    "inputTypes": [
+      "WFDateContentItem"
+    ],
+    "outputTypes": [
+      "any"
+    ],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.searchformaps": {
+    "identifier": "is.workflow.actions.searchformaps",
+    "name": "Searchformaps",
+    "description": "Action: Searchformaps",
+    "category": "location",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.showonmap": {
+    "identifier": "is.workflow.actions.showonmap",
+    "name": "Showonmap",
+    "description": "Action: Showonmap",
+    "category": "location",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.playmusic": {
+    "identifier": "is.workflow.actions.playmusic",
+    "name": "Playmusic",
+    "description": "Action: Playmusic",
+    "category": "media",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.pausemusic": {
+    "identifier": "is.workflow.actions.pausemusic",
+    "name": "Pausemusic",
+    "description": "Action: Pausemusic",
+    "category": "media",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.skipmusic": {
+    "identifier": "is.workflow.actions.skipmusic",
+    "name": "Skipmusic",
+    "description": "Action: Skipmusic",
+    "category": "media",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.getcurrentsong": {
+    "identifier": "is.workflow.actions.getcurrentsong",
+    "name": "Getcurrentsong",
+    "description": "Action: Getcurrentsong",
+    "category": "scripting",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [
+      "any"
+    ],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.getmusiclibrary": {
+    "identifier": "is.workflow.actions.getmusiclibrary",
+    "name": "Getmusiclibrary",
+    "description": "Action: Getmusiclibrary",
+    "category": "media",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [
+      "any"
+    ],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.addtoplaylist": {
+    "identifier": "is.workflow.actions.addtoplaylist",
+    "name": "Addtoplaylist",
+    "description": "Action: Addtoplaylist",
+    "category": "media",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.createplaylist": {
+    "identifier": "is.workflow.actions.createplaylist",
+    "name": "Createplaylist",
+    "description": "Action: Createplaylist",
+    "category": "media",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.recordaudio": {
+    "identifier": "is.workflow.actions.recordaudio",
+    "name": "Recordaudio",
+    "description": "Action: Recordaudio",
+    "category": "media",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "microphone",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.getvolume": {
+    "identifier": "is.workflow.actions.getvolume",
+    "name": "Getvolume",
+    "description": "Action: Getvolume",
+    "category": "scripting",
+    "parameters": [
+      {
+        "key": "WFSetValue",
+        "type": "number",
+        "description": "Volume level (0-100)",
+        "required": true,
+        "validation": {
+          "min": 0,
+          "max": 100
+        }
+      }
+    ],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [
+      "any"
+    ],
+    "permissions": "device",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.setvolume": {
+    "identifier": "is.workflow.actions.setvolume",
+    "name": "Setvolume",
+    "description": "Action: Setvolume",
+    "category": "scripting",
+    "parameters": [
+      {
+        "key": "WFSetValue",
+        "type": "number",
+        "description": "Volume level (0-100)",
+        "required": true,
+        "validation": {
+          "min": 0,
+          "max": 100
+        }
+      }
+    ],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "device",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.selectphotos": {
+    "identifier": "is.workflow.actions.selectphotos",
+    "name": "Selectphotos",
+    "description": "Action: Selectphotos",
+    "category": "camera",
+    "parameters": [],
+    "inputTypes": [
+      "WFImageContentItem"
+    ],
+    "outputTypes": [],
+    "permissions": "camera",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.getlatestphotos": {
+    "identifier": "is.workflow.actions.getlatestphotos",
+    "name": "Getlatestphotos",
+    "description": "Action: Getlatestphotos",
+    "category": "scripting",
+    "parameters": [],
+    "inputTypes": [
+      "WFImageContentItem"
+    ],
+    "outputTypes": [
+      "any"
+    ],
+    "permissions": "camera",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.getlatestvideos": {
+    "identifier": "is.workflow.actions.getlatestvideos",
+    "name": "Getlatestvideos",
+    "description": "Action: Getlatestvideos",
+    "category": "scripting",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [
+      "any"
+    ],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.savephotolibrary": {
+    "identifier": "is.workflow.actions.savephotolibrary",
+    "name": "Savephotolibrary",
+    "description": "Action: Savephotolibrary",
+    "category": "camera",
+    "parameters": [],
+    "inputTypes": [
+      "WFImageContentItem"
+    ],
+    "outputTypes": [],
+    "permissions": "camera",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.getimagesfrominput": {
+    "identifier": "is.workflow.actions.getimagesfrominput",
+    "name": "Getimagesfrominput",
+    "description": "Action: Getimagesfrominput",
+    "category": "scripting",
+    "parameters": [],
+    "inputTypes": [
+      "WFImageContentItem"
+    ],
+    "outputTypes": [
+      "WFImageContentItem"
+    ],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.resizeimage": {
+    "identifier": "is.workflow.actions.resizeimage",
+    "name": "Resizeimage",
+    "description": "Action: Resizeimage",
+    "category": "camera",
+    "parameters": [],
+    "inputTypes": [
+      "WFImageContentItem"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.cropimage": {
+    "identifier": "is.workflow.actions.cropimage",
+    "name": "Cropimage",
+    "description": "Action: Cropimage",
+    "category": "camera",
+    "parameters": [],
+    "inputTypes": [
+      "WFImageContentItem"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.rotateimage": {
+    "identifier": "is.workflow.actions.rotateimage",
+    "name": "Rotateimage",
+    "description": "Action: Rotateimage",
+    "category": "camera",
+    "parameters": [],
+    "inputTypes": [
+      "WFImageContentItem"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.convertimage": {
+    "identifier": "is.workflow.actions.convertimage",
+    "name": "Convertimage",
+    "description": "Action: Convertimage",
+    "category": "camera",
+    "parameters": [],
+    "inputTypes": [
+      "WFImageContentItem"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.makegif": {
+    "identifier": "is.workflow.actions.makegif",
+    "name": "Makegif",
+    "description": "Action: Makegif",
+    "category": "scripting",
+    "parameters": [
+      {
+        "key": "WFConditionalActionCondition",
+        "type": "object",
+        "description": "Condition to evaluate",
+        "required": true
+      }
+    ],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.trimvideo": {
+    "identifier": "is.workflow.actions.trimvideo",
+    "name": "Trimvideo",
+    "description": "Action: Trimvideo",
+    "category": "camera",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.combinevideos": {
+    "identifier": "is.workflow.actions.combinevideos",
+    "name": "Combinevideos",
+    "description": "Action: Combinevideos",
+    "category": "camera",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.getcontentsofurl": {
+    "identifier": "is.workflow.actions.getcontentsofurl",
+    "name": "Getcontentsofurl",
+    "description": "Action: Getcontentsofurl",
+    "category": "web",
+    "parameters": [
+      {
+        "key": "WFURLActionURL",
+        "type": "string",
+        "description": "URL to open",
+        "required": true,
+        "validation": {
+          "pattern": "^https?://.+"
+        }
+      }
+    ],
+    "inputTypes": [
+      "WFURLContentItem"
+    ],
+    "outputTypes": [
+      "any"
+    ],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.downloadurl": {
+    "identifier": "is.workflow.actions.downloadurl",
+    "name": "Downloadurl",
+    "description": "Action: Downloadurl",
+    "category": "web",
+    "parameters": [
+      {
+        "key": "WFURLActionURL",
+        "type": "string",
+        "description": "URL to open",
+        "required": true,
+        "validation": {
+          "pattern": "^https?://.+"
+        }
+      }
+    ],
+    "inputTypes": [
+      "WFURLContentItem"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.expandurl": {
+    "identifier": "is.workflow.actions.expandurl",
+    "name": "Expandurl",
+    "description": "Action: Expandurl",
+    "category": "web",
+    "parameters": [
+      {
+        "key": "WFURLActionURL",
+        "type": "string",
+        "description": "URL to open",
+        "required": true,
+        "validation": {
+          "pattern": "^https?://.+"
+        }
+      }
+    ],
+    "inputTypes": [
+      "WFURLContentItem"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.getrssfeed": {
+    "identifier": "is.workflow.actions.getrssfeed",
+    "name": "Getrssfeed",
+    "description": "Action: Getrssfeed",
+    "category": "scripting",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [
+      "any"
+    ],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.getarticle": {
+    "identifier": "is.workflow.actions.getarticle",
+    "name": "Getarticle",
+    "description": "Action: Getarticle",
+    "category": "scripting",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [
+      "any"
+    ],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.getcomponentsfromurl": {
+    "identifier": "is.workflow.actions.getcomponentsfromurl",
+    "name": "Getcomponentsfromurl",
+    "description": "Action: Getcomponentsfromurl",
+    "category": "web",
+    "parameters": [
+      {
+        "key": "WFURLActionURL",
+        "type": "string",
+        "description": "URL to open",
+        "required": true,
+        "validation": {
+          "pattern": "^https?://.+"
+        }
+      }
+    ],
+    "inputTypes": [
+      "WFURLContentItem"
+    ],
+    "outputTypes": [
+      "any"
+    ],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.encoding": {
+    "identifier": "is.workflow.actions.encoding",
+    "name": "Encoding",
+    "description": "Action: Encoding",
+    "category": "general",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.hash": {
+    "identifier": "is.workflow.actions.hash",
+    "name": "Hash",
+    "description": "Action: Hash",
+    "category": "general",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.setairplanemode": {
+    "identifier": "is.workflow.actions.setairplanemode",
+    "name": "Setairplanemode",
+    "description": "Action: Setairplanemode",
+    "category": "scripting",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.setbluetooth": {
+    "identifier": "is.workflow.actions.setbluetooth",
+    "name": "Setbluetooth",
+    "description": "Action: Setbluetooth",
+    "category": "scripting",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "device",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.setwifi": {
+    "identifier": "is.workflow.actions.setwifi",
+    "name": "Setwifi",
+    "description": "Action: Setwifi",
+    "category": "scripting",
+    "parameters": [
+      {
+        "key": "WFConditionalActionCondition",
+        "type": "object",
+        "description": "Condition to evaluate",
+        "required": true
+      }
+    ],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "device",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.setcellulardata": {
+    "identifier": "is.workflow.actions.setcellulardata",
+    "name": "Setcellulardata",
+    "description": "Action: Setcellulardata",
+    "category": "scripting",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.setlowpowermode": {
+    "identifier": "is.workflow.actions.setlowpowermode",
+    "name": "Setlowpowermode",
+    "description": "Action: Setlowpowermode",
+    "category": "scripting",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.setflashlight": {
+    "identifier": "is.workflow.actions.setflashlight",
+    "name": "Setflashlight",
+    "description": "Action: Setflashlight",
+    "category": "scripting",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.getbatterylevel": {
+    "identifier": "is.workflow.actions.getbatterylevel",
+    "name": "Getbatterylevel",
+    "description": "Action: Getbatterylevel",
+    "category": "scripting",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [
+      "any"
+    ],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.getdevicedetails": {
+    "identifier": "is.workflow.actions.getdevicedetails",
+    "name": "Getdevicedetails",
+    "description": "Action: Getdevicedetails",
+    "category": "scripting",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [
+      "any"
+    ],
+    "permissions": "device",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.getnetworkdetails": {
+    "identifier": "is.workflow.actions.getnetworkdetails",
+    "name": "Getnetworkdetails",
+    "description": "Action: Getnetworkdetails",
+    "category": "scripting",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [
+      "any"
+    ],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.screenshot": {
+    "identifier": "is.workflow.actions.screenshot",
+    "name": "Screenshot",
+    "description": "Action: Screenshot",
+    "category": "general",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.getscreenbrightness": {
+    "identifier": "is.workflow.actions.getscreenbrightness",
+    "name": "Getscreenbrightness",
+    "description": "Action: Getscreenbrightness",
+    "category": "scripting",
+    "parameters": [
+      {
+        "key": "WFSetValue",
+        "type": "number",
+        "description": "Brightness level (0-100)",
+        "required": true,
+        "validation": {
+          "min": 0,
+          "max": 100
+        }
+      }
+    ],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [
+      "any"
+    ],
+    "permissions": "device",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.setsilentmode": {
+    "identifier": "is.workflow.actions.setsilentmode",
+    "name": "Setsilentmode",
+    "description": "Action: Setsilentmode",
+    "category": "scripting",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.runscript": {
+    "identifier": "is.workflow.actions.runscript",
+    "name": "Runscript",
+    "description": "Action: Runscript",
+    "category": "scripting",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.runjavascript": {
+    "identifier": "is.workflow.actions.runjavascript",
+    "name": "Runjavascript",
+    "description": "Action: Runjavascript",
+    "category": "scripting",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.runshellscript": {
+    "identifier": "is.workflow.actions.runshellscript",
+    "name": "Runshellscript",
+    "description": "Action: Runshellscript",
+    "category": "scripting",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.evaluatescript": {
+    "identifier": "is.workflow.actions.evaluatescript",
+    "name": "Evaluatescript",
+    "description": "Action: Evaluatescript",
+    "category": "scripting",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.runshortcut": {
+    "identifier": "is.workflow.actions.runshortcut",
+    "name": "Runshortcut",
+    "description": "Action: Runshortcut",
+    "category": "general",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.dismissshortcut": {
+    "identifier": "is.workflow.actions.dismissshortcut",
+    "name": "Dismissshortcut",
+    "description": "Action: Dismissshortcut",
+    "category": "general",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.continueinshortcut": {
+    "identifier": "is.workflow.actions.continueinshortcut",
+    "name": "Continueinshortcut",
+    "description": "Action: Continueinshortcut",
+    "category": "general",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.waittoreturn": {
+    "identifier": "is.workflow.actions.waittoreturn",
+    "name": "Waittoreturn",
+    "description": "Action: Waittoreturn",
+    "category": "general",
+    "parameters": [
+      {
+        "key": "WFWaitActionWaitTime",
+        "type": "number",
+        "description": "Time to wait in seconds",
+        "required": true,
+        "defaultValue": 1,
+        "validation": {
+          "min": 0,
+          "max": 3600
+        }
+      }
+    ],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.average": {
+    "identifier": "is.workflow.actions.average",
+    "name": "Average",
+    "description": "Action: Average",
+    "category": "general",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.max": {
+    "identifier": "is.workflow.actions.max",
+    "name": "Max",
+    "description": "Action: Max",
+    "category": "general",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.min": {
+    "identifier": "is.workflow.actions.min",
+    "name": "Min",
+    "description": "Action: Min",
+    "category": "general",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.sum": {
+    "identifier": "is.workflow.actions.sum",
+    "name": "Sum",
+    "description": "Action: Sum",
+    "category": "general",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.randomnumber": {
+    "identifier": "is.workflow.actions.randomnumber",
+    "name": "Randomnumber",
+    "description": "Action: Randomnumber",
+    "category": "data",
+    "parameters": [],
+    "inputTypes": [
+      "WFNumberContentItem"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.showinapp": {
+    "identifier": "is.workflow.actions.showinapp",
+    "name": "Showinapp",
+    "description": "Action: Showinapp",
+    "category": "apps",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.show": {
+    "identifier": "is.workflow.actions.show",
+    "name": "Show",
+    "description": "Action: Show",
+    "category": "general",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.dismiss": {
+    "identifier": "is.workflow.actions.dismiss",
+    "name": "Dismiss",
+    "description": "Action: Dismiss",
+    "category": "general",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.lockscreen": {
+    "identifier": "is.workflow.actions.lockscreen",
+    "name": "Lockscreen",
+    "description": "Action: Lockscreen",
+    "category": "general",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.openshare_sheet": {
+    "identifier": "is.workflow.actions.openshare_sheet",
+    "name": "Openshare Sheet",
+    "description": "Action: Openshare Sheet",
+    "category": "apps",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.scanqrcode": {
+    "identifier": "is.workflow.actions.scanqrcode",
+    "name": "Scanqrcode",
+    "description": "Action: Scanqrcode",
+    "category": "general",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.generateqrcode": {
+    "identifier": "is.workflow.actions.generateqrcode",
+    "name": "Generateqrcode",
+    "description": "Action: Generateqrcode",
+    "category": "general",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.getbarcode": {
+    "identifier": "is.workflow.actions.getbarcode",
+    "name": "Getbarcode",
+    "description": "Action: Getbarcode",
+    "category": "scripting",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [
+      "any"
+    ],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.createbarcode": {
+    "identifier": "is.workflow.actions.createbarcode",
+    "name": "Createbarcode",
+    "description": "Action: Createbarcode",
+    "category": "general",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.speechrecognize": {
+    "identifier": "is.workflow.actions.speechrecognize",
+    "name": "Speechrecognize",
+    "description": "Action: Speechrecognize",
+    "category": "general",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "microphone",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.textrecognition": {
+    "identifier": "is.workflow.actions.textrecognition",
+    "name": "Textrecognition",
+    "description": "Action: Textrecognition",
+    "category": "text",
+    "parameters": [
+      {
+        "key": "WFTextActionText",
+        "type": "string",
+        "description": "The text to display or process",
+        "required": true,
+        "defaultValue": ""
+      }
+    ],
+    "inputTypes": [
+      "WFStringContentItem"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.objectdetection": {
+    "identifier": "is.workflow.actions.objectdetection",
+    "name": "Objectdetection",
+    "description": "Action: Objectdetection",
+    "category": "general",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [
+      "any"
+    ],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.scenetextrecognition": {
+    "identifier": "is.workflow.actions.scenetextrecognition",
+    "name": "Scenetextrecognition",
+    "description": "Action: Scenetextrecognition",
+    "category": "text",
+    "parameters": [
+      {
+        "key": "WFTextActionText",
+        "type": "string",
+        "description": "The text to display or process",
+        "required": true,
+        "defaultValue": ""
+      }
+    ],
+    "inputTypes": [
+      "WFStringContentItem"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.imagerecognition": {
+    "identifier": "is.workflow.actions.imagerecognition",
+    "name": "Imagerecognition",
+    "description": "Action: Imagerecognition",
+    "category": "camera",
+    "parameters": [],
+    "inputTypes": [
+      "WFImageContentItem"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.classifyimage": {
+    "identifier": "is.workflow.actions.classifyimage",
+    "name": "Classifyimage",
+    "description": "Action: Classifyimage",
+    "category": "scripting",
+    "parameters": [
+      {
+        "key": "WFConditionalActionCondition",
+        "type": "object",
+        "description": "Condition to evaluate",
+        "required": true
+      }
+    ],
+    "inputTypes": [
+      "WFImageContentItem"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.detectlandmarks": {
+    "identifier": "is.workflow.actions.detectlandmarks",
+    "name": "Detectlandmarks",
+    "description": "Action: Detectlandmarks",
+    "category": "general",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [
+      "any"
+    ],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.detectrectangles": {
+    "identifier": "is.workflow.actions.detectrectangles",
+    "name": "Detectrectangles",
+    "description": "Action: Detectrectangles",
+    "category": "general",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [
+      "any"
+    ],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.detectfaces": {
+    "identifier": "is.workflow.actions.detectfaces",
+    "name": "Detectfaces",
+    "description": "Action: Detectfaces",
+    "category": "general",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [
+      "any"
+    ],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.imagereasoning": {
+    "identifier": "is.workflow.actions.imagereasoning",
+    "name": "Imagereasoning",
+    "description": "Action: Imagereasoning",
+    "category": "camera",
+    "parameters": [],
+    "inputTypes": [
+      "WFImageContentItem"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.gettype": {
+    "identifier": "is.workflow.actions.gettype",
+    "name": "Gettype",
+    "description": "Action: Gettype",
+    "category": "scripting",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [
+      "any"
+    ],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.coerce": {
+    "identifier": "is.workflow.actions.coerce",
+    "name": "Coerce",
+    "description": "Action: Coerce",
+    "category": "general",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.getvalueforkey": {
+    "identifier": "is.workflow.actions.getvalueforkey",
+    "name": "Getvalueforkey",
+    "description": "Action: Getvalueforkey",
+    "category": "scripting",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [
+      "any"
+    ],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.setvalueforkey": {
+    "identifier": "is.workflow.actions.setvalueforkey",
+    "name": "Setvalueforkey",
+    "description": "Action: Setvalueforkey",
+    "category": "scripting",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.getdictionaryvalue": {
+    "identifier": "is.workflow.actions.getdictionaryvalue",
+    "name": "Getdictionaryvalue",
+    "description": "Action: Getdictionaryvalue",
+    "category": "scripting",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [
+      "any"
+    ],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.setdictionaryvalue": {
+    "identifier": "is.workflow.actions.setdictionaryvalue",
+    "name": "Setdictionaryvalue",
+    "description": "Action: Setdictionaryvalue",
+    "category": "scripting",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.getlistitem": {
+    "identifier": "is.workflow.actions.getlistitem",
+    "name": "Getlistitem",
+    "description": "Action: Getlistitem",
+    "category": "scripting",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [
+      "any"
+    ],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.addtolist": {
+    "identifier": "is.workflow.actions.addtolist",
+    "name": "Addtolist",
+    "description": "Action: Addtolist",
+    "category": "general",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.inserttolist": {
+    "identifier": "is.workflow.actions.inserttolist",
+    "name": "Inserttolist",
+    "description": "Action: Inserttolist",
+    "category": "general",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.removelistitem": {
+    "identifier": "is.workflow.actions.removelistitem",
+    "name": "Removelistitem",
+    "description": "Action: Removelistitem",
+    "category": "general",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.countlist": {
+    "identifier": "is.workflow.actions.countlist",
+    "name": "Countlist",
+    "description": "Action: Countlist",
+    "category": "data",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.makepayment": {
+    "identifier": "is.workflow.actions.makepayment",
+    "name": "Makepayment",
+    "description": "Action: Makepayment",
+    "category": "commerce",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.getpaymentdetails": {
+    "identifier": "is.workflow.actions.getpaymentdetails",
+    "name": "Getpaymentdetails",
+    "description": "Action: Getpaymentdetails",
+    "category": "scripting",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [
+      "any"
+    ],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.applepay": {
+    "identifier": "is.workflow.actions.applepay",
+    "name": "Applepay",
+    "description": "Action: Applepay",
+    "category": "apps",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.getpaymentmethod": {
+    "identifier": "is.workflow.actions.getpaymentmethod",
+    "name": "Getpaymentmethod",
+    "description": "Action: Getpaymentmethod",
+    "category": "scripting",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [
+      "any"
+    ],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.posttotwitter": {
+    "identifier": "is.workflow.actions.posttotwitter",
+    "name": "Posttotwitter",
+    "description": "Action: Posttotwitter",
+    "category": "social",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.posttofacebook": {
+    "identifier": "is.workflow.actions.posttofacebook",
+    "name": "Posttofacebook",
+    "description": "Action: Posttofacebook",
+    "category": "social",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.share": {
+    "identifier": "is.workflow.actions.share",
+    "name": "Share",
+    "description": "Action: Share",
+    "category": "social",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.airdrop": {
+    "identifier": "is.workflow.actions.airdrop",
+    "name": "Airdrop",
+    "description": "Action: Airdrop",
+    "category": "general",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.openin": {
+    "identifier": "is.workflow.actions.openin",
+    "name": "Openin",
+    "description": "Action: Openin",
+    "category": "apps",
+    "parameters": [],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "low",
+    "discoveredFrom": [
+      "community:known-actions"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.choosefromlist": {
+    "identifier": "is.workflow.actions.choosefromlist",
+    "name": "Choose from List",
+    "description": "Presents a list for user to choose from",
+    "category": "scripting",
+    "parameters": [
+      {
+        "key": "WFChooseFromListActionPrompt",
+        "type": "string",
+        "description": "Prompt text",
+        "required": true,
+        "defaultValue": "Choose an item:"
+      },
+      {
+        "key": "WFChooseFromListActionList",
+        "type": "array",
+        "description": "List of items to choose from",
+        "required": true
+      }
+    ],
+    "inputTypes": [
+      "any"
+    ],
+    "outputTypes": [
+      "any"
+    ],
+    "permissions": "none",
+    "confidence": "high",
+    "discoveredFrom": [
+      "official:apple"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.nothing": {
+    "identifier": "is.workflow.actions.nothing",
+    "name": "Do Nothing",
+    "description": "Performs no action",
+    "category": "scripting",
+    "parameters": [],
+    "inputTypes": [],
+    "outputTypes": [],
+    "permissions": "none",
+    "confidence": "high",
+    "discoveredFrom": [
+      "official:apple"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.setdnd": {
+    "identifier": "is.workflow.actions.setdnd",
+    "name": "Set Do Not Disturb",
+    "description": "Turns Do Not Disturb on or off",
+    "category": "device",
+    "parameters": [
+      {
+        "key": "WFSetDNDActionValue",
+        "type": "boolean",
+        "description": "Do Not Disturb state",
+        "required": true,
+        "defaultValue": true
+      },
+      {
+        "key": "WFSetDNDActionTime",
+        "type": "number",
+        "description": "Duration in minutes (optional)",
+        "required": false,
+        "validation": {
+          "min": 1,
+          "max": 1440
+        }
+      }
+    ],
+    "inputTypes": [],
+    "outputTypes": [],
+    "permissions": "device",
+    "confidence": "high",
+    "discoveredFrom": [
+      "official:apple"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  },
+  "is.workflow.actions.sendemail": {
+    "identifier": "is.workflow.actions.sendemail",
+    "name": "Send Email",
+    "description": "Sends an email",
+    "category": "communication",
+    "parameters": [
+      {
+        "key": "WFSendEmailActionRecipients",
+        "type": "array",
+        "description": "Email recipients",
+        "required": true
+      },
+      {
+        "key": "WFSendEmailActionSubject",
+        "type": "string",
+        "description": "Email subject",
+        "required": true
+      },
+      {
+        "key": "WFSendEmailActionBody",
+        "type": "string",
+        "description": "Email body",
+        "required": true
+      },
+      {
+        "key": "WFSendEmailActionShowCompose",
+        "type": "boolean",
+        "description": "Show compose window",
+        "required": false,
+        "defaultValue": false
+      }
+    ],
+    "inputTypes": [
+      "WFStringContentItem"
+    ],
+    "outputTypes": [],
+    "permissions": "contacts",
+    "confidence": "high",
+    "discoveredFrom": [
+      "official:apple"
+    ],
+    "usageExamples": [],
+    "relatedActions": [],
+    "alternatives": []
+  }
+}

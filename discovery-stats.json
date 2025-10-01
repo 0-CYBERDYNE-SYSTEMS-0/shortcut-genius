@@ -1,0 +1,21 @@
+{
+  "totalActions": 30,
+  "highConfidence": 3,
+  "mediumConfidence": 27,
+  "lowConfidence": 0,
+  "categories": {
+    "text": 1,
+    "notification": 1,
+    "web": 1,
+    "scripting": 10,
+    "media": 1,
+    "clipboard": 2,
+    "location": 2,
+    "apps": 4,
+    "camera": 1,
+    "device": 1,
+    "data": 3,
+    "general": 3
+  },
+  "newSinceOriginal": 0
+}
