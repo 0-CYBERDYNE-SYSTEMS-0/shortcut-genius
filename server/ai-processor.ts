@@ -150,9 +150,9 @@ export class AIProcessor {
       max_tokens: modelConfig.capabilities.maxTokens || 4096
     };
 
-    // Add web search tool if available
+    // Add web search tools if available
     if (this.webSearchTool) {
-      requestParams.tools = [this.webSearchTool.getToolDefinition()];
+      requestParams.tools = this.webSearchTool.getAllToolDefinitions();
       requestParams.tool_choice = 'auto';
     }
 
@@ -179,20 +179,20 @@ export class AIProcessor {
       const toolCalls = response.choices[0].message.tool_calls;
       if (toolCalls && this.webSearchTool) {
         for (const toolCall of toolCalls) {
-          if (toolCall.function.name === 'web_search') {
+          if (['web_search', 'web_extract', 'web_crawl'].includes(toolCall.function.name)) {
             try {
               const args = JSON.parse(toolCall.function.arguments);
-              const searchResults = await this.webSearchTool.executeToolCall(args);
+              const toolResults = await this.webSearchTool.executeToolCall(toolCall.function.name, args);
 
               // Add the tool result to the conversation
               messages.push(response.choices[0].message);
               messages.push({
                 role: 'tool',
                 tool_call_id: toolCall.id,
-                content: searchResults
+                content: toolResults
               });
 
-              // Make another request with the search results
+              // Make another request with the tool results
               const followUpParams = {
                 ...requestParams,
                 messages,
@@ -246,13 +246,14 @@ export class AIProcessor {
       max_tokens: modelConfig.capabilities.maxTokens || 8192
     };
 
-    // Add web search tool if available
+    // Add web search tools if available
     if (this.webSearchTool) {
-      requestParams.tools = [{
-        name: this.webSearchTool.getOpenRouterToolDefinition().name,
-        description: this.webSearchTool.getOpenRouterToolDefinition().description,
-        input_schema: this.webSearchTool.getOpenRouterToolDefinition().parameters
-      }];
+      const toolDefinitions = this.webSearchTool.getAllOpenRouterToolDefinitions();
+      requestParams.tools = toolDefinitions.map(tool => ({
+        name: tool.function.name,
+        description: tool.function.description,
+        input_schema: tool.function.parameters
+      }));
     }
 
     try {
@@ -261,9 +262,9 @@ export class AIProcessor {
 
       // Handle function calls
       const toolUse = response.content.find((c: any) => c.type === 'tool_use');
-      if (toolUse && this.webSearchTool) {
+      if (toolUse && this.webSearchTool && ['web_search', 'web_extract', 'web_crawl'].includes(toolUse.name)) {
         try {
-          const searchResults = await this.webSearchTool.executeToolCall(toolUse.input);
+          const toolResults = await this.webSearchTool.executeToolCall(toolUse.name, toolUse.input);
 
           // Add the tool result to the conversation
           messages.push({ role: 'assistant', content: response.content });
@@ -272,11 +273,11 @@ export class AIProcessor {
             content: [{
               type: 'tool_result',
               tool_use_id: toolUse.id,
-              content: searchResults
+              content: toolResults
             }]
           });
 
-          // Make another request with the search results
+          // Make another request with the tool results
           response = await this.anthropic.messages.create({
             ...requestParams,
             messages,
@@ -321,9 +322,9 @@ export class AIProcessor {
       ...reasoningOptions
     };
 
-    // Add web search tool if available (OpenRouter function calling format)
+    // Add web search tools if available (OpenRouter function calling format)
     if (this.webSearchTool) {
-      requestData.tools = [this.webSearchTool.getOpenRouterToolDefinition()];
+      requestData.tools = this.webSearchTool.getAllOpenRouterToolDefinitions();
       requestData.tool_choice = 'auto';
     }
 
@@ -335,20 +336,20 @@ export class AIProcessor {
       const toolCalls = response.choices[0].message.tool_calls;
       if (toolCalls && this.webSearchTool) {
         for (const toolCall of toolCalls) {
-          if (toolCall.function.name === 'web_search') {
+          if (['web_search', 'web_extract', 'web_crawl'].includes(toolCall.function.name)) {
             try {
               const args = JSON.parse(toolCall.function.arguments);
-              const searchResults = await this.webSearchTool.executeToolCall(args);
+              const toolResults = await this.webSearchTool.executeToolCall(toolCall.function.name, args);
 
               // Add the tool result to the conversation
               messages.push(response.choices[0].message);
               messages.push({
                 role: 'tool',
                 tool_call_id: toolCall.id,
-                content: searchResults
+                content: toolResults
               });
 
-              // Make another request with the search results
+              // Make another request with the tool results
               const followUpData = {
                 ...requestData,
                 messages,

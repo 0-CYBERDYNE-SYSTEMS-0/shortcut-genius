@@ -105,7 +105,23 @@ initializeServices().catch(console.error);
 
 const SYSTEM_PROMPT = `You are an iOS Shortcuts expert who specializes in reverse engineering and optimizing shortcuts.
 
-You have access to web search functionality to help you find current information, latest iOS features, new shortcut actions, or any other up-to-date information that might be relevant to creating or analyzing shortcuts. Use this capability when you need recent information or when the user asks about current events, latest versions, or anything that might have changed recently.
+You have access to comprehensive web search and content extraction tools to help you find current information, latest iOS features, new shortcut actions, or any other up-to-date information that might be relevant to creating or analyzing shortcuts. Use these capabilities when you need recent information or when the user asks about current events, latest versions, or anything that might have changed recently.
+
+**Available Web Tools:**
+1. **web_search** - Search the web for current information, API documentation, news, or specific topics. Use search_type="api_docs" for comprehensive API documentation searches.
+2. **web_extract** - Extract detailed content from specific URLs, perfect for getting complete API documentation, specifications, or detailed information from known sources.
+3. **web_crawl** - Crawl entire websites or documentation sections to get comprehensive information about APIs, services, or topics. Use this when you need to explore multiple pages from the same site.
+
+**When to Use Each Tool:**
+- Use **web_search** when you need to find information about a topic, service, or API but don't have specific URLs
+- Use **web_extract** when you have specific documentation URLs and need detailed content extraction
+- Use **web_crawl** when you need comprehensive information from an entire documentation site or multiple related pages
+
+**Best Practices for API Documentation:**
+- For API integration tasks, prefer web_search with search_type="api_docs" first
+- If you find good documentation URLs, use web_extract to get detailed information
+- For comprehensive API understanding, use web_crawl on the main documentation site
+- Always extract endpoints, parameters, authentication methods, and code examples
 
 Example valid shortcut:
 {
@@ -1010,7 +1026,7 @@ export function registerRoutes(app: Express) {
   // Web search API endpoint for testing
   app.post('/api/search', async (req, res) => {
     try {
-      const { query, max_results = 5 } = req.body;
+      const { query, max_results = 5, search_type = 'basic' } = req.body;
 
       if (!query) {
         return res.status(400).json({
@@ -1018,12 +1034,191 @@ export function registerRoutes(app: Express) {
         });
       }
 
-      const results = await webSearchTool.search(query, max_results);
+      let results;
+      if (search_type === 'api_docs') {
+        results = await webSearchTool.searchForAPIDocumentation(query, max_results);
+      } else {
+        results = await webSearchTool.search(query, max_results);
+      }
+
       res.json(results);
     } catch (error) {
       console.error('Web search error:', error);
       res.status(500).json({
         error: 'Web search failed',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Test extract functionality
+  app.post('/api/test/extract', async (req, res) => {
+    try {
+      const { urls, prompt } = req.body;
+
+      if (!urls || !Array.isArray(urls) || urls.length === 0) {
+        return res.status(400).json({
+          error: 'URLs array is required'
+        });
+      }
+
+      const results = await webSearchTool.extract(urls, prompt);
+      res.json(results);
+    } catch (error) {
+      console.error('Extract error:', error);
+      res.status(500).json({
+        error: 'Extract failed',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Test crawl functionality
+  app.post('/api/test/crawl', async (req, res) => {
+    try {
+      const { url, limit = 10, prompt } = req.body;
+
+      if (!url) {
+        return res.status(400).json({
+          error: 'URL parameter is required'
+        });
+      }
+
+      const results = await webSearchTool.crawl(url, limit, prompt);
+      res.json(results);
+    } catch (error) {
+      console.error('Crawl error:', error);
+      res.status(500).json({
+        error: 'Crawl failed',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Test API documentation extraction
+  app.post('/api/test/api-docs', async (req, res) => {
+    try {
+      const { serviceName, searchQuery } = req.body;
+
+      if (!serviceName) {
+        return res.status(400).json({
+          error: 'Service name is required'
+        });
+      }
+
+      const { APIDocumentationExtractor } = await import('./api-documentation-extractor');
+      const extractor = new APIDocumentationExtractor(webSearchTool);
+
+      const apiDocs = await extractor.extractAPIDocumentation(serviceName, searchQuery);
+      res.json(apiDocs);
+    } catch (error) {
+      console.error('API docs extraction error:', error);
+      res.status(500).json({
+        error: 'API documentation extraction failed',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Test all Tavily capabilities
+  app.post('/api/test/tavily-comprehensive', async (req, res) => {
+    try {
+      const { serviceName = 'OpenWeatherMap' } = req.body;
+
+      console.log(`🧪 Testing comprehensive Tavily capabilities for ${serviceName}`);
+
+      // Test 1: Basic search
+      console.log('1️⃣ Testing basic search...');
+      const searchResults = await webSearchTool.search(`${serviceName} API`);
+
+      // Test 2: API documentation search
+      console.log('2️⃣ Testing API documentation search...');
+      const apiSearchResults = await webSearchTool.searchForAPIDocumentation(`${serviceName} API documentation`);
+
+      // Test 3: Extract from documentation URLs
+      let extractResults = null;
+      if (apiSearchResults.results.length > 0) {
+        console.log('3️⃣ Testing extract from documentation...');
+        const docUrls = apiSearchResults.results.slice(0, 2).map(r => r.url);
+        extractResults = await webSearchTool.extract(
+          docUrls,
+          `Extract detailed API information for ${serviceName}`
+        );
+      }
+
+      // Test 4: Crawl main documentation site
+      let crawlResults = null;
+      if (apiSearchResults.results.length > 0) {
+        console.log('4️⃣ Testing crawl functionality...');
+        const mainUrl = apiSearchResults.results[0].url;
+        try {
+          crawlResults = await webSearchTool.crawl(
+            mainUrl,
+            3,
+            `Comprehensive API documentation extraction for ${serviceName}`
+          );
+        } catch (crawlError) {
+          console.warn('Crawl test failed:', crawlError);
+        }
+      }
+
+      // Test 5: Full API documentation extraction
+      console.log('5️⃣ Testing full API documentation extraction...');
+      const { APIDocumentationExtractor } = await import('./api-documentation-extractor');
+      const extractor = new APIDocumentationExtractor(webSearchTool);
+      const apiDocs = await extractor.extractAPIDocumentation(serviceName);
+
+      const testResults = {
+        serviceName,
+        timestamp: new Date().toISOString(),
+        tests: {
+          basicSearch: {
+            success: searchResults.results.length > 0,
+            resultCount: searchResults.results.length,
+            hasAnswer: !!(searchResults as any).answer
+          },
+          apiDocumentationSearch: {
+            success: apiSearchResults.results.length > 0,
+            resultCount: apiSearchResults.results.length,
+            sampleUrls: apiSearchResults.results.slice(0, 3).map(r => r.url)
+          },
+          extract: {
+            success: extractResults ? extractResults.results.length > 0 : false,
+            resultCount: extractResults ? extractResults.results.length : 0,
+            tested: !!extractResults
+          },
+          crawl: {
+            success: crawlResults ? crawlResults.results.length > 0 : false,
+            resultCount: crawlResults ? crawlResults.results.length : 0,
+            tested: !!crawlResults
+          },
+          fullApiExtraction: {
+            success: !!(apiDocs.endpoints.length > 0),
+            endpointCount: apiDocs.endpoints.length,
+            hasAuthentication: apiDocs.authentication.type !== 'none',
+            exampleCount: apiDocs.examples.length,
+            sourceUrlCount: apiDocs.sourceUrls.length
+          }
+        },
+        summary: {
+          totalTestsRun: Object.keys(apiDocs).length,
+          allSuccessful: (
+            searchResults.results.length > 0 &&
+            apiSearchResults.results.length > 0 &&
+            apiDocs.endpoints.length > 0
+          )
+        },
+        tavilyConfig: {
+          searchEngine: (webSearchTool as any).searchEngine,
+          hasApiKey: !!(webSearchTool as any).apiKey
+        }
+      };
+
+      res.json(testResults);
+    } catch (error) {
+      console.error('Comprehensive test error:', error);
+      res.status(500).json({
+        error: 'Comprehensive test failed',
         details: error instanceof Error ? error.message : 'Unknown error'
       });
     }
