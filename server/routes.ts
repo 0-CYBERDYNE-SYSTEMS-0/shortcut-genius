@@ -16,6 +16,7 @@ import { OpenRouterClient } from './openrouter-client';
 import { AIProcessor } from './ai-processor';
 import { OpenRouterModelsService } from './openrouter-models';
 import { WebSearchTool } from './web-search-tool';
+import { AgenticShortcutBuilder } from './agentic-shortcut-builder';
 import {
   getModelConfig,
   isOpenRouterModel,
@@ -91,6 +92,18 @@ async function initializeServices() {
     console.log('✅ Action database system initialized');
     // Get supported models from AI processor
     SUPPORTED_MODELS = aiProcessor.getAvailableModels();
+
+    // Load action prompt for agentic builder
+    const fs = await import('fs/promises');
+    const actionPrompt = await fs.readFile('/Users/scrimwiggins/shortcut-genius-main/ai-action-prompt.md', 'utf8');
+
+    // Initialize agentic builder
+    agenticBuilder = new AgenticShortcutBuilder(
+      openrouter,
+      webSearchTool,
+      actionPrompt
+    );
+    console.log('✅ Agentic shortcut builder initialized');
   } catch (error) {
     console.error('Failed to initialize AI processor:', error);
   }
@@ -98,6 +111,7 @@ async function initializeServices() {
 
 // Global variables for initialization
 let aiProcessor: AIProcessor;
+let agenticBuilder: AgenticShortcutBuilder;
 let SUPPORTED_MODELS: string[] = [];
 
 // Initialize services after dotenv config
@@ -429,6 +443,46 @@ export function registerRoutes(app: Express) {
       const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
       res.status(500).json({
         error: `Error processing with ${model}: ${errorMessage}`
+      });
+    }
+  });
+
+  // Agentic mode endpoint - builds shortcuts using multi-turn agent loop
+  app.post('/api/agentic/generate', async (req, res) => {
+    const { prompt, model = 'anthropic/claude-3.5-sonnet', maxIterations = 15 } = req.body;
+
+    if (!prompt) {
+      return res.status(400).json({
+        error: 'Missing required field: prompt'
+      });
+    }
+
+    if (!agenticBuilder) {
+      return res.status(503).json({
+        error: 'Agentic builder not initialized'
+      });
+    }
+
+    try {
+      console.log(`🤖 Starting agentic generation with model: ${model}`);
+
+      const result = await agenticBuilder.buildShortcut(prompt, model, maxIterations);
+
+      res.json({
+        shortcut: result.shortcut,
+        metadata: {
+          mode: 'agentic',
+          iterations: result.metadata.iterations,
+          searchesPerformed: result.metadata.searchesPerformed,
+          confidence: result.metadata.confidence,
+          summary: result.metadata.summary
+        }
+      });
+
+    } catch (error) {
+      console.error('Agentic generation error:', error);
+      res.status(500).json({
+        error: `Agentic generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
       });
     }
   });
