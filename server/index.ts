@@ -7,6 +7,12 @@ import dotenv from "dotenv";
 // Load environment variables
 dotenv.config();
 
+// Debug: Check if environment variables are loaded
+console.log('🔧 Environment Variables Loaded:');
+console.log('- OPENROUTER_API_KEY exists:', !!process.env.OPENROUTER_API_KEY);
+console.log('- OPENAI_API_KEY exists:', !!process.env.OPENAI_API_KEY);
+console.log('- ANTHROPIC_API_KEY exists:', !!process.env.ANTHROPIC_API_KEY);
+
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));

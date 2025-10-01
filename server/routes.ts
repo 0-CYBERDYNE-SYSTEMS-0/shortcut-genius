@@ -46,32 +46,58 @@ import {
   generateSharingMetadata
 } from './shortcut-sharing';
 
-// AI Model Clients - Direct APIs and OpenRouter
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || '' });
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY || '' });
-const openrouter = new OpenRouterClient(process.env.OPENROUTER_API_KEY || '');
+// AI Model Clients - Direct APIs and OpenRouter (initialized after dotenv config)
+let openai: OpenAI;
+let anthropic: Anthropic;
+let openrouter: OpenRouterClient;
+let openRouterModelsService: OpenRouterModelsService;
+let webSearchTool: WebSearchTool;
 
-// Initialize services
-const openRouterModelsService = new OpenRouterModelsService(process.env.OPENROUTER_API_KEY || '');
-const webSearchTool = new WebSearchTool(
-  process.env.TAVILY_API_KEY || process.env.SERPER_API_KEY || process.env.BRAVE_API_KEY,
-  process.env.SEARCH_ENGINE as 'tavily' | 'serper' | 'duckduckgo' | 'brave' || 'duckduckgo'
-);
+// Initialize function to be called after dotenv config
+async function initializeServices() {
+  openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || '' });
+  anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY || '' });
+  openrouter = new OpenRouterClient(process.env.OPENROUTER_API_KEY || '');
 
-// Initialize AI Processor with web search tool
-const aiProcessor = new AIProcessor({
-  openai,
-  anthropic,
-  openrouter,
-  webSearchTool
-});
+  // Debug: Log API key status (don't log the actual key)
+  console.log('🔑 API Keys Status:');
+  console.log('- OpenAI:', process.env.OPENAI_API_KEY ? 'configured' : 'not configured');
+  console.log('- Anthropic:', process.env.ANTHROPIC_API_KEY ? 'configured' : 'not configured');
+  console.log('- OpenRouter:', process.env.OPENROUTER_API_KEY ? `configured (${process.env.OPENROUTER_API_KEY.substring(0, 15)}...)` : 'not configured');
+  console.log('- OpenRouter API Key value:', process.env.OPENROUTER_API_KEY || 'undefined');
 
-// Initialize action database system
-await aiProcessor.initialize();
-console.log('✅ Action database system initialized');
+  // Initialize services
+  openRouterModelsService = new OpenRouterModelsService(process.env.OPENROUTER_API_KEY || '');
+  webSearchTool = new WebSearchTool(
+    process.env.TAVILY_API_KEY || process.env.SERPER_API_KEY || process.env.BRAVE_API_KEY,
+    process.env.SEARCH_ENGINE as 'tavily' | 'serper' | 'duckduckgo' | 'brave' || 'duckduckgo'
+  );
 
-// Get supported models from AI processor
-const SUPPORTED_MODELS = aiProcessor.getAvailableModels();
+  // Initialize AI Processor with web search tool
+  aiProcessor = new AIProcessor({
+    openai,
+    anthropic,
+    openrouter,
+    webSearchTool
+  });
+
+  // Initialize action database system
+  try {
+    await aiProcessor.initialize();
+    console.log('✅ Action database system initialized');
+    // Get supported models from AI processor
+    SUPPORTED_MODELS = aiProcessor.getAvailableModels();
+  } catch (error) {
+    console.error('Failed to initialize AI processor:', error);
+  }
+}
+
+// Global variables for initialization
+let aiProcessor: AIProcessor;
+let SUPPORTED_MODELS: string[] = [];
+
+// Initialize services after dotenv config
+initializeServices().catch(console.error);
 
 const SYSTEM_PROMPT = `You are an iOS Shortcuts expert who specializes in reverse engineering and optimizing shortcuts.
 
@@ -180,7 +206,35 @@ interface ProcessResult {
 }
 
 export function registerRoutes(app: Express) {
+  // Force reinitialization endpoint
+  app.post('/api/reinit', async (req, res) => {
+    console.log('🔄 Force reinitializing services...');
+    try {
+      await initializeServices();
+      console.log('✅ Services reinitialized successfully');
+      res.json({ message: 'Services reinitialized successfully' });
+    } catch (error) {
+      console.error('❌ Failed to reinitialize services:', error);
+      res.status(500).json({
+        error: 'Failed to reinitialize services'
+      });
+    }
+  });
+
   app.post('/api/process', async (req, res) => {
+    // Ensure services are initialized before handling requests
+    if (!aiProcessor || !openrouter || !process.env.OPENROUTER_API_KEY) {
+      console.log('🔄 Initializing services on first request...');
+      try {
+        await initializeServices();
+        console.log('✅ Services initialized successfully');
+      } catch (error) {
+        console.error('❌ Failed to initialize services:', error);
+        return res.status(500).json({
+          error: 'Services not initialized properly'
+        });
+      }
+    }
     const { model: requestedModel, prompt, type = 'analyze' } = req.body;
     
     // Use intelligent model routing
@@ -204,13 +258,14 @@ export function registerRoutes(app: Express) {
       });
     }
 
-    // Validate model selection
+    // Validate model selection - allow direct models or any provider/model format (OpenRouter)
     const allowedModels = SUPPORTED_MODELS;
-    const isOpenRouterModel = model.includes('/') && !model.startsWith('openrouter/');
+    const isDirectModel = allowedModels.includes(model);
+    const isOpenRouterFormat = model.includes('/') && !model.startsWith('openrouter/');
 
-    if (!allowedModels.includes(model) && !isOpenRouterModel) {
+    if (!isDirectModel && !isOpenRouterFormat) {
       return res.status(400).json({
-        error: 'Invalid model specified'
+        error: 'Invalid model specified. Use direct models (like gpt-4o) or OpenRouter format (provider/model)'
       });
     }
 
@@ -391,7 +446,8 @@ export function registerRoutes(app: Express) {
       timestamp: new Date().toISOString(),
       services: {
         openai: process.env.OPENAI_API_KEY ? 'configured' : 'not_configured',
-        anthropic: process.env.ANTHROPIC_API_KEY ? 'configured' : 'not_configured'
+        anthropic: process.env.ANTHROPIC_API_KEY ? 'configured' : 'not_configured',
+        openrouter: process.env.OPENROUTER_API_KEY ? 'configured' : 'not_configured'
       },
       circuitBreakers: circuitBreakerStatus,
       uptime: process.uptime()

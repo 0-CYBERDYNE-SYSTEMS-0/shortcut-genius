@@ -488,20 +488,16 @@ IMPORTANT:
   }
 
   getAvailableModels(): AIModel[] {
-    return [
+    const directModels = [
       // OpenAI Direct Models
-      'gpt-4o', 'gpt-4-1', 'gpt-4-1-mini', 'gpt-4-1-nano',
-      'gpt-5', 'gpt-5-mini', 'gpt-5-nano',
-      'o3', 'o3-mini', 'o4-mini',
+      'gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo',
       // Anthropic Direct Models
-      'claude-3-5-sonnet-20241022',
-      // OpenRouter Models
-      'openrouter/openai/gpt-4o', 'openrouter/openai/gpt-5',
-      'openrouter/anthropic/claude-3-5-sonnet', 'openrouter/anthropic/claude-4',
-      'openrouter/google/gemini-2-5-pro', 'openrouter/meta/llama-3-3-70b-instruct',
-      'openrouter/mistralai/mistral-large-2411', 'openrouter/qwen/qwen-2-5-72b-instruct',
-      'openrouter/deepseek/deepseek-v3'
+      'claude-3-5-sonnet-20241022'
     ];
+
+    // Allow any provider/model format for OpenRouter (this enables ANY OpenRouter model)
+    // This means users can use any model they find from the OpenRouter API
+    return directModels;
   }
 
   checkApiKeyAvailability(model: AIModel): { available: boolean; error?: string } {

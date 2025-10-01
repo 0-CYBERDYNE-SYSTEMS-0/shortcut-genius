@@ -1,3 +1,4 @@
+import OpenAI from 'openai';
 import axios, { AxiosInstance } from 'axios';
 
 export interface OpenRouterResponse {
@@ -10,6 +11,7 @@ export interface OpenRouterResponse {
     message: {
       role: string;
       content: string;
+      tool_calls?: any[];
     };
     finish_reason: string;
   }>;
@@ -21,8 +23,10 @@ export interface OpenRouterResponse {
 }
 
 export interface OpenRouterMessage {
-  role: 'system' | 'user' | 'assistant';
-  content: string;
+  role: 'system' | 'user' | 'assistant' | 'tool';
+  content?: string;
+  tool_call_id?: string;
+  tool_calls?: any[];
 }
 
 export interface OpenRouterChatCompletionRequest {
@@ -34,13 +38,33 @@ export interface OpenRouterChatCompletionRequest {
   frequency_penalty?: number;
   presence_penalty?: number;
   stream?: boolean;
+  tools?: any[];
+  tool_choice?: any;
 }
 
 export class OpenRouterClient {
-  private client: AxiosInstance;
+  private openaiClient: OpenAI;
+  private fallbackClient: AxiosInstance;
 
   constructor(apiKey: string) {
-    this.client = axios.create({
+    // Debug: Log the API key being passed
+    console.log('🔧 OpenRouter Client Constructor:');
+    console.log('- API Key passed:', apiKey ? `exists (${apiKey.substring(0, 15)}...)` : 'undefined or empty');
+    console.log('- Process env OPENROUTER_API_KEY:', process.env.OPENROUTER_API_KEY ? `exists (${process.env.OPENROUTER_API_KEY.substring(0, 15)}...)` : 'undefined');
+
+    // Use OpenAI SDK with OpenRouter base URL (recommended by OpenRouter)
+    this.openaiClient = new OpenAI({
+      apiKey: apiKey,
+      baseURL: 'https://openrouter.ai/api/v1',
+      defaultHeaders: {
+        'HTTP-Referer': process.env.BASE_URL || 'http://localhost:4321',
+        'X-Title': 'ShortcutGenius'
+      },
+      timeout: 120000
+    });
+
+    // Fallback axios client for direct API calls
+    this.fallbackClient = axios.create({
       baseURL: 'https://openrouter.ai/api/v1',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
@@ -48,19 +72,40 @@ export class OpenRouterClient {
         'HTTP-Referer': process.env.BASE_URL || 'http://localhost:4321',
         'X-Title': 'ShortcutGenius'
       },
-      timeout: 120000 // 2 minutes timeout
+      timeout: 120000
     });
   }
 
   async createChatCompletion(request: OpenRouterChatCompletionRequest): Promise<OpenRouterResponse> {
     try {
-      const response = await this.client.post('/chat/completions', request);
-      return response.data;
+      // Try OpenAI SDK first (recommended by OpenRouter)
+      const response = await this.openaiClient.chat.completions.create({
+        model: request.model,
+        messages: request.messages as any,
+        temperature: request.temperature,
+        max_tokens: request.max_tokens,
+        top_p: request.top_p,
+        frequency_penalty: request.frequency_penalty,
+        presence_penalty: request.presence_penalty,
+        stream: request.stream,
+        tools: request.tools,
+        tool_choice: request.tool_choice
+      });
+
+      return response as OpenRouterResponse;
     } catch (error: any) {
-      console.error('OpenRouter API error:', error.response?.data || error.message);
-      throw new Error(
-        `OpenRouter API error: ${error.response?.data?.error?.message || error.message}`
-      );
+      console.error('OpenRouter API error with OpenAI SDK:', error.response?.data || error.message);
+
+      // Fallback to direct axios call
+      try {
+        const response = await this.fallbackClient.post('/chat/completions', request);
+        return response.data;
+      } catch (fallbackError: any) {
+        console.error('OpenRouter API error with fallback:', fallbackError.response?.data || fallbackError.message);
+        throw new Error(
+          `OpenRouter API error: ${fallbackError.response?.data?.error?.message || fallbackError.message}`
+        );
+      }
     }
   }
 

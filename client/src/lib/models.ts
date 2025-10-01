@@ -76,8 +76,20 @@ export const MODEL_CONFIGS: Record<AIModel, ModelConfig> = {
 
 // Check if a model is from OpenRouter
 export const isOpenRouterModel = (modelId: AIModel): boolean => {
+  // Direct OpenAI and Anthropic models (not from OpenRouter)
+  const directModels = ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo', 'claude-3-5-sonnet-20241022'];
+
+  // If it's a direct model, it's not from OpenRouter
+  if (directModels.includes(modelId)) {
+    return false;
+  }
+
+  // Models with provider/model format are from OpenRouter
   const hasProviderSlash = modelId.includes('/') && !modelId.startsWith('openrouter/');
+
+  // Old format with openrouter/ prefix
   const isOpenRouterPrefixed = modelId.startsWith('openrouter/');
+
   return hasProviderSlash || isOpenRouterPrefixed;
 };
 
@@ -86,8 +98,9 @@ export const getOpenRouterModelName = (modelId: AIModel): string => {
   if (modelId.startsWith('openrouter/')) {
     return modelId.replace('openrouter/', '');
   }
-  if (modelId.includes('/')) {
-    return modelId.split('/')[1];
+  if (modelId.includes('/') && modelId.split('/').length >= 2) {
+    // For models like "openai/gpt-4o-mini", return the full "provider/model" format
+    return modelId;
   }
   return modelId;
 };
