@@ -1,7 +1,10 @@
 import OpenAI from 'openai';
 import Anthropic from '@anthropic-ai/sdk';
+import fs from 'fs/promises';
 import { OpenRouterClient } from './openrouter-client';
 import { WebSearchTool } from './web-search-tool';
+import { AIActionEnhancer } from './ai-action-enhancer';
+import { GlyphMappingSystem } from './glyph-mapping-system';
 import {
   getModelConfig,
   isOpenRouterModel,
@@ -42,12 +45,72 @@ export class AIProcessor {
   private anthropic: Anthropic;
   private openrouter: OpenRouterClient;
   private webSearchTool?: WebSearchTool;
+  private actionEnhancer: AIActionEnhancer;
+  private glyphSystem: GlyphMappingSystem;
+  private comprehensiveActionDatabase: any = null;
+  private aiPrompt: string = '';
+  private initialized: boolean = false;
 
   constructor(options: AIProcessorOptions) {
     this.openai = options.openai;
     this.anthropic = options.anthropic;
     this.openrouter = options.openrouter;
     this.webSearchTool = options.webSearchTool;
+    this.actionEnhancer = new AIActionEnhancer();
+    this.glyphSystem = new GlyphMappingSystem();
+  }
+
+  async initialize(): Promise<void> {
+    if (!this.initialized) {
+      await this.actionEnhancer.initialize();
+      await this.loadComprehensiveActionDatabase();
+      this.initialized = true;
+    }
+  }
+
+  private async loadComprehensiveActionDatabase(): Promise<void> {
+    try {
+      // Load final comprehensive database
+      const databasePath = '/Users/scrimwiggins/shortcut-genius-main/final-action-database.json';
+      const data = await fs.readFile(databasePath, 'utf8');
+      this.comprehensiveActionDatabase = JSON.parse(data);
+
+      // Load optimized AI prompt
+      const promptPath = '/Users/scrimwiggins/shortcut-genius-main/ai-action-prompt.md';
+      const promptData = await fs.readFile(promptPath, 'utf8');
+      this.aiPrompt = promptData;
+
+      console.log(`Loaded comprehensive action database with ${Object.keys(this.comprehensiveActionDatabase).length} actions`);
+    } catch (error) {
+      console.log('Could not load comprehensive database, falling back to action enhancer');
+      this.comprehensiveActionDatabase = null;
+    }
+  }
+
+  async enhancePrompt(prompt: string, type: 'generate' | 'analyze' = 'generate'): Promise<{ enhancedPrompt: string; actionSuggestions: any[] }> {
+    if (!this.initialized) {
+      await this.initialize();
+    }
+
+    const enhancedRequest = {
+      prompt,
+      model: 'gpt-4o',
+      mode: type
+    };
+
+    const enhancedResponse = await this.actionEnhancer.enhanceShortcutRequest(enhancedRequest);
+    return {
+      enhancedPrompt: enhancedResponse.enhancedPrompt,
+      actionSuggestions: enhancedResponse.actions
+    };
+  }
+
+  getActionDatabase(): any {
+    return this.actionEnhancer.getActionDatabase();
+  }
+
+  getGlyphForAction(actionIdentifier: string): string {
+    return this.glyphSystem.getGlyphForAction(actionIdentifier);
   }
 
   async process(request: ProcessRequest): Promise<ProcessResult> {
@@ -317,29 +380,83 @@ export class AIProcessor {
   }
 
   private buildSystemPrompt(basePrompt: string, type: string): string {
-    if (type === 'generate') {
-      return basePrompt + '\nRespond ONLY with a valid JSON shortcut object following the exact structure from the example.';
-    } else {
-      return basePrompt + '\nAnalyze the shortcut and respond with a valid JSON analysis object.';
+    let systemPrompt = basePrompt;
+
+    // Add comprehensive action database knowledge
+    if (this.comprehensiveActionDatabase && this.aiPrompt) {
+      systemPrompt += '\n\n' + this.aiPrompt;
     }
+
+    if (type === 'generate') {
+      systemPrompt += '\n\nRespond ONLY with a valid JSON shortcut object following the exact structure from the example.';
+    } else {
+      systemPrompt += '\n\nAnalyze the shortcut and respond with a valid JSON analysis object.';
+    }
+
+    return systemPrompt;
   }
 
   private buildUserPrompt(prompt: string, type: string): string {
     if (type === 'generate') {
-      return `Create a shortcut that ${prompt}. Return only valid JSON in this exact format:
+      let actionPrompt = '';
+
+      if (this.comprehensiveActionDatabase) {
+        const availableActions = Object.keys(this.comprehensiveActionDatabase).length;
+
+        // Get actions by category for better organization
+        const categories: Record<string, any[]> = {};
+        Object.values(this.comprehensiveActionDatabase).forEach((action: any) => {
+          if (!categories[action.category]) {
+            categories[action.category] = [];
+          }
+          categories[action.category].push(action);
+        });
+
+        actionPrompt = `
+
+AVAILABLE ACTIONS DATABASE (${availableActions} verified actions):
+
+${Object.entries(categories).slice(0, 8).map(([category, actions]) => `
+**${category.toUpperCase()}** (${actions.length} actions):
+${actions.slice(0, 3).map((action: any) => `  • ${action.name} (\`${action.identifier}\`)
+    ${action.parameters.length > 0 ? `Parameters: ${action.parameters.map((p: any) => p.key).join(', ')}` : 'No parameters'}
+    Permissions: ${action.permissions}`).join('\n')}
+`).join('')}
+
+*Use only these verified action identifiers in your response. All required parameters must be included.*`;
+      } else {
+        // Fallback to basic action database
+        const actionDatabase = this.getActionDatabase();
+        const availableActions = Object.keys(actionDatabase).length;
+        actionPrompt = `
+
+IMPORTANT: Use only the following verified iOS Shortcuts actions (${availableActions} available):
+${Object.entries(actionDatabase).slice(0, 10).map(([id, action]: [string, any]) =>
+  `- ${action.name}: ${id}\n  Parameters: ${action.parameters.map((p: any) => p.key).join(', ')}\n  Category: ${action.category}`
+).join('\n')}`;
+      }
+
+      return `Create a shortcut that ${prompt}.${actionPrompt}
+
+Return only valid JSON in this exact format:
 {
   "name": "Shortcut Name",
   "actions": [
     {
-      "type": "notification",
+      "type": "action_identifier_here",
       "parameters": {
-        "title": "Title",
-        "body": "Message",
-        "sound": true
+        "parameter_key": "parameter_value"
       }
     }
   ]
-}`;
+}
+
+IMPORTANT:
+- Use only the action identifiers listed above
+- Include all required parameters for each action
+- Use proper parameter keys as shown in the action descriptions
+- Consider permission requirements
+- Match input/output types between connected actions`;
     } else {
       return `Analyze this shortcut and suggest improvements: ${prompt}`;
     }

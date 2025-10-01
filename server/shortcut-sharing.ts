@@ -31,17 +31,47 @@ interface SharingOptions {
   author?: string;
 }
 
-// In-memory storage for shared shortcuts (in production, use a database)
-const sharedShortcuts = new Map<string, SharedShortcut>();
+// Initialize directory paths
 const SHARES_DIR = path.join(process.cwd(), 'shares');
 const QR_CODES_DIR = path.join(SHARES_DIR, 'qr-codes');
+const SHARES_DB = path.join(SHARES_DIR, 'shortcuts.json');
+
+// Load shortcuts from file
+async function loadShortcuts(): Promise<Map<string, SharedShortcut>> {
+  try {
+    if (await fs.access(SHARES_DB).then(() => true).catch(() => false)) {
+      const data = await fs.readFile(SHARES_DB, 'utf-8');
+      const shortcuts = JSON.parse(data);
+      return new Map(Object.entries(shortcuts));
+    }
+  } catch (error) {
+    console.log('No existing shortcuts database found, starting fresh');
+  }
+  return new Map();
+}
+
+// Save shortcuts to file
+async function saveShortcuts(shortcuts: Map<string, SharedShortcut>): Promise<void> {
+  try {
+    const data = Object.fromEntries(shortcuts);
+    await fs.writeFile(SHARES_DB, JSON.stringify(data, null, 2));
+  } catch (error) {
+    console.error('Failed to save shortcuts database:', error);
+  }
+}
+
+// In-memory cache with file persistence
+let sharedShortcuts = new Map<string, SharedShortcut>();
 
 // Initialize sharing system
 export async function initializeSharingSystem(): Promise<void> {
   try {
     await fs.mkdir(SHARES_DIR, { recursive: true });
     await fs.mkdir(QR_CODES_DIR, { recursive: true });
-    console.log('Shortcut sharing system initialized');
+
+    // Load existing shortcuts
+    sharedShortcuts = await loadShortcuts();
+    console.log(`Shortcut sharing system initialized with ${sharedShortcuts.size} existing shortcuts`);
   } catch (error) {
     console.error('Failed to initialize sharing system:', error);
     throw error;
@@ -72,7 +102,7 @@ export async function createSharedShortcut(
   }
 
   // Generate URLs
-  const baseUrl = process.env.BASE_URL || 'http://localhost:5000';
+  const baseUrl = process.env.BASE_URL || 'http://localhost:4321';
   const shareUrl = `${baseUrl}/share/${id}`;
   const qrCodeUrl = `${baseUrl}/api/qr/${id}`;
 
@@ -106,8 +136,9 @@ export async function createSharedShortcut(
     hash
   };
 
-  // Store in memory (in production, save to database)
+  // Store in memory and save to file
   sharedShortcuts.set(id, sharedShortcut);
+  await saveShortcuts(sharedShortcuts);
 
   return sharedShortcut;
 }
@@ -137,6 +168,7 @@ export async function incrementDownloadCount(id: string): Promise<void> {
   if (shared) {
     shared.downloadCount++;
     shared.updatedAt = new Date().toISOString();
+    await saveShortcuts(sharedShortcuts);
   }
 }
 

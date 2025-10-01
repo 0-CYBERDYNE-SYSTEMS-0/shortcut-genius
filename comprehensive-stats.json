@@ -1,0 +1,43 @@
+{
+  "totalActions": 185,
+  "confidenceLevels": {
+    "high": 0,
+    "medium": 0,
+    "low": 158
+  },
+  "categories": {
+    "text": 9,
+    "notification": 1,
+    "web": 5,
+    "scripting": 61,
+    "media": 8,
+    "clipboard": 3,
+    "location": 4,
+    "apps": 8,
+    "camera": 11,
+    "device": 1,
+    "data": 11,
+    "files": 10,
+    "general": 37,
+    "communication": 3,
+    "health": 5,
+    "smarthome": 4,
+    "commerce": 1,
+    "social": 3
+  },
+  "permissionLevels": {
+    "none": 148,
+    "notification": 1,
+    "media": 1,
+    "location": 2,
+    "contacts": 7,
+    "camera": 4,
+    "device": 7,
+    "health": 7,
+    "home": 6,
+    "microphone": 2
+  },
+  "sources": {
+    "community": 158
+  }
+}

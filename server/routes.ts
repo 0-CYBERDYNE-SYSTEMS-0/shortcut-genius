@@ -66,6 +66,10 @@ const aiProcessor = new AIProcessor({
   webSearchTool
 });
 
+// Initialize action database system
+await aiProcessor.initialize();
+console.log('✅ Action database system initialized');
+
 // Get supported models from AI processor
 const SUPPORTED_MODELS = aiProcessor.getAvailableModels();
 

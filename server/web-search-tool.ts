@@ -239,22 +239,25 @@ export class WebSearchTool {
   // OpenRouter function calling format
   getOpenRouterToolDefinition() {
     return {
-      name: 'web_search',
-      description: 'Search the web for current information, news, or specific topics',
-      parameters: {
-        type: 'object',
-        properties: {
-          query: {
-            type: 'string',
-            description: 'The search query'
+      type: 'function',
+      function: {
+        name: 'web_search',
+        description: 'Search the web for current information, news, or specific topics',
+        parameters: {
+          type: 'object',
+          properties: {
+            query: {
+              type: 'string',
+              description: 'The search query'
+            },
+            max_results: {
+              type: 'number',
+              description: 'Maximum results to return',
+              default: 5
+            }
           },
-          max_results: {
-            type: 'number',
-            description: 'Maximum results to return',
-            default: 5
-          }
-        },
-        required: ['query']
+          required: ['query']
+        }
       }
     };
   }

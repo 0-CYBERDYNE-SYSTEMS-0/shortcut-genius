@@ -1,0 +1,513 @@
+{
+  "is.workflow.actions.gettext": {
+    "identifier": "is.workflow.actions.gettext",
+    "name": "Text",
+    "description": "Displays text on the screen",
+    "category": "text",
+    "parameters": [
+      {
+        "key": "WFTextActionText",
+        "type": "string",
+        "description": "The text to display",
+        "required": true,
+        "defaultValue": "Hello World!"
+      }
+    ],
+    "inputTypes": [],
+    "outputTypes": ["WFStringContentItem"],
+    "permissions": "none"
+  },
+  "is.workflow.actions.notification": {
+    "identifier": "is.workflow.actions.notification",
+    "name": "Show Notification",
+    "description": "Displays a notification",
+    "category": "notification",
+    "parameters": [
+      {
+        "key": "WFNotificationActionBody",
+        "type": "string",
+        "description": "Notification body text",
+        "required": true,
+        "defaultValue": "Notification"
+      },
+      {
+        "key": "WFNotificationActionTitle",
+        "type": "string",
+        "description": "Notification title",
+        "required": false,
+        "defaultValue": "Shortcut"
+      },
+      {
+        "key": "WFNotificationActionSound",
+        "type": "boolean",
+        "description": "Play sound",
+        "required": false,
+        "defaultValue": false
+      }
+    ],
+    "inputTypes": [],
+    "outputTypes": [],
+    "permissions": "notification"
+  },
+  "is.workflow.actions.url": {
+    "identifier": "is.workflow.actions.url",
+    "name": "Open URL",
+    "description": "Opens a URL in the default browser",
+    "category": "web",
+    "parameters": [
+      {
+        "key": "WFURLActionURL",
+        "type": "string",
+        "description": "The URL to open",
+        "required": true,
+        "defaultValue": "https://example.com"
+      }
+    ],
+    "inputTypes": ["WFURLContentItem"],
+    "outputTypes": [],
+    "permissions": "none"
+  },
+  "is.workflow.actions.wait": {
+    "identifier": "is.workflow.actions.wait",
+    "name": "Wait",
+    "description": "Waits for a specified duration",
+    "category": "scripting",
+    "parameters": [
+      {
+        "key": "WFWaitActionWaitTime",
+        "type": "number",
+        "description": "Time to wait in seconds",
+        "required": true,
+        "defaultValue": 1
+      }
+    ],
+    "inputTypes": [],
+    "outputTypes": [],
+    "permissions": "none"
+  },
+  "is.workflow.actions.speak": {
+    "identifier": "is.workflow.actions.speak",
+    "name": "Speak Text",
+    "description": "Speaks text using text-to-speech",
+    "category": "media",
+    "parameters": [
+      {
+        "key": "WFSpeakTextActionText",
+        "type": "string",
+        "description": "Text to speak",
+        "required": true,
+        "defaultValue": "Hello World!"
+      },
+      {
+        "key": "WFSpeakTextActionLanguage",
+        "type": "string",
+        "description": "Language code",
+        "required": false,
+        "defaultValue": "en-US"
+      },
+      {
+        "key": "WFSpeakTextActionPitch",
+        "type": "number",
+        "description": "Voice pitch (0.5-2.0)",
+        "required": false,
+        "defaultValue": 1.0
+      },
+      {
+        "key": "WFSpeakTextActionRate",
+        "type": "number",
+        "description": "Speech rate (0.5-2.0)",
+        "required": false,
+        "defaultValue": 1.0
+      }
+    ],
+    "inputTypes": ["WFStringContentItem"],
+    "outputTypes": [],
+    "permissions": "media"
+  },
+  "is.workflow.actions.copy": {
+    "identifier": "is.workflow.actions.copy",
+    "name": "Copy to Clipboard",
+    "description": "Copies content to the clipboard",
+    "category": "clipboard",
+    "parameters": [
+      {
+        "key": "WFCopyActionCopyText",
+        "type": "any",
+        "description": "Content to copy",
+        "required": true
+      }
+    ],
+    "inputTypes": ["WFStringContentItem", "WFURLContentItem", "WFImageContentItem"],
+    "outputTypes": [],
+    "permissions": "none"
+  },
+  "is.workflow.actions.setvariable": {
+    "identifier": "is.workflow.actions.setvariable",
+    "name": "Set Variable",
+    "description": "Sets a variable to a value",
+    "category": "scripting",
+    "parameters": [
+      {
+        "key": "WFVariableName",
+        "type": "string",
+        "description": "Variable name",
+        "required": true,
+        "defaultValue": "Variable"
+      },
+      {
+        "key": "WFVariableInput",
+        "type": "any",
+        "description": "Variable value",
+        "required": true
+      }
+    ],
+    "inputTypes": ["any"],
+    "outputTypes": ["any"],
+    "permissions": "none"
+  },
+  "is.workflow.actions.getvariable": {
+    "identifier": "is.workflow.actions.getvariable",
+    "name": "Get Variable",
+    "description": "Gets the value of a variable",
+    "category": "scripting",
+    "parameters": [
+      {
+        "key": "WFVariableName",
+        "type": "string",
+        "description": "Variable name",
+        "required": true,
+        "defaultValue": "Variable"
+      }
+    ],
+    "inputTypes": [],
+    "outputTypes": ["any"],
+    "permissions": "none"
+  },
+  "is.workflow.actions.conditional": {
+    "identifier": "is.workflow.actions.conditional",
+    "name": "If",
+    "description": "Performs actions conditionally",
+    "category": "scripting",
+    "parameters": [
+      {
+        "key": "WFConditionalActionCondition",
+        "type": "object",
+        "description": "Condition to evaluate",
+        "required": true
+      }
+    ],
+    "inputTypes": ["any"],
+    "outputTypes": ["any"],
+    "permissions": "none"
+  },
+  "is.workflow.actions.repeat": {
+    "identifier": "is.workflow.actions.repeat",
+    "name": "Repeat",
+    "description": "Repeats actions multiple times",
+    "category": "scripting",
+    "parameters": [
+      {
+        "key": "WFRepeatActionCount",
+        "type": "number",
+        "description": "Number of times to repeat",
+        "required": true,
+        "defaultValue": 1
+      }
+    ],
+    "inputTypes": ["any"],
+    "outputTypes": ["any"],
+    "permissions": "none"
+  },
+  "is.workflow.actions.ask": {
+    "identifier": "is.workflow.actions.ask",
+    "name": "Ask for Input",
+    "description": "Asks the user for input",
+    "category": "scripting",
+    "parameters": [
+      {
+        "key": "WFAskActionPrompt",
+        "type": "string",
+        "description": "Prompt text",
+        "required": true,
+        "defaultValue": "Enter input:"
+      },
+      {
+        "key": "WFAskActionDefaultAnswer",
+        "type": "string",
+        "description": "Default answer",
+        "required": false,
+        "defaultValue": ""
+      }
+    ],
+    "inputTypes": [],
+    "outputTypes": ["WFStringContentItem"],
+    "permissions": "none"
+  },
+  "is.workflow.actions.showresult": {
+    "identifier": "is.workflow.actions.showresult",
+    "name": "Show Result",
+    "description": "Shows the result of previous actions",
+    "category": "scripting",
+    "parameters": [],
+    "inputTypes": ["any"],
+    "outputTypes": [],
+    "permissions": "none"
+  },
+  "is.workflow.actions.comment": {
+    "identifier": "is.workflow.actions.comment",
+    "name": "Comment",
+    "description": "Adds a comment to the shortcut",
+    "category": "scripting",
+    "parameters": [
+      {
+        "key": "WFCommentActionText",
+        "type": "string",
+        "description": "Comment text",
+        "required": true,
+        "defaultValue": "Comment"
+      }
+    ],
+    "inputTypes": [],
+    "outputTypes": [],
+    "permissions": "none"
+  },
+  "is.workflow.actions.exit": {
+    "identifier": "is.workflow.actions.exit",
+    "name": "Exit Shortcut",
+    "description": "Exits the shortcut immediately",
+    "category": "scripting",
+    "parameters": [],
+    "inputTypes": [],
+    "outputTypes": [],
+    "permissions": "none"
+  },
+  "is.workflow.actions.showalert": {
+    "identifier": "is.workflow.actions.showalert",
+    "name": "Show Alert",
+    "description": "Shows an alert dialog with options",
+    "category": "scripting",
+    "parameters": [
+      {
+        "key": "WFAlertActionTitle",
+        "type": "string",
+        "description": "Alert title",
+        "required": true,
+        "defaultValue": "Alert"
+      },
+      {
+        "key": "WFAlertActionMessage",
+        "type": "string",
+        "description": "Alert message",
+        "required": true,
+        "defaultValue": "Message"
+      }
+    ],
+    "inputTypes": [],
+    "outputTypes": [],
+    "permissions": "none"
+  },
+  "is.workflow.actions.getcurrentlocation": {
+    "identifier": "is.workflow.actions.getcurrentlocation",
+    "name": "Get Current Location",
+    "description": "Gets the device's current location",
+    "category": "location",
+    "parameters": [],
+    "inputTypes": [],
+    "outputTypes": ["WFLocationContentItem"],
+    "permissions": "location"
+  },
+  "is.workflow.actions.getcurrentweather": {
+    "identifier": "is.workflow.actions.getcurrentweather",
+    "name": "Get Current Weather",
+    "description": "Gets current weather conditions",
+    "category": "location",
+    "parameters": [],
+    "inputTypes": [],
+    "outputTypes": ["WFWeatherContentItem"],
+    "permissions": "location"
+  },
+  "is.workflow.actions.openapp": {
+    "identifier": "is.workflow.actions.openapp",
+    "name": "Open App",
+    "description": "Opens a specific app",
+    "category": "apps",
+    "parameters": [
+      {
+        "key": "WFOpenAppActionAppIdentifier",
+        "type": "string",
+        "description": "App bundle identifier",
+        "required": true
+      }
+    ],
+    "inputTypes": [],
+    "outputTypes": [],
+    "permissions": "none"
+  },
+  "is.workflow.actions.createnote": {
+    "identifier": "is.workflow.actions.createnote",
+    "name": "Create Note",
+    "description": "Creates a note in the Notes app",
+    "category": "apps",
+    "parameters": [
+      {
+        "key": "WFNoteActionNote",
+        "type": "string",
+        "description": "Note content",
+        "required": true
+      },
+      {
+        "key": "WFNoteActionTitle",
+        "type": "string",
+        "description": "Note title",
+        "required": false
+      }
+    ],
+    "inputTypes": ["WFStringContentItem"],
+    "outputTypes": [],
+    "permissions": "none"
+  },
+  "is.workflow.actions.sendmessage": {
+    "identifier": "is.workflow.actions.sendmessage",
+    "name": "Send Message",
+    "description": "Sends a message via Messages",
+    "category": "apps",
+    "parameters": [
+      {
+        "key": "WFSendMessageActionRecipients",
+        "type": "array",
+        "description": "Recipients",
+        "required": true
+      },
+      {
+        "key": "WFSendMessageActionMessage",
+        "type": "string",
+        "description": "Message text",
+        "required": true
+      }
+    ],
+    "inputTypes": ["WFStringContentItem"],
+    "outputTypes": [],
+    "permissions": "contacts"
+  },
+  "is.workflow.actions.makephonecall": {
+    "identifier": "is.workflow.actions.makephonecall",
+    "name": "Make Phone Call",
+    "description": "Makes a phone call",
+    "category": "apps",
+    "parameters": [
+      {
+        "key": "WFMakePhoneCallActionPhoneNumber",
+        "type": "string",
+        "description": "Phone number",
+        "required": true
+      }
+    ],
+    "inputTypes": [],
+    "outputTypes": [],
+    "permissions": "contacts"
+  },
+  "is.workflow.actions.takephoto": {
+    "identifier": "is.workflow.actions.takephoto",
+    "name": "Take Photo",
+    "description": "Takes a photo with the camera",
+    "category": "camera",
+    "parameters": [],
+    "inputTypes": [],
+    "outputTypes": ["WFImageContentItem"],
+    "permissions": "camera"
+  },
+  "is.workflow.actions.setbrightness": {
+    "identifier": "is.workflow.actions.setbrightness",
+    "name": "Set Brightness",
+    "description": "Sets the screen brightness",
+    "category": "device",
+    "parameters": [
+      {
+        "key": "WFSetBrightnessActionValue",
+        "type": "number",
+        "description": "Brightness level (0-100)",
+        "required": true,
+        "defaultValue": 50
+      }
+    ],
+    "inputTypes": [],
+    "outputTypes": [],
+    "permissions": "device"
+  },
+  "is.workflow.actions.getclipboard": {
+    "identifier": "is.workflow.actions.getclipboard",
+    "name": "Get Clipboard",
+    "description": "Gets content from the clipboard",
+    "category": "clipboard",
+    "parameters": [],
+    "inputTypes": [],
+    "outputTypes": ["any"],
+    "permissions": "none"
+  },
+  "is.workflow.actions.calculate": {
+    "identifier": "is.workflow.actions.calculate",
+    "name": "Calculate",
+    "description": "Performs mathematical calculations",
+    "category": "data",
+    "parameters": [
+      {
+        "key": "WFCalculateActionOperand1",
+        "type": "number",
+        "description": "First operand",
+        "required": true
+      },
+      {
+        "key": "WFCalculateActionOperand2",
+        "type": "number",
+        "description": "Second operand",
+        "required": true
+      },
+      {
+        "key": "WFCalculateActionOperation",
+        "type": "string",
+        "description": "Operation (+, -, *, /)",
+        "required": true,
+        "defaultValue": "+"
+      }
+    ],
+    "inputTypes": ["number"],
+    "outputTypes": ["WFNumberContentItem"],
+    "permissions": "none"
+  },
+  "is.workflow.actions.date": {
+    "identifier": "is.workflow.actions.date",
+    "name": "Date",
+    "description": "Gets the current date or creates a date",
+    "category": "data",
+    "parameters": [
+      {
+        "key": "WFDateActionDate",
+        "type": "string",
+        "description": "Date string",
+        "required": false,
+        "defaultValue": "now"
+      }
+    ],
+    "inputTypes": [],
+    "outputTypes": ["WFDateContentItem"],
+    "permissions": "none"
+  },
+  "is.workflow.actions.time": {
+    "identifier": "is.workflow.actions.time",
+    "name": "Time",
+    "description": "Gets the current time or creates a time",
+    "category": "data",
+    "parameters": [
+      {
+        "key": "WFTimeActionTime",
+        "type": "string",
+        "description": "Time string",
+        "required": false,
+        "defaultValue": "now"
+      }
+    ],
+    "inputTypes": [],
+    "outputTypes": ["WFDateContentItem"],
+    "permissions": "none"
+  }
+}

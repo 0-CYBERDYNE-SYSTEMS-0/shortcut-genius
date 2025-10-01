@@ -1,0 +1,58 @@
+{
+  "timestamp": "2025-10-01T05:44:24.867Z",
+  "system": {
+    "totalActions": 185,
+    "highConfidenceActions": 4,
+    "mediumConfidenceActions": 0,
+    "lowConfidenceActions": 181,
+    "categories": {
+      "text": 9,
+      "notification": 1,
+      "web": 5,
+      "scripting": 63,
+      "media": 8,
+      "clipboard": 3,
+      "location": 4,
+      "apps": 8,
+      "camera": 11,
+      "device": 2,
+      "data": 11,
+      "general": 35,
+      "files": 8,
+      "communication": 4,
+      "health": 5,
+      "smarthome": 4,
+      "commerce": 1,
+      "social": 3
+    },
+    "actionsWithParameters": 48,
+    "averageParameters": 0.42,
+    "actionsRequiringPermissions": 185
+  },
+  "automatedDiscovery": {
+    "lastUpdate": "2025-10-01T05:44:24.865Z",
+    "nextUpdate": "2025-10-02T05:44:24.865Z",
+    "needsUpdate": false
+  },
+  "integration": {
+    "aiProcessorEnhanced": true,
+    "comprehensiveDatabaseLoaded": true,
+    "automatedMonitoringActive": true,
+    "validationSystemActive": true
+  },
+  "performance": {
+    "improvementFactor": 6.85,
+    "confidenceDistribution": {
+      "high": 2,
+      "medium": 0,
+      "low": 98
+    }
+  },
+  "files": {
+    "finalDatabase": "/Users/scrimwiggins/shortcut-genius-main/final-action-database.json",
+    "comprehensiveDatabase": "/Users/scrimwiggins/shortcut-genius-main/comprehensive-action-database.json",
+    "aiPrompt": "/Users/scrimwiggins/shortcut-genius-main/ai-action-prompt.md",
+    "automatedDiscovery": "/Users/scrimwiggins/shortcut-genius-main/last-update.json",
+    "statistics": "/Users/scrimwiggins/shortcut-genius-main/final-stats.json"
+  }
+}
