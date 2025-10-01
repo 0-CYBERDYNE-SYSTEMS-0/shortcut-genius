@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { AIModel, OpenRouterModel } from "@/lib/types";
 import { MODEL_CONFIGS } from "@/lib/models";
 import { fetchOpenRouterModels } from "@/lib/openrouter-api";
