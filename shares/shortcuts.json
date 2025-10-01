@@ -1,0 +1,29 @@
+{
+  "0907f679-d055-4628-a959-b3c7300b0202": {
+    "id": "0907f679-d055-4628-a959-b3c7300b0202",
+    "name": "Hello World Test",
+    "description": "iOS Shortcut: Hello World Test",
+    "originalShortcut": {
+      "name": "Hello World Test",
+      "actions": [
+        {
+          "type": "text",
+          "parameters": {
+            "text": "Hello World!"
+          }
+        }
+      ]
+    },
+    "filePath": "/Users/scrimwiggins/shortcut-genius-main/shares/Hello_World_Test_0907f679.shortcut",
+    "shareUrl": "http://localhost:4321/share/0907f679-d055-4628-a959-b3c7300b0202",
+    "qrCodeUrl": "http://localhost:4321/api/qr/0907f679-d055-4628-a959-b3c7300b0202",
+    "downloadCount": 2,
+    "createdAt": "2025-09-24T16:21:48.673Z",
+    "updatedAt": "2025-09-24T16:21:54.354Z",
+    "isPublic": true,
+    "tags": [],
+    "author": "Anonymous",
+    "version": "1.0.0",
+    "hash": "74256d1cd6e51aedcb9abc31289883734c258a618da64e8aa03c4048ba7a668c"
+  }
+}
