@@ -15,8 +15,8 @@
       ]
     },
     "filePath": "/Users/scrimwiggins/shortcut-genius-main/shares/Hello_World_Test_0907f679.shortcut",
-    "shareUrl": "http://localhost:4321/share/0907f679-d055-4628-a959-b3c7300b0202",
-    "qrCodeUrl": "http://localhost:4321/api/qr/0907f679-d055-4628-a959-b3c7300b0202",
+    "shareUrl": "http://localhost:5000/share/0907f679-d055-4628-a959-b3c7300b0202",
+    "qrCodeUrl": "http://localhost:5000/api/qr/0907f679-d055-4628-a959-b3c7300b0202",
     "downloadCount": 2,
     "createdAt": "2025-09-24T16:21:48.673Z",
     "updatedAt": "2025-09-24T16:21:54.354Z",

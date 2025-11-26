@@ -56,7 +56,7 @@ export class OpenRouterClient {
       apiKey: apiKey,
       baseURL: 'https://openrouter.ai/api/v1',
       defaultHeaders: {
-        'HTTP-Referer': process.env.BASE_URL || 'http://localhost:4321',
+        'HTTP-Referer': process.env.BASE_URL || 'http://localhost:5000',
         'X-Title': 'ShortcutGenius'
       },
       timeout: 120000
@@ -68,7 +68,7 @@ export class OpenRouterClient {
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
-        'HTTP-Referer': process.env.BASE_URL || 'http://localhost:4321',
+        'HTTP-Referer': process.env.BASE_URL || 'http://localhost:5000',
         'X-Title': 'ShortcutGenius'
       },
       timeout: 120000

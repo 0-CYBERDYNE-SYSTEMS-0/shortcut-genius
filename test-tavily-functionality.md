@@ -55,7 +55,7 @@ The system is currently configured to use **DuckDuckGo** as the search engine (f
 
 ### ✅ Basic Search (Working)
 ```bash
-curl -X POST http://localhost:4321/api/search \
+curl -X POST http://localhost:5000/api/search \
   -H "Content-Type: application/json" \
   -d '{"query": "OpenWeatherMap API documentation"}'
 ```
@@ -63,7 +63,7 @@ curl -X POST http://localhost:4321/api/search \
 
 ### ✅ Error Handling (Working)
 ```bash
-curl -X POST http://localhost:4321/api/test/tavily-comprehensive \
+curl -X POST http://localhost:5000/api/test/tavily-comprehensive \
   -H "Content-Type: application/json" \
   -d '{"serviceName": "OpenWeatherMap"}'
 ```

@@ -40,7 +40,7 @@ app.use(express.urlencoded({ extended: false }));
 
   // Serve the app - try environment variable first, then fallback
   // this serves both the API and the client
-  const PORT = process.env.PORT || 4321;
+  const PORT = process.env.PORT || 5000;
   server.listen(PORT, "0.0.0.0", () => {
     const formattedTime = new Date().toLocaleTimeString("en-US", {
       hour: "2-digit",

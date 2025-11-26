@@ -43,7 +43,7 @@ export class OpenRouterModelsService {
       const response = await axios.get<OpenRouterModelsResponse>('https://openrouter.ai/api/v1/models', {
         headers: {
           'Authorization': `Bearer ${this.apiKey}`,
-          'HTTP-Referer': 'https://localhost:4321',
+          'HTTP-Referer': process.env.BASE_URL || 'http://localhost:5000',
           'X-Title': 'ShortcutGenius'
         }
       });

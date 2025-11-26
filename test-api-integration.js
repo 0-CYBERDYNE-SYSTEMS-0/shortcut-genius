@@ -6,7 +6,7 @@ console.log('🧪 Testing Action Database Integration...\n');
 // Test the API endpoint
 const testRequest = async () => {
   try {
-    const response = await fetch('http://localhost:4321/api/process', {
+    const response = await fetch('http://localhost:5000/api/process', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

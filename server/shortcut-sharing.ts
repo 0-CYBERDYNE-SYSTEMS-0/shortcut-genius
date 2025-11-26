@@ -102,7 +102,7 @@ export async function createSharedShortcut(
   }
 
   // Generate URLs
-  const baseUrl = process.env.BASE_URL || 'http://localhost:4321';
+  const baseUrl = process.env.BASE_URL || 'http://localhost:5000';
   const shareUrl = `${baseUrl}/share/${id}`;
   const qrCodeUrl = `${baseUrl}/api/qr/${id}`;
 
