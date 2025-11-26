@@ -223,6 +223,7 @@ interface ProcessResult {
   content: string;
   localAnalysis?: any;
   error?: string;
+  usage?: any;
 }
 
 export function registerRoutes(app: Express) {
@@ -523,6 +524,117 @@ export function registerRoutes(app: Express) {
       console.error('Build shortcut error:', error);
       res.status(500).json({
         error: 'Failed to build shortcut',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Import shortcut from plist/JSON file
+  app.post('/api/shortcuts/import', upload.single('file'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'No file provided' });
+      }
+
+      const { parsePlistBuffer, appleToInternal } = await import('./plist-converter');
+      const buffer = req.file.buffer;
+      const filename = req.file.originalname.toLowerCase();
+
+      let shortcut;
+
+      if (filename.endsWith('.json')) {
+        const content = buffer.toString('utf8');
+        const parsed = JSON.parse(content);
+        
+        if (parsed.WFWorkflowActions) {
+          shortcut = appleToInternal(parsed);
+        } else if (parsed.actions) {
+          shortcut = parsed;
+        } else {
+          return res.status(400).json({ error: 'Invalid JSON format' });
+        }
+      } else if (filename.endsWith('.shortcut') || filename.endsWith('.plist') || filename.endsWith('.wflow')) {
+        const appleShortcut = parsePlistBuffer(buffer);
+        shortcut = appleToInternal(appleShortcut);
+      } else {
+        return res.status(400).json({ error: 'Unsupported file format. Use .shortcut, .plist, .wflow, or .json' });
+      }
+
+      res.json({
+        success: true,
+        shortcut,
+        actionCount: shortcut.actions.length,
+        format: filename.split('.').pop()
+      });
+
+    } catch (error) {
+      console.error('Import shortcut error:', error);
+      res.status(500).json({
+        error: 'Failed to import shortcut',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Export shortcut to various formats
+  app.post('/api/shortcuts/export', async (req, res) => {
+    try {
+      const { shortcut, format = 'plist' }: { shortcut: any; format?: 'plist' | 'json' | 'html' | 'binary' } = req.body;
+
+      if (!shortcut || !shortcut.name) {
+        return res.status(400).json({ error: 'Invalid shortcut data' });
+      }
+
+      const { internalToApple, toXMLPlist, toBinaryPlist, generateShortcutHTML } = await import('./plist-converter');
+
+      let content: string | Buffer;
+      let contentType: string;
+      let filename: string;
+
+      const safeName = shortcut.name.replace(/[^a-zA-Z0-9]/g, '_');
+
+      switch (format) {
+        case 'json':
+          const appleFormat = internalToApple(shortcut);
+          content = JSON.stringify(appleFormat, null, 2);
+          contentType = 'application/json';
+          filename = `${safeName}.json`;
+          break;
+
+        case 'html':
+          content = generateShortcutHTML(shortcut);
+          contentType = 'text/html';
+          filename = `${safeName}.html`;
+          break;
+
+        case 'binary':
+          const binaryApple = internalToApple(shortcut);
+          content = await toBinaryPlist(binaryApple);
+          contentType = 'application/octet-stream';
+          filename = `${safeName}.shortcut`;
+          break;
+
+        case 'plist':
+        default:
+          const xmlApple = internalToApple(shortcut);
+          content = toXMLPlist(xmlApple);
+          contentType = 'application/xml';
+          filename = `${safeName}.plist`;
+          break;
+      }
+
+      res.set({
+        'Content-Type': contentType,
+        'Content-Disposition': `attachment; filename="${filename}"`,
+        'X-Export-Format': format
+      });
+
+      res.send(content);
+
+    } catch (error) {
+      console.error('Export shortcut error:', error);
+      res.status(500).json({
+        error: 'Failed to export shortcut',
         details: error instanceof Error ? error.message : 'Unknown error'
       });
     }

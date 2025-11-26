@@ -175,14 +175,15 @@ function formatError(type: string, message: string, index?: number): string {
 
 // Helper function for generating shortcut templates
 export function generateTemplate(type: 'basic' | 'conditional' | 'media' | 'device' | 'health' | 'home'): Shortcut {
-  return TEST_CASES[{
+  const templateMap: Record<string, keyof typeof TEST_CASES> = {
     basic: 'basicInputOutput',
     conditional: 'conditionalLogic',
     media: 'mediaHandling',
     device: 'deviceControl',
     health: 'healthData',
     home: 'homeAutomation'
-  }[type]];
+  };
+  return TEST_CASES[templateMap[type]];
 }
 
 // Enhanced validation function
@@ -213,7 +214,7 @@ export function validateShortcut(shortcut: Shortcut): string[] {
   const requiredPermissions = new Set<string>();
   
   shortcut.actions.forEach((action, index) => {
-    const actionType = SHORTCUT_ACTIONS[action.type];
+    const actionType = SHORTCUT_ACTIONS[action.type as keyof typeof SHORTCUT_ACTIONS];
     
     // Action type validation
     if (!actionType) {
@@ -232,7 +233,7 @@ export function validateShortcut(shortcut: Shortcut): string[] {
       const sanitizedParams = sanitizeParameters(action.parameters);
       action.parameters = sanitizedParams;
 
-      actionType.parameters.forEach(param => {
+      actionType.parameters.forEach((param: string) => {
         if (!sanitizedParams.hasOwnProperty(param)) {
           errors.push(formatError('Parameters', `Missing required parameter: ${param}`, index));
         } else {

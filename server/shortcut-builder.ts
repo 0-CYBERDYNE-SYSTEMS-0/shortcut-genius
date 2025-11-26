@@ -171,7 +171,7 @@ export function buildAppleShortcut(shortcut: Shortcut): AppleShortcut {
 // Convert to plist format
 export function convertToPlist(shortcut: Shortcut): Buffer {
   const appleShortcut = buildAppleShortcut(shortcut);
-  const plistString = plist.build(appleShortcut);
+  const plistString = plist.build(appleShortcut as unknown as plist.PlistValue);
   return Buffer.from(plistString, 'utf8');
 }
 
@@ -181,7 +181,7 @@ export function convertToBinaryPlist(shortcut: Shortcut): Buffer {
 
   // For now, we'll create XML plist and note that binary conversion
   // would require additional native tools or libraries
-  const plistString = plist.build(appleShortcut);
+  const plistString = plist.build(appleShortcut as unknown as plist.PlistValue);
   return Buffer.from(plistString, 'utf8');
 }
 

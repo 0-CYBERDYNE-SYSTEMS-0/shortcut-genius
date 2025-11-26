@@ -1,4 +1,5 @@
 import fs from 'fs/promises';
+import path from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 
@@ -66,7 +67,9 @@ export class FinalDatabaseBuilder {
     console.log('📂 Loading comprehensive database...');
 
     try {
-      const data = await fs.readFile('/Users/scrimwiggins/shortcut-genius-main/comprehensive-action-database.json', 'utf8');
+      const databasePath = process.env.ACTION_DATABASE_PATH || 
+        path.join(process.cwd(), 'comprehensive-action-database.json');
+      const data = await fs.readFile(databasePath, 'utf8');
       const comprehensive = JSON.parse(data);
 
       // Convert to final format with enhanced details
