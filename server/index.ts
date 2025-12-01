@@ -40,15 +40,55 @@ app.use(express.urlencoded({ extended: false }));
 
   // Serve the app - try environment variable first, then fallback
   // this serves both the API and the client
-  const PORT = process.env.PORT || 5000;
-  server.listen(PORT, "0.0.0.0", () => {
-    const formattedTime = new Date().toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hour12: true,
+  const preferredPort = parseInt(process.env.PORT || "5000");
+  
+  // Function to try listening on a port and return the actual port used
+  const tryListen = (port: number): Promise<number> => {
+    return new Promise((resolve, reject) => {
+      server.listen(port, "0.0.0.0", () => {
+        const actualPort = (server.address() as any)?.port;
+        resolve(actualPort);
+      });
+      
+      server.once('error', (err: any) => {
+        if (err.code === 'EADDRINUSE') {
+          reject(err);
+        } else {
+          console.error('Server error:', err);
+          process.exit(1);
+        }
+      });
     });
-
-    console.log(`${formattedTime} [express] serving on port ${PORT}`);
-  });
+  };
+  
+  // Try to start the server, incrementing port if needed
+  const startServer = async (startPort: number) => {
+    try {
+      const actualPort = await tryListen(startPort);
+      
+      const formattedTime = new Date().toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: true,
+      });
+      
+      if (actualPort !== startPort) {
+        console.log(`${formattedTime} [express] Port ${startPort} was in use, serving on port ${actualPort}`);
+      } else {
+        console.log(`${formattedTime} [express] serving on port ${actualPort}`);
+      }
+      
+      // Store the actual port in the environment for other parts of the app to use
+      process.env.ACTUAL_PORT = actualPort.toString();
+    } catch (err: any) {
+      // Port is in use, try the next one
+      const nextPort = startPort + 1;
+      console.log(`Port ${startPort} is in use, trying port ${nextPort}...`);
+      await startServer(nextPort);
+    }
+  };
+  
+  // Start the server
+  startServer(preferredPort);
 })();
