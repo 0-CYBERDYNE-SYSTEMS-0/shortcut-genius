@@ -213,8 +213,24 @@ export function validateShortcut(shortcut: Shortcut): string[] {
   // Action validation
   const requiredPermissions = new Set<string>();
   
+  // Create a reverse lookup map for iOS identifiers
+  const identifierToAction: Record<string, keyof typeof SHORTCUT_ACTIONS> = {};
+  Object.entries(SHORTCUT_ACTIONS).forEach(([key, config]) => {
+    if (config.identifier) {
+      identifierToAction[config.identifier] = key as keyof typeof SHORTCUT_ACTIONS;
+    }
+  });
+  
   shortcut.actions.forEach((action, index) => {
-    const actionType = SHORTCUT_ACTIONS[action.type as keyof typeof SHORTCUT_ACTIONS];
+    // Check action type - accept both simple names and iOS identifiers
+    let actionType = SHORTCUT_ACTIONS[action.type as keyof typeof SHORTCUT_ACTIONS];
+    let actionKey = action.type as keyof typeof SHORTCUT_ACTIONS;
+    
+    // If not found, check if it's an iOS identifier
+    if (!actionType && identifierToAction[action.type]) {
+      actionType = SHORTCUT_ACTIONS[identifierToAction[action.type]];
+      actionKey = identifierToAction[action.type];
+    }
     
     // Action type validation
     if (!actionType) {
@@ -223,14 +239,40 @@ export function validateShortcut(shortcut: Shortcut): string[] {
     }
 
     // Permission tracking
-    const permission = ACTION_PERMISSIONS[action.type as keyof typeof ACTION_PERMISSIONS];
+    const permission = ACTION_PERMISSIONS[actionKey as keyof typeof ACTION_PERMISSIONS];
     if (permission && permission !== 'none') {
       requiredPermissions.add(permission);
     }
 
     // Parameter validation
     try {
-      const sanitizedParams = sanitizeParameters(action.parameters);
+      // First, map iOS parameter names to standard names
+      const mappedParams = { ...action.parameters };
+      if ((actionType as any).parameterMapping) {
+        Object.entries((actionType as any).parameterMapping).forEach(([iosParam, standardParam]) => {
+          if (mappedParams.hasOwnProperty(iosParam) && !mappedParams.hasOwnProperty(standardParam)) {
+            mappedParams[standardParam] = mappedParams[iosParam];
+            delete mappedParams[iosParam];
+          }
+        });
+      }
+
+      // Remove any remaining iOS parameters that don't have mappings
+      const finalParams: Record<string, any> = {};
+      (actionType as any).parameters.forEach((expectedParam: string) => {
+        if (mappedParams.hasOwnProperty(expectedParam)) {
+          finalParams[expectedParam] = mappedParams[expectedParam];
+        }
+      });
+
+      // Also include any mapped parameters
+      Object.entries(mappedParams).forEach(([key, value]) => {
+        if ((actionType as any).parameters.includes(key)) {
+          finalParams[key] = value;
+        }
+      });
+
+      const sanitizedParams = sanitizeParameters(finalParams);
       action.parameters = sanitizedParams;
 
       actionType.parameters.forEach((param: string) => {
@@ -310,75 +352,157 @@ export function exportShortcut(shortcut: Shortcut): string {
   return JSON.stringify(shortcut, null, 2);
 }
 
-export const SHORTCUT_ACTIONS = {
+// iOS Shortcuts action configuration with parameter mappings
+export type ShortcutActionConfig = {
+  name: string;
+  parameters: string[];
+  identifier?: string;
+  parameterMapping?: Record<string, string>;
+};
+
+export const SHORTCUT_ACTIONS: Record<string, ShortcutActionConfig> = {
   // Text & Input
   text: {
     name: 'Text',
-    parameters: ['text']
+    parameters: ['text'],
+    identifier: 'is.workflow.actions.text'
   },
   number: {
     name: 'Number',
-    parameters: ['value']
+    parameters: ['value'],
+    identifier: 'is.workflow.actions.number'
   },
   ask: {
     name: 'Ask for Input',
-    parameters: ['prompt', 'defaultValue']
+    parameters: ['prompt', 'defaultValue'],
+    identifier: 'is.workflow.actions.ask',
+    parameterMapping: {
+      'WFAskActionPrompt': 'prompt',
+      'WFAskActionDefaultAnswer': 'defaultValue'
+    }
+  },
+  setvariable: {
+    name: 'Set Variable',
+    parameters: ['name', 'value'],
+    identifier: 'is.workflow.actions.setvariable',
+    parameterMapping: {
+      'WFVariableName': 'name',
+      'WFVariableInput': 'value'
+    }
+  },
+  getvariable: {
+    name: 'Get Variable',
+    parameters: ['name'],
+    identifier: 'is.workflow.actions.getvariable'
   },
   
   // Control Flow
   if: {
     name: 'If/Then/Else',
-    parameters: ['condition', 'then', 'else']
+    parameters: ['condition', 'then', 'else'],
+    identifier: 'is.workflow.actions.conditional'
   },
   repeat: {
     name: 'Repeat',
-    parameters: ['count', 'actions']
+    parameters: ['count', 'actions'],
+    identifier: 'is.workflow.actions.repeat'
   },
   wait: {
     name: 'Wait',
-    parameters: ['seconds']
+    parameters: ['seconds'],
+    identifier: 'is.workflow.actions.wait'
   },
 
   // Media
   play_sound: {
     name: 'Play Sound',
-    parameters: ['soundName', 'volume']
+    parameters: ['soundName', 'volume'],
+    identifier: 'is.workflow.actions.play_sound'
   },
   record_audio: {
     name: 'Record Audio',
-    parameters: ['duration', 'quality']
+    parameters: ['duration', 'quality'],
+    identifier: 'is.workflow.actions.record_audio',
+    parameterMapping: {
+      'WFRecordAudioTime': 'duration',
+      'WFRecordAudioQuality': 'quality'
+    }
   },
   take_photo: {
     name: 'Take Photo',
-    parameters: ['useFrontCamera', 'flash']
+    parameters: ['useFrontCamera', 'flash'],
+    identifier: 'is.workflow.actions.takephoto',
+    parameterMapping: {
+      'WFCameraCaptureDevice': 'useFrontCamera',
+      'WFCameraFlash': 'flash'
+    }
   },
   select_photos: {
     name: 'Select Photos',
-    parameters: ['allowMultiple', 'includeVideos']
+    parameters: ['allowMultiple', 'includeVideos'],
+    identifier: 'is.workflow.actions.selectphotos'
+  },
+  savephotolibrary: {
+    name: 'Save to Photo Library',
+    parameters: ['input', 'albumName'],
+    identifier: 'is.workflow.actions.savephotolibrary',
+    parameterMapping: {
+      'WFInput': 'input',
+      'WFPhotoAlbumName': 'albumName'
+    }
   },
 
   // Device
   set_volume: {
     name: 'Set Volume',
-    parameters: ['level']
+    parameters: ['level'],
+    parameterMapping: {
+      'WFVolumeValue': 'level'
+    }
   },
   set_brightness: {
     name: 'Set Brightness',
-    parameters: ['level']
+    parameters: ['level'],
+    parameterMapping: {
+      'WFBrightnessValue': 'level'
+    }
   },
   set_do_not_disturb: {
     name: 'Set Do Not Disturb',
-    parameters: ['enabled', 'duration']
+    parameters: ['enabled', 'duration'],
+    parameterMapping: {
+      'WFDoNotDisturbState': 'enabled',
+      'WFDoNotDisturbDuration': 'duration'
+    }
   },
 
   // System
   url: {
     name: 'URL',
-    parameters: ['url', 'method', 'headers']
+    parameters: ['url', 'method', 'headers'],
+    identifier: 'is.workflow.actions.url',
+    parameterMapping: {
+      'WFURLActionURL': 'url',
+      'WFHTTPMethodType': 'method'
+    }
+  },
+  getcontentsofurl: {
+    name: 'Get Contents of URL',
+    parameters: ['url', 'method', 'headers'],
+    identifier: 'is.workflow.actions.getcontentsofurl',
+    parameterMapping: {
+      'WFURLActionURL': 'url',
+      'WFHTTPMethodType': 'method'
+    }
   },
   notification: {
     name: 'Notification',
-    parameters: ['title', 'body', 'sound']
+    parameters: ['title', 'body', 'sound'],
+    parameterMapping: {
+      'WFNotificationActionTitle': 'title',
+      'WFNotificationActionBody': 'body',
+      'WFNotificationActionSound': 'sound'
+    }
   },
   files: {
     name: 'Files',

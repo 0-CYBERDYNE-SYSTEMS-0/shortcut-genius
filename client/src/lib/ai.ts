@@ -65,3 +65,52 @@ export async function processWithAI(
     };
   }
 }
+
+export interface ChatResponse {
+  response: string;
+  searchActivity?: AgentSearchActivity[];
+  generatedWithWebSearch?: boolean;
+  shortcutUpdate?: any;
+  usage?: any;
+  error?: string;
+}
+
+export async function chatWithAI(
+  model: AIModel,
+  message: string,
+  conversationHistory: Array<{type: string; content: string}> = [],
+  userId: string = 'anonymous',
+  reasoningOptions?: ReasoningOptions,
+  onActivityUpdate?: (activity: AgentSearchActivity) => void
+): Promise<ChatResponse> {
+  if (!checkRateLimit(userId)) {
+    return { response: '', error: 'Rate limit exceeded. Please try again later.' };
+  }
+
+  try {
+    const result = await postData('/api/chat', {
+      model,
+      message,
+      conversationHistory,
+      userId,
+      reasoningOptions
+      // Removed API keys - server handles authentication
+    });
+    
+    // Notify client of search activities if callback provided
+    if (onActivityUpdate && result.searchActivity) {
+      result.searchActivity.forEach((activity: AgentSearchActivity) => {
+        onActivityUpdate(activity);
+      });
+    }
+    
+    return result;
+  } catch (error) {
+    return {
+      response: '',
+      error: error instanceof Error ? error.message : 'An unknown error occurred',
+      searchActivity: [],
+      generatedWithWebSearch: false
+    };
+  }
+}

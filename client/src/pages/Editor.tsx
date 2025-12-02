@@ -12,7 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useBreakpoint } from '@/hooks/use-mobile';
 import { AIModel, ReasoningOptions } from '@/lib/types';
 import { DEFAULT_REASONING_OPTIONS } from '@/lib/models';
-import { processWithAI } from '@/lib/ai';
+import { processWithAI, chatWithAI } from '@/lib/ai';
 import { Shortcut, parseShortcutFile, exportShortcut } from '@/lib/shortcuts';
 import { analyzeShortcut } from '@/lib/shortcut-analyzer';
 
@@ -157,6 +157,88 @@ export function Editor() {
     }
   };
 
+  const handleChatMessage = async (message: string) => {
+    setIsProcessing(true);
+    
+    // Add user message to activity
+    const userMessageId = agentActivity.addUserMessage(message);
+    
+    // Add assistant message with "thinking..." status
+    const assistantMessageId = agentActivity.addAssistantMessage('Thinking...', [], null);
+
+    try {
+      const conversationHistory = agentActivity.messages.map(msg => ({
+        type: msg.type,
+        content: msg.content
+      }));
+
+      const response = await chatWithAI(
+        model,
+        message,
+        conversationHistory,
+        'anonymous',
+        reasoningOptions,
+        (activity) => {
+          // Update the assistant message with the activity
+          agentActivity.updateActivity(assistantMessageId, {
+            activities: [...(agentActivity.messages.find(m => m.id === assistantMessageId)?.activities || []), activity]
+          });
+        }
+      );
+      
+      if (response.error) {
+        // Update assistant message with error
+        agentActivity.updateActivity(assistantMessageId, {
+          content: response.error
+        });
+        throw new Error(response.error);
+      }
+
+      // Update assistant message with actual response
+      agentActivity.updateActivity(assistantMessageId, {
+        content: response.response,
+        activities: response.searchActivity?.map(activity => ({
+          id: Math.random().toString(36).substr(2, 9),
+          timestamp: new Date(),
+          type: activity.type,
+          status: activity.status,
+          query: activity.query,
+          toolUsed: activity.toolName,
+          details: activity.results || activity.error,
+          results: activity.results,
+          sources: activity.sources
+        })) || []
+      });
+
+      // Show agent pane if there was web search activity
+      if (response.generatedWithWebSearch) {
+        setShowAgent(true);
+      }
+
+      // If a shortcut was generated, ask if user wants to apply it
+      if (response.shortcutUpdate) {
+        agentActivity.addAssistantMessage(
+          `I've generated a shortcut called "${response.shortcutUpdate.name}". Would you like to apply these changes to the current shortcut?`,
+          [],
+          response.shortcutUpdate
+        );
+      }
+    } catch (error) {
+      // Error is already handled in the update above
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleUpdateShortcut = (shortcutUpdate: any) => {
+    setShortcut(shortcutUpdate);
+    setCode(JSON.stringify(shortcutUpdate, null, 2));
+    toast({
+      title: 'Shortcut Updated',
+      description: 'The generated shortcut has been applied.'
+    });
+  };
+
   const handleImportFromGallery = (shortcutUrl: string) => {
     // For now, just switch to editor tab
     // In a full implementation, you'd fetch the shortcut from the URL
@@ -248,8 +330,11 @@ export function Editor() {
                   <div className="h-full px-3 pt-3">
                     <AgentPane 
                       activities={agentActivity.activities}
+                      messages={agentActivity.messages}
                       isProcessing={isProcessing}
                       onClearHistory={agentActivity.clearActivities}
+                      onSendMessage={handleChatMessage}
+                      onUpdateShortcut={handleUpdateShortcut}
                     />
                   </div>
                 </TabsContent>
@@ -344,8 +429,11 @@ export function Editor() {
                       <TabsContent value="agent" className="flex-1 mt-0 px-3">
                         <AgentPane 
                           activities={agentActivity.activities}
+                          messages={agentActivity.messages}
                           isProcessing={isProcessing}
                           onClearHistory={agentActivity.clearActivities}
+                          onSendMessage={handleChatMessage}
+                          onUpdateShortcut={handleUpdateShortcut}
                         />
                       </TabsContent>
                     )}
@@ -434,8 +522,11 @@ export function Editor() {
                   <ResizablePanel defaultSize={showAnalysis ? 25 : 50}>
                     <AgentPane 
                       activities={agentActivity.activities}
+                      messages={agentActivity.messages}
                       isProcessing={isProcessing}
                       onClearHistory={agentActivity.clearActivities}
+                      onSendMessage={handleChatMessage}
+                      onUpdateShortcut={handleUpdateShortcut}
                     />
                   </ResizablePanel>
                 </>

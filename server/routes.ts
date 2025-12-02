@@ -1287,6 +1287,83 @@ export function registerRoutes(app: Express) {
     }
   });
 
+  // Conversational AI Chat API
+  app.post('/api/chat', async (req, res) => {
+    try {
+      const { model, message, conversationHistory = [], userId = 'anonymous', reasoningOptions } = req.body;
+
+      if (!model || !message) {
+        return res.status(400).json({
+          error: 'Model and message are required'
+        });
+      }
+
+      // Build conversation context
+      const contextPrompt = `
+You are an expert iOS Shortcuts developer with real-time web search capabilities. You help users build iOS shortcuts by:
+
+1. **Searching for APIs** - Always search for current API documentation when users mention services
+2. **Building real integrations** - Use actual APIs, never placeholders
+3. **Iterative development** - Work with users step by step to build shortcuts
+4. **Showing your work** - Always show searches, findings, and reasoning
+
+**Your responses should:**
+- Be conversational and helpful
+- Use web search extensively for API discovery
+- Show your search results and reasoning
+- Ask clarifying questions when needed
+- Build shortcuts iteratively with user input
+- Update shortcuts based on feedback
+
+**Current conversation context:**
+${conversationHistory.map((msg: any) => `${msg.type}: ${msg.content}`).join('\n')}
+
+**User's latest message:**
+${message}
+
+Please respond conversationally and search for any APIs or services mentioned.
+      `;
+
+      // Process the request with search activity tracking
+      const response = await aiProcessor.process({
+        model,
+        prompt: contextPrompt,
+        type: 'generate',
+        systemPrompt: SYSTEM_PROMPT,
+        reasoningOptions
+      });
+
+      // Extract any shortcut that might have been generated
+      let shortcutUpdate = null;
+      try {
+        // Try to parse any JSON shortcut from the response
+        const jsonMatch = response.content.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
+        if (jsonMatch) {
+          shortcutUpdate = JSON.parse(jsonMatch[1]);
+        }
+      } catch (parseError) {
+        // Ignore parsing errors - not all responses will contain shortcuts
+      }
+
+      res.json({
+        response: response.content,
+        searchActivity: response.searchActivity || [],
+        generatedWithWebSearch: response.generatedWithWebSearch || false,
+        shortcutUpdate,
+        usage: response.usage
+      });
+
+    } catch (error: any) {
+      console.error('Chat API error:', error);
+      res.status(500).json({
+        error: 'Chat processing failed',
+        details: error instanceof Error ? error.message : 'Unknown error',
+        searchActivity: [],
+        generatedWithWebSearch: false
+      });
+    }
+  });
+
   // Test all Tavily capabilities
   app.post('/api/test/tavily-comprehensive', async (req, res) => {
     try {

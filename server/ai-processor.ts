@@ -313,6 +313,8 @@ export class AIProcessor {
     };
 
     // Add web search tools if available
+    const searchActivity: AgentSearchActivity[] = [];
+    
     if (this.webSearchTool) {
       const toolDefinitions = this.webSearchTool.getAllOpenRouterToolDefinitions();
       requestParams.tools = toolDefinitions.map(tool => ({
@@ -329,8 +331,44 @@ export class AIProcessor {
       // Handle function calls
       const toolUse = response.content.find((c: any) => c.type === 'tool_use');
       if (toolUse && this.webSearchTool && ['web_search', 'web_extract', 'web_crawl'].includes(toolUse.name)) {
+        const activityId = Math.random().toString(36).substr(2, 9);
+        const activity: AgentSearchActivity = {
+          id: activityId,
+          timestamp: new Date(),
+          type: toolUse.name === 'web_search' ? 'search' : 
+                toolUse.name === 'web_extract' ? 'extract' : 'crawl',
+          status: 'running',
+          toolName: toolUse.name,
+          query: toolUse.input.query || toolUse.input.url || toolUse.input
+        };
+        
+        searchActivity.push(activity);
+        
         try {
           const toolResults = await this.webSearchTool.executeToolCall(toolUse.name, toolUse.input);
+
+          // Update activity with results
+          activity.status = 'completed';
+          activity.results = toolResults;
+          
+          // Parse results for sources if it's a search
+          if (toolUse.name === 'web_search' && typeof toolResults === 'string') {
+            try {
+              // Simple parsing of search results to extract sources
+              const urlMatches = toolResults.match(/URL: (https?:\/\/[^\s\n]+)/g);
+              if (urlMatches) {
+                activity.sources = urlMatches.map((match, index) => ({
+                  title: `Search Result ${index + 1}`,
+                  url: match.replace('URL: ', ''),
+                  snippet: '',
+                  source: 'Web Search',
+                  used: true
+                }));
+              }
+            } catch (parseError) {
+              // Ignore parsing errors
+            }
+          }
 
           // Add the tool result to the conversation
           messages.push({ role: 'assistant', content: response.content });
@@ -353,6 +391,8 @@ export class AIProcessor {
           content = (response.content[0] as any)?.text || '';
         } catch (toolError) {
           console.error('Tool execution error:', toolError);
+          activity.status = 'failed';
+          activity.error = toolError instanceof Error ? toolError.message : 'Unknown error';
           // Continue with original response if tool fails
         }
       }
@@ -363,7 +403,14 @@ export class AIProcessor {
           prompt_tokens: response.usage.input_tokens,
           completion_tokens: response.usage.output_tokens,
           total_tokens: response.usage.input_tokens + response.usage.output_tokens
-        }
+        },
+        searchActivity,
+        generatedWithWebSearch: searchActivity.length > 0,
+        processingSteps: [
+          'Analyzing request...',
+          ...(searchActivity.map(a => `Performed ${a.type}: ${a.query || a.toolName}`)),
+          'Generating response...'
+        ]
       };
     } catch (error: any) {
       throw new Error(`Anthropic API error: ${error.message}`);
@@ -389,6 +436,8 @@ export class AIProcessor {
     };
 
     // Add web search tools if available (OpenRouter function calling format)
+    const searchActivity: AgentSearchActivity[] = [];
+    
     if (this.webSearchTool) {
       requestData.tools = this.webSearchTool.getAllOpenRouterToolDefinitions();
       requestData.tool_choice = 'auto';
@@ -403,9 +452,47 @@ export class AIProcessor {
       if (toolCalls && this.webSearchTool) {
         for (const toolCall of toolCalls) {
           if (['web_search', 'web_extract', 'web_crawl'].includes(toolCall.function.name)) {
+            const activityId = Math.random().toString(36).substr(2, 9);
+            const activity: AgentSearchActivity = {
+              id: activityId,
+              timestamp: new Date(),
+              type: toolCall.function.name === 'web_search' ? 'search' : 
+                    toolCall.function.name === 'web_extract' ? 'extract' : 'crawl',
+              status: 'running',
+              toolName: toolCall.function.name,
+              query: JSON.parse(toolCall.function.arguments).query || 
+                     JSON.parse(toolCall.function.arguments).url ||
+                     JSON.parse(toolCall.function.arguments)
+            };
+            
+            searchActivity.push(activity);
+            
             try {
               const args = JSON.parse(toolCall.function.arguments);
               const toolResults = await this.webSearchTool.executeToolCall(toolCall.function.name, args);
+
+              // Update activity with results
+              activity.status = 'completed';
+              activity.results = toolResults;
+              
+              // Parse results for sources if it's a search
+              if (toolCall.function.name === 'web_search' && typeof toolResults === 'string') {
+                try {
+                  // Simple parsing of search results to extract sources
+                  const urlMatches = toolResults.match(/URL: (https?:\/\/[^\s\n]+)/g);
+                  if (urlMatches) {
+                    activity.sources = urlMatches.map((match, index) => ({
+                      title: `Search Result ${index + 1}`,
+                      url: match.replace('URL: ', ''),
+                      snippet: '',
+                      source: 'Web Search',
+                      used: true
+                    }));
+                  }
+                } catch (parseError) {
+                  // Ignore parsing errors
+                }
+              }
 
               // Add the tool result to the conversation
               messages.push(response.choices[0].message);
@@ -427,6 +514,8 @@ export class AIProcessor {
               content = response.choices[0].message.content || '';
             } catch (toolError) {
               console.error('Tool execution error:', toolError);
+              activity.status = 'failed';
+              activity.error = toolError instanceof Error ? toolError.message : 'Unknown error';
               // Continue with original response if tool fails
             }
           }
@@ -439,7 +528,14 @@ export class AIProcessor {
           prompt_tokens: response.usage.prompt_tokens,
           completion_tokens: response.usage.completion_tokens,
           total_tokens: response.usage.total_tokens
-        }
+        },
+        searchActivity,
+        generatedWithWebSearch: searchActivity.length > 0,
+        processingSteps: [
+          'Analyzing request...',
+          ...(searchActivity.map(a => `Performed ${a.type}: ${a.query || a.toolName}`)),
+          'Generating response...'
+        ]
       };
     } catch (error: any) {
       throw new Error(`OpenRouter API error: ${error.message}`);
