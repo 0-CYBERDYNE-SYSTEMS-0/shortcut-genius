@@ -75,6 +75,26 @@ export interface ToolCall {
   };
 }
 
+export interface AgentSearchActivity {
+  id: string;
+  timestamp: Date;
+  type: 'search' | 'extract' | 'crawl';
+  status: 'running' | 'completed' | 'failed';
+  query?: string;
+  toolName: string;
+  results?: any;
+  sources?: WebSearchResult[];
+  error?: string;
+}
+
+export interface EnhancedAIResponse extends AIResponse {
+  tool_calls?: ToolCall[];
+  searchActivity?: AgentSearchActivity[];
+  sourcesUsed?: WebSearchResult[];
+  generatedWithWebSearch?: boolean;
+  processingSteps?: string[];
+}
+
 export interface AIResponseWithTools extends AIResponse {
   tool_calls?: ToolCall[];
 }

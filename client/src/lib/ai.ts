@@ -1,4 +1,4 @@
-import { AIModel, AIResponse, ReasoningOptions } from './types';
+import { AIModel, AIResponse, EnhancedAIResponse, ReasoningOptions, AgentSearchActivity, WebSearchResult } from './types';
 import { postData } from './fetcher';
 
 const rateLimits = new Map<string, number>();
@@ -24,8 +24,9 @@ export async function processWithAI(
   prompt: string,
   userId: string,
   type: 'analyze' | 'generate' = 'analyze',
-  reasoningOptions?: ReasoningOptions
-): Promise<AIResponse> {
+  reasoningOptions?: ReasoningOptions,
+  onActivityUpdate?: (activity: AgentSearchActivity) => void
+): Promise<EnhancedAIResponse> {
   if (!checkRateLimit(userId)) {
     return { content: '', error: 'Rate limit exceeded. Please try again later.' };
   }
@@ -35,14 +36,32 @@ export async function processWithAI(
       model,
       prompt,
       type,
-      reasoningOptions
+      reasoningOptions,
+      includeSearchActivity: true // Request enhanced response with search activity
       // Removed API keys - server handles authentication
     });
-    return result;
+    
+    // Convert server response to EnhancedAIResponse format
+    const enhancedResult: EnhancedAIResponse = {
+      ...result,
+      generatedWithWebSearch: !!(result.searchActivity && result.searchActivity.length > 0),
+      processingSteps: result.processingSteps || []
+    };
+    
+    // Notify client of search activities if callback provided
+    if (onActivityUpdate && result.searchActivity) {
+      result.searchActivity.forEach((activity: AgentSearchActivity) => {
+        onActivityUpdate(activity);
+      });
+    }
+    
+    return enhancedResult;
   } catch (error) {
     return {
       content: '',
-      error: error instanceof Error ? error.message : 'An unknown error occurred'
+      error: error instanceof Error ? error.message : 'An unknown error occurred',
+      generatedWithWebSearch: false,
+      processingSteps: []
     };
   }
 }

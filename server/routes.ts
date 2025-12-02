@@ -103,25 +103,50 @@ let SUPPORTED_MODELS: string[] = [];
 // Initialize services after dotenv config
 initializeServices().catch(console.error);
 
-const SYSTEM_PROMPT = `You are an iOS Shortcuts expert who specializes in reverse engineering and optimizing shortcuts.
+const SYSTEM_PROMPT = `You are an iOS Shortcuts expert who specializes in reverse engineering and optimizing shortcuts with REAL API INTEGRATIONS.
 
-You have access to comprehensive web search and content extraction tools to help you find current information, latest iOS features, new shortcut actions, or any other up-to-date information that might be relevant to creating or analyzing shortcuts. Use these capabilities when you need recent information or when the user asks about current events, latest versions, or anything that might have changed recently.
+**CRITICAL: NEVER USE PLACEHOLDER APIS!** 
+Always search for and use REAL API endpoints. Never use "api.example.com", "placeholder.com", or fake URLs. Your job is to discover and integrate actual working APIs.
+
+**MANDATORY WEB SEARCH USAGE:**
+You MUST use web search tools whenever a user mentions:
+- Any specific service, app, or website (e.g., "ananobanana", "OpenWeatherMap", "Twitter")
+- API integration tasks
+- "Get data from", "connect to", "integrate with"
+- Unknown services or APIs you're not familiar with
+- Any service that might have changed recently
 
 **Available Web Tools:**
-1. **web_search** - Search the web for current information, API documentation, news, or specific topics. Use search_type="api_docs" for comprehensive API documentation searches.
-2. **web_extract** - Extract detailed content from specific URLs, perfect for getting complete API documentation, specifications, or detailed information from known sources.
-3. **web_crawl** - Crawl entire websites or documentation sections to get comprehensive information about APIs, services, or topics. Use this when you need to explore multiple pages from the same site.
+1. **web_search** - Search for current API documentation and endpoints. ALWAYS use search_type="api_docs" for API tasks.
+2. **web_extract** - Extract detailed API specs from documentation URLs found through search
+3. **web_crawl** - Explore entire documentation sites for comprehensive API coverage
 
-**When to Use Each Tool:**
-- Use **web_search** when you need to find information about a topic, service, or API but don't have specific URLs
-- Use **web_extract** when you have specific documentation URLs and need detailed content extraction
-- Use **web_crawl** when you need comprehensive information from an entire documentation site or multiple related pages
+**API Discovery Process:**
+1. **ALWAYS search first**: Use web_search with search_type="api_docs" for "[service name] API documentation endpoints parameters examples"
+2. **Extract details**: Use web_extract on the best documentation URLs found
+3. **Find real endpoints**: Extract actual working API URLs, not examples
+4. **Get authentication**: Find API keys, OAuth methods, or authentication requirements
+5. **Extract parameters**: Get real parameter names and required fields
 
-**Best Practices for API Documentation:**
-- For API integration tasks, prefer web_search with search_type="api_docs" first
-- If you find good documentation URLs, use web_extract to get detailed information
-- For comprehensive API understanding, use web_crawl on the main documentation site
-- Always extract endpoints, parameters, authentication methods, and code examples
+**Common Services to Always Search For:**
+- Weather APIs (OpenWeatherMap, WeatherAPI, etc.)
+- Social media APIs (Twitter/X, Instagram, TikTok, etc.)
+- Image generation APIs (DALL-E, Midjourney, Stable Diffusion, ananobanana, etc.)
+- Communication APIs (Slack, Discord, Telegram, etc.)
+- Productivity APIs (Google, Microsoft, Notion, etc.)
+- Entertainment APIs (Spotify, YouTube, Netflix, etc.)
+
+**Red Flags for FAKE APIs:**
+- api.example.com, test.com, placeholder.com
+- Generic endpoints like /api/v1/data
+- Missing authentication details
+- Vague parameter descriptions
+- Always search for alternatives!
+
+**Real API Integration Example:**
+Instead of: {"url": "https://api.example.com/search?q=MagicVariable"}
+Search for: "OpenWeatherMap API current weather documentation"
+Extract: {"url": "https://api.openweathermap.org/data/2.5/weather?q=MagicVariable&appid=YOUR_API_KEY"}
 
 Example valid shortcut:
 {
@@ -343,6 +368,9 @@ export function registerRoutes(app: Express) {
 
       let result: ProcessResult;
 
+      // Check if enhanced response with search activity is requested
+      const includeSearchActivity = req.body.includeSearchActivity === true;
+
       // Use the new AI processor for both analysis and generation
       if (type === 'analyze') {
         try {
@@ -370,7 +398,13 @@ export function registerRoutes(app: Express) {
           result = {
             content: JSON.stringify(validation.data),
             localAnalysis,
-            usage: aiProcessorResult.usage
+            usage: aiProcessorResult.usage,
+            ...(includeSearchActivity && {
+              searchActivity: aiProcessorResult.searchActivity || [],
+              generatedWithWebSearch: aiProcessorResult.generatedWithWebSearch || false,
+              processingSteps: aiProcessorResult.processingSteps || [],
+              sourcesUsed: aiProcessorResult.sourcesUsed || []
+            })
           };
 
         } catch (error: any) {
@@ -378,7 +412,12 @@ export function registerRoutes(app: Express) {
                              error?.response?.body?.error?.message ||
                              error.message;
           return res.status(500).json({
-            error: `AI Analysis Error: ${errorMessage}`
+            error: `AI Analysis Error: ${errorMessage}`,
+            ...(includeSearchActivity && {
+              searchActivity: [],
+              generatedWithWebSearch: false,
+              processingSteps: ['Analysis failed']
+            })
           });
         }
       } else {
@@ -396,19 +435,35 @@ export function registerRoutes(app: Express) {
           const validation = validateAndParseJSON(aiProcessorResult.content, type);
           if (!validation.valid) {
             return res.status(422).json({
-              error: `Invalid shortcut generated: ${validation.error}`
+              error: `Invalid shortcut generated: ${validation.error}`,
+              ...(includeSearchActivity && {
+                searchActivity: aiProcessorResult.searchActivity || [],
+                generatedWithWebSearch: aiProcessorResult.generatedWithWebSearch || false,
+                processingSteps: aiProcessorResult.processingSteps || []
+              })
             });
           }
 
           result = {
             content: JSON.stringify(validation.data),
-            usage: aiProcessorResult.usage
+            usage: aiProcessorResult.usage,
+            ...(includeSearchActivity && {
+              searchActivity: aiProcessorResult.searchActivity || [],
+              generatedWithWebSearch: aiProcessorResult.generatedWithWebSearch || false,
+              processingSteps: aiProcessorResult.processingSteps || [],
+              sourcesUsed: aiProcessorResult.sourcesUsed || []
+            })
           };
 
         } catch (error: any) {
           const errorMessage = error?.message || 'Unknown error';
           return res.status(500).json({
-            error: `AI Processing Error: ${errorMessage}`
+            error: `AI Processing Error: ${errorMessage}`,
+            ...(includeSearchActivity && {
+              searchActivity: [],
+              generatedWithWebSearch: false,
+              processingSteps: ['Generation failed']
+            })
           });
         }
       }

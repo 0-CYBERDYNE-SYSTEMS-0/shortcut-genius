@@ -5,6 +5,7 @@ import { EditorPane } from '@/components/EditorPane';
 import { PreviewPane } from '@/components/PreviewPane';
 import { Toolbar } from '@/components/Toolbar';
 import { AnalysisPane } from '@/components/AnalysisPane';
+import { AgentPane, useAgentActivity } from '@/components/AgentPane';
 import { ShortcutsGallery } from '@/components/ShortcutsGallery';
 import { ReasoningControls } from '@/components/ReasoningControls';
 import { useToast } from '@/hooks/use-toast';
@@ -27,10 +28,14 @@ export function Editor() {
   const [code, setCode] = useState(JSON.stringify(DEFAULT_SHORTCUT, null, 2));
   const [isProcessing, setIsProcessing] = useState(false);
   const [showAnalysis, setShowAnalysis] = useState(false);
+  const [showAgent, setShowAgent] = useState(false);
   const [activeTab, setActiveTab] = useState('editor');
   const [mobileActiveTab, setMobileActiveTab] = useState('editor');
   const { toast } = useToast();
   const { isMobile, isTablet, isDesktop, isLargeDesktop } = useBreakpoint();
+  
+  // Agent activity state management
+  const agentActivity = useAgentActivity();
 
   const handleImport = (content: string) => {
     try {
@@ -78,7 +83,8 @@ export function Editor() {
         `Analyze this iOS shortcut and suggest improvements:\n${code}`,
         'anonymous',
         'analyze',
-        reasoningOptions
+        reasoningOptions,
+        agentActivity.addActivity
       );
       
       if (response.error) {
@@ -87,11 +93,16 @@ export function Editor() {
 
       toast({
         title: 'AI Processing Complete',
-        description: response.content
+        description: response.generatedWithWebSearch ? 
+          'Analysis complete with web search insights' : 
+          'Analysis complete'
       });
       
-      // Show analysis pane after AI processing
+      // Show analysis pane and agent pane after AI processing
       setShowAnalysis(true);
+      if (response.generatedWithWebSearch) {
+        setShowAgent(true);
+      }
     } catch (error) {
       toast({
         title: 'Processing failed',
@@ -111,7 +122,8 @@ export function Editor() {
         prompt,
         'anonymous',
         'generate',
-        reasoningOptions
+        reasoningOptions,
+        agentActivity.addActivity
       );
       
       if (response.error) {
@@ -122,12 +134,17 @@ export function Editor() {
       setShortcut(generatedShortcut);
       setCode(JSON.stringify(generatedShortcut, null, 2));
 
-      // Show analysis for generated shortcut
+      // Show analysis and agent pane for generated shortcut
       setShowAnalysis(true);
+      if (response.generatedWithWebSearch) {
+        setShowAgent(true);
+      }
 
       toast({
         title: 'Shortcut Generated',
-        description: 'New shortcut has been created based on your description.'
+        description: response.generatedWithWebSearch ? 
+          'Shortcut created with real API integrations discovered via web search' :
+          'New shortcut has been created based on your description.'
       });
     } catch (error) {
       toast({
@@ -166,6 +183,8 @@ export function Editor() {
           isProcessing={isProcessing}
           showAnalysis={showAnalysis}
           onToggleAnalysis={() => setShowAnalysis(!showAnalysis)}
+          showAgent={showAgent}
+          onToggleAgent={() => setShowAgent(!showAgent)}
           currentShortcut={shortcut}
         />
 
@@ -177,10 +196,14 @@ export function Editor() {
 
           <TabsContent value="editor" className="flex-1 mt-0">
             <Tabs value={mobileActiveTab} onValueChange={setMobileActiveTab} className="flex-1 flex flex-col">
-              <TabsList className={`grid w-full h-12 mx-3 mt-3 ${showAnalysis ? 'grid-cols-3' : 'grid-cols-2'}`}>
+              <TabsList className={`grid w-full h-12 mx-3 mt-3 ${
+                showAnalysis && showAgent ? 'grid-cols-4' : 
+                showAnalysis || showAgent ? 'grid-cols-3' : 'grid-cols-2'
+              }`}>
                 <TabsTrigger value="editor" className="text-sm">Edit</TabsTrigger>
                 <TabsTrigger value="preview" className="text-sm">Preview</TabsTrigger>
                 {showAnalysis && <TabsTrigger value="analysis" className="text-sm">Analysis</TabsTrigger>}
+                {showAgent && <TabsTrigger value="agent" className="text-sm">AI Agent</TabsTrigger>}
               </TabsList>
 
               <TabsContent value="editor" className="flex-1 mt-0">
@@ -220,6 +243,17 @@ export function Editor() {
                   </div>
                 </TabsContent>
               )}
+              {showAgent && (
+                <TabsContent value="agent" className="flex-1 mt-0">
+                  <div className="h-full px-3 pt-3">
+                    <AgentPane 
+                      activities={agentActivity.activities}
+                      isProcessing={isProcessing}
+                      onClearHistory={agentActivity.clearActivities}
+                    />
+                  </div>
+                </TabsContent>
+              )}
             </Tabs>
           </TabsContent>
 
@@ -247,6 +281,8 @@ export function Editor() {
           isProcessing={isProcessing}
           showAnalysis={showAnalysis}
           onToggleAnalysis={() => setShowAnalysis(!showAnalysis)}
+          showAgent={showAgent}
+          onToggleAgent={() => setShowAgent(!showAgent)}
           currentShortcut={shortcut}
         />
 
@@ -288,9 +324,13 @@ export function Editor() {
                 <ResizableHandle />
                 <ResizablePanel defaultSize={50}>
                   <Tabs defaultValue="preview" className="h-full flex flex-col">
-                    <TabsList className={`grid w-full h-12 m-3 ${showAnalysis ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                    <TabsList className={`grid w-full h-12 m-3 ${
+                        showAnalysis && showAgent ? 'grid-cols-3' : 
+                        showAnalysis || showAgent ? 'grid-cols-2' : 'grid-cols-1'
+                      }`}>
                       <TabsTrigger value="preview" className="text-sm">Preview</TabsTrigger>
                       {showAnalysis && <TabsTrigger value="analysis" className="text-sm">Analysis</TabsTrigger>}
+                      {showAgent && <TabsTrigger value="agent" className="text-sm">AI Agent</TabsTrigger>}
                     </TabsList>
                     <TabsContent value="preview" className="flex-1 mt-0 px-3">
                       <PreviewPane shortcut={shortcut} />
@@ -298,6 +338,15 @@ export function Editor() {
                     {showAnalysis && (
                       <TabsContent value="analysis" className="flex-1 mt-0 px-3">
                         <AnalysisPane analysis={analyzeShortcut(shortcut)} />
+                      </TabsContent>
+                    )}
+                    {showAgent && (
+                      <TabsContent value="agent" className="flex-1 mt-0 px-3">
+                        <AgentPane 
+                          activities={agentActivity.activities}
+                          isProcessing={isProcessing}
+                          onClearHistory={agentActivity.clearActivities}
+                        />
                       </TabsContent>
                     )}
                   </Tabs>
@@ -344,7 +393,7 @@ export function Editor() {
               direction="horizontal"
               className="flex-1"
             >
-              <ResizablePanel defaultSize={showAnalysis ? 33 : 50}>
+              <ResizablePanel defaultSize={showAnalysis && showAgent ? 25 : showAnalysis || showAgent ? 33 : 50}>
                 <div className="h-full flex flex-col">
                   <div className="flex-1">
                     <EditorPane
@@ -368,14 +417,26 @@ export function Editor() {
                 </div>
               </ResizablePanel>
               <ResizableHandle />
-              <ResizablePanel defaultSize={showAnalysis ? 33 : 50}>
+              <ResizablePanel defaultSize={showAnalysis && showAgent ? 25 : showAnalysis || showAgent ? 33 : 50}>
                 <PreviewPane shortcut={shortcut} />
               </ResizablePanel>
               {showAnalysis && (
                 <>
                   <ResizableHandle />
-                  <ResizablePanel defaultSize={33}>
+                  <ResizablePanel defaultSize={showAgent ? 25 : 50}>
                     <AnalysisPane analysis={analyzeShortcut(shortcut)} />
+                  </ResizablePanel>
+                </>
+              )}
+              {showAgent && (
+                <>
+                  <ResizableHandle />
+                  <ResizablePanel defaultSize={showAnalysis ? 25 : 50}>
+                    <AgentPane 
+                      activities={agentActivity.activities}
+                      isProcessing={isProcessing}
+                      onClearHistory={agentActivity.clearActivities}
+                    />
                   </ResizablePanel>
                 </>
               )}

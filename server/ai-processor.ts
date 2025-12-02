@@ -31,6 +31,18 @@ interface ProcessRequest {
   reasoningOptions?: ReasoningOptions;
 }
 
+interface AgentSearchActivity {
+  id: string;
+  timestamp: Date;
+  type: 'search' | 'extract' | 'crawl';
+  status: 'running' | 'completed' | 'failed';
+  query?: string;
+  toolName: string;
+  results?: any;
+  sources?: any[];
+  error?: string;
+}
+
 interface ProcessResult {
   content: string;
   usage?: {
@@ -39,6 +51,10 @@ interface ProcessResult {
     total_tokens: number;
     reasoning_tokens?: number;
   };
+  searchActivity?: AgentSearchActivity[];
+  sourcesUsed?: any[];
+  generatedWithWebSearch?: boolean;
+  processingSteps?: string[];
 }
 
 export class AIProcessor {
@@ -152,6 +168,8 @@ export class AIProcessor {
     };
 
     // Add web search tools if available
+    const searchActivity: AgentSearchActivity[] = [];
+    
     if (this.webSearchTool) {
       requestParams.tools = this.webSearchTool.getAllToolDefinitions();
       requestParams.tool_choice = 'auto';
@@ -181,9 +199,47 @@ export class AIProcessor {
       if (toolCalls && this.webSearchTool) {
         for (const toolCall of toolCalls) {
           if (['web_search', 'web_extract', 'web_crawl'].includes(toolCall.function.name)) {
+            const activityId = Math.random().toString(36).substr(2, 9);
+            const activity: AgentSearchActivity = {
+              id: activityId,
+              timestamp: new Date(),
+              type: toolCall.function.name === 'web_search' ? 'search' : 
+                    toolCall.function.name === 'web_extract' ? 'extract' : 'crawl',
+              status: 'running',
+              toolName: toolCall.function.name,
+              query: JSON.parse(toolCall.function.arguments).query || 
+                     JSON.parse(toolCall.function.arguments).url ||
+                     JSON.parse(toolCall.function.arguments)
+            };
+            
+            searchActivity.push(activity);
+            
             try {
               const args = JSON.parse(toolCall.function.arguments);
               const toolResults = await this.webSearchTool.executeToolCall(toolCall.function.name, args);
+
+              // Update activity with results
+              activity.status = 'completed';
+              activity.results = toolResults;
+              
+              // Parse results for sources if it's a search
+              if (toolCall.function.name === 'web_search' && typeof toolResults === 'string') {
+                try {
+                  // Simple parsing of search results to extract sources
+                  const urlMatches = toolResults.match(/URL: (https?:\/\/[^\s\n]+)/g);
+                  if (urlMatches) {
+                    activity.sources = urlMatches.map((match, index) => ({
+                      title: `Search Result ${index + 1}`,
+                      url: match.replace('URL: ', ''),
+                      snippet: '',
+                      source: 'Web Search',
+                      used: true
+                    }));
+                  }
+                } catch (parseError) {
+                  // Ignore parsing errors
+                }
+              }
 
               // Add the tool result to the conversation
               messages.push(response.choices[0].message);
@@ -210,6 +266,8 @@ export class AIProcessor {
               content = response.choices[0].message.content || '';
             } catch (toolError) {
               console.error('Tool execution error:', toolError);
+              activity.status = 'failed';
+              activity.error = toolError instanceof Error ? toolError.message : 'Unknown error';
               // Continue with original response if tool fails
             }
           }
@@ -223,7 +281,14 @@ export class AIProcessor {
           completion_tokens: response.usage?.completion_tokens || 0,
           total_tokens: response.usage?.total_tokens || 0,
           reasoning_tokens: (response.usage as any)?.completion_tokens_details?.reasoning_tokens
-        }
+        },
+        searchActivity,
+        generatedWithWebSearch: searchActivity.length > 0,
+        processingSteps: [
+          'Analyzing request...',
+          ...(searchActivity.map(a => `Performed ${a.type}: ${a.query || a.toolName}`)),
+          'Generating shortcut...'
+        ]
       };
     } catch (error: any) {
       throw new Error(`OpenAI API error: ${error.message}`);

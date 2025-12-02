@@ -7,7 +7,7 @@ import { ShareDialog } from './ShareDialog';
 import { ThemeToggle } from './theme-toggle';
 import { AIModel, ReasoningOptions } from '@/lib/types';
 import { Shortcut } from '@/lib/shortcuts';
-import { BarChart2, Share2, Download, Mic, MoreVertical } from 'lucide-react';
+import { BarChart2, Share2, Download, Mic, MoreVertical, Bot } from 'lucide-react';
 import { useBreakpoint } from '@/hooks/use-mobile';
 import {
   DropdownMenu,
@@ -28,6 +28,8 @@ interface ToolbarProps {
   isProcessing: boolean;
   showAnalysis: boolean;
   onToggleAnalysis: () => void;
+  showAgent?: boolean;
+  onToggleAgent?: () => void;
   currentShortcut?: Shortcut | null;
 }
 
@@ -43,6 +45,8 @@ export function Toolbar({
   isProcessing,
   showAnalysis,
   onToggleAnalysis,
+  showAgent,
+  onToggleAgent,
   currentShortcut
 }: ToolbarProps) {
   const [prompt, setPrompt] = useState('');
@@ -143,6 +147,16 @@ export function Toolbar({
             </div>
             <div className="flex items-center gap-1">
               <ThemeToggle />
+              {onToggleAgent && (
+                <Button
+                  size="sm"
+                  variant={showAgent ? "default" : "outline"}
+                  onClick={onToggleAgent}
+                  className={`px-2 ${showAgent ? "bg-blue-600 hover:bg-blue-700" : ""}`}
+                >
+                  <Bot className="h-4 w-4" />
+                </Button>
+              )}
               <Button
                 size="sm"
                 variant="outline"
@@ -260,6 +274,17 @@ export function Toolbar({
           <div className="flex items-center gap-2">
             <FileUpload onUpload={onImport} />
             <ThemeToggle />
+            {onToggleAgent && (
+              <Button
+                size="sm"
+                variant={showAgent ? "default" : "outline"}
+                onClick={onToggleAgent}
+                className={showAgent ? "bg-blue-600 hover:bg-blue-700" : ""}
+              >
+                <Bot className="mr-1 h-4 w-4" />
+                Agent
+              </Button>
+            )}
             <Button size="sm" variant="outline" onClick={onExport}>Export</Button>
             <Button
               size="sm"
@@ -375,6 +400,18 @@ export function Toolbar({
             <BarChart2 className={isLargeDesktop ? "mr-2 h-4 w-4" : "h-4 w-4"} />
             {isLargeDesktop && (showAnalysis ? 'Hide' : 'Show')}{isLargeDesktop && ' '}Analysis
           </Button>
+
+          {onToggleAgent && (
+            <Button
+              variant={showAgent ? "default" : "outline"}
+              onClick={onToggleAgent}
+              size={isLargeDesktop ? 'default' : 'sm'}
+              className={showAgent ? "bg-blue-600 hover:bg-blue-700" : ""}
+            >
+              <Bot className={isLargeDesktop ? "mr-2 h-4 w-4" : "h-4 w-4"} />
+              {isLargeDesktop && 'AI Agent'}
+            </Button>
+          )}
 
           <Button
             onClick={onProcess}
