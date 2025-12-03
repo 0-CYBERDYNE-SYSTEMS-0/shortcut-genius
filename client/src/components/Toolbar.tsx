@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ModelSelector } from './ModelSelector';
@@ -7,7 +7,7 @@ import { ShareDialog } from './ShareDialog';
 import { ThemeToggle } from './theme-toggle';
 import { AIModel, ReasoningOptions } from '@/lib/types';
 import { Shortcut } from '@/lib/shortcuts';
-import { BarChart2, Share2, Download, Mic, MoreVertical, Bot } from 'lucide-react';
+import { BarChart2, Share2, Download, Mic, MoreVertical, Bot, Send, Loader2 } from 'lucide-react';
 import { useBreakpoint } from '@/hooks/use-mobile';
 import {
   DropdownMenu,
@@ -53,6 +53,7 @@ export function Toolbar({
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [inputExpanded, setInputExpanded] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { isMobile, isTablet, isDesktop, isLargeDesktop, isTouch } = useBreakpoint();
 
   const handleDownloadShortcut = async () => {
@@ -127,10 +128,29 @@ export function Toolbar({
     }
   };
 
+  const handleFileImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const content = e.target?.result as string;
+      onImport(content);
+    };
+    reader.readAsText(file);
+  };
+
   // Mobile Layout
   if (isMobile) {
     return (
       <>
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileImport}
+          accept=".shortcut,.json"
+          className="hidden"
+        />
         <div className="flex flex-col border-b bg-background">
           {/* Row 1: Essential actions */}
           <div className="flex items-center justify-between px-3 py-2 border-b">
@@ -162,6 +182,7 @@ export function Toolbar({
                 variant="outline"
                 onClick={onToggleAnalysis}
                 className="px-2"
+                aria-label={showAnalysis ? 'Hide Analysis' : 'Show Analysis'}
               >
                 <BarChart2 className="h-4 w-4" />
               </Button>
@@ -183,7 +204,7 @@ export function Toolbar({
                   <DropdownMenuItem onClick={onExport}>
                     Export
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => {}}>
+                  <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
                     Import
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -191,44 +212,52 @@ export function Toolbar({
             </div>
           </div>
 
-          {/* Row 2: Expandable input */}
-          <div className="px-3 py-2">
-            <div className={`transition-all duration-200 ${inputExpanded ? 'min-h-[80px]' : 'h-10'}`}>
-              <div className="relative">
-                <Input
-                  placeholder="Describe your shortcut..."
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  onFocus={() => setInputExpanded(true)}
-                  onBlur={() => setInputExpanded(false)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey && prompt.trim()) {
-                      handleGenerate();
-                    }
-                  }}
-                  className="pr-20 text-base min-h-10"
-                />
-                <div className="absolute right-1 top-1/2 -translate-y-1/2 flex gap-1">
-                  {isTouch && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={handleVoiceInput}
-                      disabled={isListening}
-                      className="h-8 w-8 p-0"
-                    >
-                      <Mic className={`h-4 w-4 ${isListening ? 'text-red-500 animate-pulse' : ''}`} />
-                    </Button>
-                  )}
+          {/* Row 2: Proper input area */}
+          <div className="px-3 pb-3">
+            <div className="relative w-full">
+              <Input
+                placeholder="Ask AI to build shortcuts with real APIs..."
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey && prompt.trim()) {
+                    handleGenerate();
+                    e.preventDefault();
+                  }
+                }}
+                className="w-full text-base min-h-[44px] pr-[4.5rem]"
+                disabled={isProcessing}
+              />
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-2">
+                {isTouch && (
                   <Button
                     size="sm"
-                    onClick={handleGenerate}
-                    disabled={isProcessing || !prompt.trim()}
-                    className="h-8 px-3"
+                    variant="ghost"
+                    onClick={handleVoiceInput}
+                    disabled={isListening}
+                    className="h-10 w-10 p-0"
                   >
-                    Generate
+                    <Mic className={`h-5 w-5 ${isListening ? 'text-red-500 animate-pulse' : ''}`} />
                   </Button>
-                </div>
+                )}
+                <Button
+                  size="sm"
+                  onClick={handleGenerate}
+                  disabled={isProcessing || !prompt.trim()}
+                  className="h-10 px-4 font-medium"
+                >
+                  {isProcessing ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      Working...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-5 w-5 mr-2" />
+                      Send
+                    </>
+                  )}
+                </Button>
               </div>
             </div>
           </div>
@@ -247,60 +276,90 @@ export function Toolbar({
   if (isTablet) {
     return (
       <>
-        <div className="h-16 border-b px-4 flex items-center gap-3">
-          <ModelSelector value={model} onChange={onModelChange} />
-
-          <div className="flex-1 flex items-center gap-2 min-w-0">
-            <Input
-              placeholder="Describe your shortcut..."
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey && prompt.trim()) {
-                  handleGenerate();
-                }
-              }}
-              className="flex-1"
-            />
-            <Button
-              onClick={handleGenerate}
-              disabled={isProcessing || !prompt.trim()}
-              size="sm"
-            >
-              Generate
-            </Button>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <FileUpload onUpload={onImport} />
-            <ThemeToggle />
-            {onToggleAgent && (
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileImport}
+          accept=".shortcut,.json"
+          className="hidden"
+        />
+        <div className="border-b">
+          {/* Row 1: Model selector and primary actions */}
+          <div className="px-4 py-3 flex items-center gap-3 border-b">
+            <ModelSelector value={model} onChange={onModelChange} />
+            
+            <div className="flex-1 flex items-center gap-2 min-w-0">
+              <Input
+                placeholder="Describe your shortcut..."
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey && prompt.trim()) {
+                    handleGenerate();
+                    e.preventDefault();
+                  }
+                }}
+                className="flex-1"
+              />
               <Button
                 size="sm"
-                variant={showAgent ? "default" : "outline"}
-                onClick={onToggleAgent}
-                className={showAgent ? "bg-blue-600 hover:bg-blue-700" : ""}
+                onClick={handleGenerate}
+                disabled={isProcessing || !prompt.trim()}
               >
-                <Bot className="mr-1 h-4 w-4" />
-                Agent
+                {isProcessing ? '...' : 'Generate'}
               </Button>
-            )}
-            <Button size="sm" variant="outline" onClick={onExport}>Export</Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={onToggleAnalysis}
-            >
-              <BarChart2 className="mr-1 h-4 w-4" />
-              {showAnalysis ? 'Hide' : 'Show'}
-            </Button>
-            <Button
-              onClick={onProcess}
-              disabled={isProcessing}
-              size="sm"
-            >
-              {isProcessing ? 'Processing...' : 'Process'}
-            </Button>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <ThemeToggle />
+              {onToggleAgent && (
+                <Button
+                  size="sm"
+                  variant={showAgent ? "default" : "outline"}
+                  onClick={onToggleAgent}
+                  className={showAgent ? "bg-blue-600 hover:bg-blue-700" : ""}
+                >
+                  <Bot className="h-4 w-4" />
+                </Button>
+              )}
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={onToggleAnalysis}
+              >
+                <BarChart2 className="h-4 w-4" />
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="sm" variant="outline">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setShareDialogOpen(true)} disabled={!currentShortcut}>
+                    <Share2 className="mr-2 h-4 w-4" />
+                    Share
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleDownloadShortcut} disabled={!currentShortcut}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Download
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={onExport}>
+                    Export
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
+                    Import
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button
+                size="sm"
+                onClick={onProcess}
+                disabled={isProcessing}
+              >
+                {isProcessing ? 'Processing...' : 'Process'}
+              </Button>
+            </div>
           </div>
         </div>
 
