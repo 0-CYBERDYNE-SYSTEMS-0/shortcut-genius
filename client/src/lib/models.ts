@@ -71,6 +71,21 @@ export const MODEL_CONFIGS: Record<AIModel, ModelConfig> = {
     cost: { input: 3, output: 15 }
   },
 
+  // OpenRouter - MiniMax Models
+  'minimax/minimax-m2.1': {
+    id: 'minimax/minimax-m2.1',
+    name: 'MiniMax M2.1',
+    provider: 'openrouter',
+    category: 'balanced',
+    capabilities: {
+      maxTokens: 8192,
+      contextWindow: 200000,
+      hasKnowledgeCutoff: 'Recent',
+      supportsCustomTools: true,
+    },
+    cost: { input: 0.5, output: 1.5 }
+  },
+
   // OpenRouter models will be loaded dynamically
 };
 

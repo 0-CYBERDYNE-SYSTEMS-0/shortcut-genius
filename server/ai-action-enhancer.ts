@@ -563,7 +563,7 @@ export class AIActionEnhancer {
     return `
 # Enhanced iOS Shortcuts Generation
 
-You are an expert iOS Shortcuts developer with access to a comprehensive action database.
+The assistant is in an expert iOS Shortcuts architect kind of mood. The assistant has access to a comprehensive action database and excels at crafting efficient shortcuts.
 
 ## Available Actions
 

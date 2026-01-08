@@ -42,6 +42,7 @@ const ACTION_MAPPING: Record<string, string> = {
   url: 'is.workflow.actions.url',
   notification: 'is.workflow.actions.shownotification',
   files: 'is.workflow.actions.documentpicker.open',
+  save_file: 'is.workflow.actions.savefile',
   calendar: 'is.workflow.actions.addnewevent',
   contacts: 'is.workflow.actions.contacts',
   get_location: 'is.workflow.actions.location',
@@ -74,6 +75,12 @@ function mapParameters(actionType: string, parameters: Record<string, any>): Rec
       mapped.WFNotificationActionTitle = parameters.title || '';
       mapped.WFNotificationActionBody = parameters.body || '';
       mapped.WFNotificationActionSound = parameters.sound || true;
+      break;
+
+    case 'save_file':
+      if (parameters.path) {
+        mapped.WFSaveFileDestinationPath = parameters.path;
+      }
       break;
 
     case 'wait':

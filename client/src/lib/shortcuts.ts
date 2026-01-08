@@ -31,6 +31,7 @@ export const ACTION_PERMISSIONS = {
   url: 'network',
   notification: 'notification',
   files: 'files',
+  save_file: 'files',
   calendar: 'calendar',
   contacts: 'contacts',
   get_location: 'location',
@@ -382,6 +383,10 @@ export const SHORTCUT_ACTIONS = {
   files: {
     name: 'Files',
     parameters: ['path', 'content', 'operation']
+  },
+  save_file: {
+    name: 'Save File',
+    parameters: ['path']
   },
 
   // Calendar & Contacts

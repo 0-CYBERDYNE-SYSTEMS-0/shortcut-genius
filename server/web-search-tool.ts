@@ -42,6 +42,8 @@ export interface CrawlResponse {
   crawled_urls: string[];
 }
 
+const REQUEST_TIMEOUT_MS = 12000;
+
 export class WebSearchTool {
   private apiKey?: string;
   private searchEngine: 'tavily' | 'serper' | 'duckduckgo' | 'brave';
@@ -89,7 +91,7 @@ export class WebSearchTool {
         api_key: this.apiKey,
         urls,
         prompt: prompt || 'Extract the main content, API endpoints, parameters, and examples from this documentation'
-      });
+      }, { timeout: REQUEST_TIMEOUT_MS });
 
       const results = response.data.results.map((result: any) => ({
         url: result.url,
@@ -132,7 +134,7 @@ export class WebSearchTool {
         prompt: prompt || 'Extract API documentation, endpoints, parameters, and code examples',
         include_raw_content: true,
         max_depth: 2 // Don't go too deep for performance
-      });
+      }, { timeout: REQUEST_TIMEOUT_MS });
 
       const results = response.data.results.map((result: any) => ({
         url: result.url,
@@ -211,7 +213,7 @@ export class WebSearchTool {
       include_images: false,
       include_raw_content: true, // Enable full content extraction
       max_results: maxResults
-    });
+    }, { timeout: REQUEST_TIMEOUT_MS });
 
     const results = response.data.results.map((result: any) => ({
       title: result.title,
@@ -238,6 +240,7 @@ export class WebSearchTool {
       q: query,
       num: maxResults
     }, {
+      timeout: REQUEST_TIMEOUT_MS,
       headers: {
         'X-API-KEY': this.apiKey,
         'Content-Type': 'application/json'
@@ -273,6 +276,7 @@ export class WebSearchTool {
         text_decorations: false,
         result_filter: 'web'
       },
+      timeout: REQUEST_TIMEOUT_MS,
       headers: {
         'X-Subscription-Token': this.apiKey,
         'Accept': 'application/json'
@@ -304,6 +308,7 @@ export class WebSearchTool {
           no_html: '1',
           skip_disambig: '1'
         },
+        timeout: REQUEST_TIMEOUT_MS,
         headers: {
           'User-Agent': 'ShortcutGenius/1.0'
         }

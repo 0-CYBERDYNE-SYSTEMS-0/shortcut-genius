@@ -11,11 +11,12 @@ import type { AnalysisResult } from '@/lib/shortcut-analyzer';
 
 interface AnalysisPaneProps {
   analysis: AnalysisResult;
+  className?: string;
 }
 
-export function AnalysisPane({ analysis }: AnalysisPaneProps) {
+export function AnalysisPane({ analysis, className }: AnalysisPaneProps) {
   return (
-    <Card className="h-full">
+    <Card className={`h-full ${className || ''}`}>
       <CardHeader>
         <CardTitle>Shortcut Analysis</CardTitle>
       </CardHeader>

@@ -50,6 +50,11 @@ import {
   incrementDownloadCount,
   generateSharingMetadata
 } from './shortcut-sharing';
+import { registerConversationRoutes } from './routes/conversations';
+import { registerSimpleConversationRoutes } from './routes/simple-conversations';
+import { ConversationalShortcutAgent } from './conversational-agent';
+import { db } from '../db';
+import { conversations } from '../db/schema';
 
 // AI Model Clients - Direct APIs and OpenRouter (initialized after dotenv config)
 let openai: OpenAI;
@@ -60,16 +65,15 @@ let webSearchTool: WebSearchTool;
 
 // Initialize function to be called after dotenv config
 async function initializeServices() {
-  openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || '' });
-  anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY || '' });
+  openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || '', timeout: 60000 });
+  anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY || '', timeout: 60000 });
   openrouter = new OpenRouterClient(process.env.OPENROUTER_API_KEY || '');
 
   // Debug: Log API key status (don't log the actual key)
   console.log('🔑 API Keys Status:');
   console.log('- OpenAI:', process.env.OPENAI_API_KEY ? 'configured' : 'not configured');
   console.log('- Anthropic:', process.env.ANTHROPIC_API_KEY ? 'configured' : 'not configured');
-  console.log('- OpenRouter:', process.env.OPENROUTER_API_KEY ? `configured (${process.env.OPENROUTER_API_KEY.substring(0, 15)}...)` : 'not configured');
-  console.log('- OpenRouter API Key value:', process.env.OPENROUTER_API_KEY || 'undefined');
+  console.log('- OpenRouter:', process.env.OPENROUTER_API_KEY ? 'configured' : 'not configured');
 
   // Initialize services
   openRouterModelsService = new OpenRouterModelsService(process.env.OPENROUTER_API_KEY || '');
@@ -93,6 +97,10 @@ async function initializeServices() {
     // Get supported models from AI processor
     SUPPORTED_MODELS = aiProcessor.getAvailableModels();
 
+    // Initialize conversational agent
+    conversationalAgent = new ConversationalShortcutAgent(aiProcessor, webSearchTool);
+    console.log('✅ Conversational agent initialized');
+
     // Load action prompt for agentic builder
     const fs = await import('fs/promises');
     const actionPrompt = await fs.readFile('/Users/scrimwiggins/shortcut-genius-main/ai-action-prompt.md', 'utf8');
@@ -112,14 +120,57 @@ async function initializeServices() {
 // Global variables for initialization
 let aiProcessor: AIProcessor;
 let agenticBuilder: AgenticShortcutBuilder;
+let conversationalAgent: ConversationalShortcutAgent;
 let SUPPORTED_MODELS: string[] = [];
 
-// Initialize services after dotenv config
-initializeServices().catch(console.error);
+// Initialize services - will be called from registerRoutes
+// Don't auto-initialize here to avoid timing issues
+let servicesInitialized = false;
 
-const SYSTEM_PROMPT = `You are an iOS Shortcuts expert who specializes in reverse engineering and optimizing shortcuts.
+function extractShortcutJson(payload: string): any | null {
+  try {
+    return JSON.parse(payload);
+  } catch {}
 
-You have access to comprehensive web search and content extraction tools to help you find current information, latest iOS features, new shortcut actions, or any other up-to-date information that might be relevant to creating or analyzing shortcuts. Use these capabilities when you need recent information or when the user asks about current events, latest versions, or anything that might have changed recently.
+  const start = payload.indexOf('{');
+  const end = payload.lastIndexOf('}');
+  if (start === -1 || end === -1 || end <= start) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(payload.slice(start, end + 1));
+  } catch {
+    return null;
+  }
+}
+
+async function canUseConversationStore(): Promise<boolean> {
+  try {
+    if (!db?.$client?.query) {
+      return false;
+    }
+
+    const result = await db.$client.query(
+      "select 1 from information_schema.tables where table_schema = 'public' and table_name = 'conversations'",
+      []
+    );
+
+    if (!result?.rows || result.rows.length === 0) {
+      return false;
+    }
+
+    await db.select({ id: conversations.id }).from(conversations).limit(1);
+    return true;
+  } catch (error) {
+    console.warn('⚠️ Conversation store not available:', error);
+    return false;
+  }
+}
+
+const SYSTEM_PROMPT = `The assistant is in a highly skilled iOS Shortcuts architect kind of mood. The assistant specializes in reverse engineering and optimizing shortcuts with precision and expertise.
+
+The assistant has access to comprehensive web search and content extraction tools to find current information, latest iOS features, new shortcut actions, or any other up-to-date information relevant to creating or analyzing shortcuts. The assistant uses these capabilities when recent information is needed or when users ask about current events, latest versions, or anything that might have changed recently.
 
 **Available Web Tools:**
 1. **web_search** - Search the web for current information, API documentation, news, or specific topics. Use search_type="api_docs" for comprehensive API documentation searches.
@@ -239,7 +290,34 @@ interface ProcessResult {
   error?: string;
 }
 
-export function registerRoutes(app: Express) {
+export async function registerRoutes(app: Express) {
+  // Ensure services are initialized before registering routes
+  if (!servicesInitialized) {
+    await initializeServices();
+    servicesInitialized = true;
+  }
+
+  // Register conversation routes
+  try {
+    console.log('🗨️ Registering conversation routes...');
+
+    // Use real AI-powered routes with conversational agent
+    const canUseDb = await canUseConversationStore();
+
+    if (conversationalAgent && canUseDb) {
+      registerConversationRoutes(app, conversationalAgent);
+      console.log('✅ Full conversation routes with AI agent registered');
+    } else {
+      console.warn('⚠️ Using simplified conversation routes (AI or database unavailable)');
+      registerSimpleConversationRoutes(app, conversationalAgent);
+      console.log('✅ Simplified conversation routes registered');
+    }
+
+  } catch (error) {
+    console.warn('⚠️ Failed to register conversation routes:', error);
+    console.log('✅ Server running with basic functionality available');
+  }
+
   // Force reinitialization endpoint
   app.post('/api/reinit', async (req, res) => {
     console.log('🔄 Force reinitializing services...');
@@ -257,7 +335,7 @@ export function registerRoutes(app: Express) {
 
   app.post('/api/process', async (req, res) => {
     // Ensure services are initialized before handling requests
-    if (!aiProcessor || !openrouter || !process.env.OPENROUTER_API_KEY) {
+    if (!aiProcessor || !openrouter) {
       console.log('🔄 Initializing services on first request...');
       try {
         await initializeServices();
@@ -300,6 +378,13 @@ export function registerRoutes(app: Express) {
     if (!isDirectModel && !isOpenRouterFormat) {
       return res.status(400).json({
         error: 'Invalid model specified. Use direct models (like gpt-4o) or OpenRouter format (provider/model)'
+      });
+    }
+
+    const keyStatus = aiProcessor.checkApiKeyAvailability(model);
+    if (!keyStatus.available) {
+      return res.status(400).json({
+        error: keyStatus.error || 'Model API key not configured'
       });
     }
 
@@ -359,8 +444,8 @@ export function registerRoutes(app: Express) {
       // Use the new AI processor for both analysis and generation
       if (type === 'analyze') {
         try {
-          // Parse input shortcut for local analysis
-          const inputShortcut = JSON.parse(prompt);
+          // Parse input shortcut for local analysis when possible
+          const inputShortcut = extractShortcutJson(prompt);
 
           // Run AI analysis and local analysis in parallel
           const [aiProcessorResult, localAnalysis] = await Promise.all([
@@ -371,7 +456,7 @@ export function registerRoutes(app: Express) {
               systemPrompt: SYSTEM_PROMPT,
               reasoningOptions
             }),
-            analyzeShortcut(inputShortcut)
+            inputShortcut ? analyzeShortcut(inputShortcut) : Promise.resolve(undefined)
           ]);
 
           // Validate AI analysis response
@@ -1073,6 +1158,47 @@ export function registerRoutes(app: Express) {
       res.status(500).json({
         error: 'Failed to get OpenRouter model',
         details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Direct OpenRouter test endpoint
+  app.post('/api/openrouter/test', async (req, res) => {
+    try {
+      if (!process.env.OPENROUTER_API_KEY) {
+        return res.status(400).json({
+          error: 'OpenRouter API key not configured'
+        });
+      }
+
+      const { model = 'openai/gpt-4o-mini', prompt, system, temperature } = req.body || {};
+      if (!prompt || typeof prompt !== 'string') {
+        return res.status(400).json({
+          error: 'Prompt is required'
+        });
+      }
+
+      const messages = [
+        ...(system ? [{ role: 'system', content: system }] : []),
+        { role: 'user', content: prompt }
+      ];
+
+      const response = await openrouter.createChatCompletion({
+        model,
+        messages: messages as any,
+        temperature: typeof temperature === 'number' ? temperature : 0.7
+      });
+
+      const content = response.choices?.[0]?.message?.content || '';
+      res.json({
+        model: response.model,
+        content,
+        usage: response.usage
+      });
+    } catch (error: any) {
+      console.error('OpenRouter test error:', error);
+      res.status(500).json({
+        error: error instanceof Error ? error.message : 'OpenRouter test failed'
       });
     }
   });

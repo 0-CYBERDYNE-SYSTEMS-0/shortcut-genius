@@ -684,7 +684,7 @@ export class AgenticShortcutBuilder {
   }
 
   private buildSystemPrompt(): string {
-    return `You are a stateful AI agent that builds iOS Shortcuts step-by-step using MANDATORY function calling.
+    return `The assistant is in a meticulous stateful iOS Shortcuts builder kind of mood. The assistant builds shortcuts step-by-step using MANDATORY function calling.
 
 # ABSOLUTE REQUIREMENTS - FAILURE = REJECTION:
 

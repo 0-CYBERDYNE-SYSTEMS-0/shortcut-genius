@@ -5,25 +5,33 @@ import { Shortcut, ShortcutAction } from '@/lib/shortcuts';
 
 interface PreviewPaneProps {
   shortcut: Shortcut;
+  className?: string;
 }
 
-export function PreviewPane({ shortcut }: PreviewPaneProps) {
+export function PreviewPane({ shortcut, className }: PreviewPaneProps) {
   const [actions, setActions] = useState<ShortcutAction[]>([]);
 
   useEffect(() => {
     setActions(shortcut.actions);
   }, [shortcut]);
 
+  // Generate stable key for action items
+  const getActionKey = (action: ShortcutAction, index: number): string => {
+    // Create a stable key using action type and parameter hash
+    const paramHash = JSON.stringify(action.parameters);
+    return `${action.type}-${index}-${paramHash.substring(0, 20)}`;
+  };
+
   return (
-    <Card className="h-full">
+    <Card className={`h-full ${className || ''}`}>
       <ScrollArea className="h-full">
         <div className="p-4 space-y-4">
           <h2 className="text-xl font-semibold">{shortcut.name}</h2>
-          
+
           <div className="space-y-2">
             {actions.map((action, index) => (
               <div
-                key={index}
+                key={getActionKey(action, index)}
                 className="bg-secondary rounded-lg p-3 flex flex-col gap-2"
               >
                 <div className="font-medium text-primary">

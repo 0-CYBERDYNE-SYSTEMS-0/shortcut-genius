@@ -110,7 +110,7 @@ export class OpenRouterClient {
 
   async getModels() {
     try {
-      const response = await this.client.get('/models');
+      const response = await this.fallbackClient.get('/models');
       return response.data;
     } catch (error: any) {
       console.error('OpenRouter models API error:', error.response?.data || error.message);
@@ -122,7 +122,7 @@ export class OpenRouterClient {
 
   async getGeneration(generationId: string) {
     try {
-      const response = await this.client.get(`/generation?id=${generationId}`);
+      const response = await this.fallbackClient.get(`/generation?id=${generationId}`);
       return response.data;
     } catch (error: any) {
       console.error('OpenRouter generation API error:', error.response?.data || error.message);
