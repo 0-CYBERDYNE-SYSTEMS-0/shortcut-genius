@@ -1,26 +1,9 @@
 <div align="center">
 
-```
 
-                                                                       
-            
-        
-                          
-                          
-                   
-                        
-                                                                       
-                               
-                             
-                               
-                               
-                        
-                             
-                                                                       
             AI-POWERED iOS SHORTCUT CREATION & ANALYSIS           
                                                                        
 
-```
 
 <h1 align="center"> ShortcutGenius </h1>
 <h3 align="center">
@@ -50,16 +33,15 @@
 </div>
 
 ##  What Makes ShortcutGenius Revolutionary
-
 <table>
 <tr>
 <td width="33%" align="center">
 
 ###  AI-Powered Generation
-```
+
  100%
 GPT-4o + Claude 3.5 Sonnet
-```
+
 **Natural Language → iOS Shortcuts**
 - Describe what you want in plain English
 - Dual AI models for optimal results
@@ -70,10 +52,10 @@ GPT-4o + Claude 3.5 Sonnet
 <td width="33%" align="center">
 
 ###  Advanced Analysis Engine
-```
+
  100%
 Security Score: A+
-```
+
 **Professional-Grade Shortcut Analysis**
 - Pattern detection & dependency mapping
 - Security vulnerability scanning
@@ -84,10 +66,10 @@ Security Score: A+
 <td width="33%" align="center">
 
 ###  Developer Experience
-```
+
  100%
 DX Score: Excellent
-```
+
 **Monaco Editor Integration**
 - Custom syntax highlighting
 - Real-time JSON validation
@@ -99,14 +81,12 @@ DX Score: Excellent
 </table>
 
 ##  See It In Action
-
 <div align="center">
 
 ###  Live Demo
 *Coming soon - preparing production deployment*
 
 ###  Core Features
-
 <table>
 <tr>
 <td align="center">
@@ -145,20 +125,16 @@ DX Score: Excellent
 </div>
 
 ##  Quick Start (Ready in 60 seconds!)
-
 <div align="center">
 
 ###  Prerequisites
-
 ```bash
 # You'll need these installed
 node >= 18.0.0
 npm >= 8.0.0
 PostgreSQL >= 14
-```
 
 ###  Installation
-
 ```bash
 # Clone the genius
 git clone https://github.com/scrimwiggins/shortcut-genius.git
@@ -170,32 +146,24 @@ npm install
 # Setup environment
 cp .env.example .env
 # Add your API keys to .env
-```
 
 ###  Environment Setup
-
 ```bash
 # Required API keys in .env
 OPENAI_API_KEY=your_openai_api_key_here
 ANTHROPIC_API_KEY=your_anthropic_api_key_here
 DATABASE_URL=postgresql://user:pass@localhost:5432/shortcut_genius
-```
 
 ###  Launch
-
 ```bash
 # Setup database
 npm run db:push
 
 # Start development server
 npm run dev
-```
 
 ###  Success!
 
-```
-
-                                                                 
    ShortcutGenius is running!                                  
                                                                  
    Local:    http://localhost:5000                            
@@ -205,12 +173,10 @@ npm run dev
    Editor:    Monaco with custom syntax                       
                                                                  
 
-```
 
 </div>
 
 ##  Built With Excellence
-
 <div align="center">
 
 ###  Frontend Powerhouse
@@ -238,7 +204,6 @@ npm run dev
 </div>
 
 ###  Technology Breakdown
-
 | Layer | Technology | Purpose | Status |
 |-------|------------|---------|--------|
 | **Frontend** | React 18 + TypeScript | Interactive UI |  Production Ready |
@@ -249,9 +214,7 @@ npm run dev
 | **Analysis** | Custom algorithms + AI | Shortcut optimization |  Advanced pattern detection |
 
 ##  Usage Examples (Copy & Paste Ready!)
-
 ###  Basic Shortcut Generation
-
 <details>
 <summary><b> Click to expand - Natural Language Generation</b></summary>
 
@@ -285,7 +248,6 @@ prompt: "Create a shortcut that turns off Do Not Disturb, sets volume to 70%,
     }
   ]
 }
-```
 
 **Analysis Output:**
 ```json
@@ -294,13 +256,12 @@ prompt: "Create a shortcut that turns off Do Not Disturb, sets volume to 70%,
     { "type": "device_control", "frequency": 2, "context": "morning routine" }
   ],
   "dependencies": [
-    { "action": "weather", "dependencies": [], "dependents": ["sms"] }
+    { "action": "weather", "dependencies": , "dependents": ["sms"] }
   ],
   "optimizations": [
     { "type": "grouping", "description": "Group device settings", "impact": "medium" }
   ]
 }
-```
 
 </details>
 
@@ -336,7 +297,6 @@ const analysis = await analyzeShortcut(importedShortcut);
     }
   ]
 }
-```
 
 </details>
 
@@ -381,17 +341,13 @@ const supportedActions = {
   "contacts": "Contact management",
   "health": "Health data access"
 };
-```
 
 </details>
 
 ##  Performance Metrics (Real Data!)
-
 <div align="center">
 
 ###  Lightning Fast Performance
-
-```
 
                     PERFORMANCE DASHBOARD                        
 
@@ -404,10 +360,8 @@ const supportedActions = {
                                                                  
    Overall Score: 95/100                                       
 
-```
 
 ###  AI Model Comparison
-
 | Metric | GPT-4o | Claude 3.5 Sonnet | Industry Average |
 |--------|--------|-------------------|------------------|
 | **Generation Speed** | **1.1s**  | **1.3s**  | 2.8s |
@@ -418,30 +372,23 @@ const supportedActions = {
 </div>
 
 ##  Join Our Epic Community!
-
 <div align="center">
 
 ###  Contributors Hall of Fame
-
 <a href="https://github.com/scrimwiggins/shortcut-genius/graphs/contributors">
 <img src="https://contrib.rocks/image?repo=scrimwiggins/shortcut-genius" />
 </a>
 
 ###  Contribution Workflow
 
-```
-
-                                                                
    Fork    Branch    Code    Test       
                                                                 
                                                                 
    Merge   Review   PR     Document     
                                                                 
 
-```
 
 ###  Ways to Contribute
-
 <table>
 <tr>
 <td align="center" width="25%">
@@ -482,25 +429,23 @@ Make it beautiful!
 </div>
 
 ##  Roadmap
-
 ###  Q1 2024
-- [ ] **Siri Integration** - Voice-activated shortcut creation
-- [ ] **Template Library** - Pre-built shortcut templates
-- [ ] **Team Collaboration** - Share and collaborate on shortcuts
-- [ ] **Advanced Security** - Enterprise-grade security analysis
+-  **Siri Integration** - Voice-activated shortcut creation
+-  **Template Library** - Pre-built shortcut templates
+-  **Team Collaboration** - Share and collaborate on shortcuts
+-  **Advanced Security** - Enterprise-grade security analysis
 
 ###  Q2 2024
-- [ ] **Mobile App** - Native iOS companion app
-- [ ] **API Marketplace** - Third-party integrations
-- [ ] **AI Model Training** - Custom model for iOS shortcuts
-- [ ] **Performance Analytics** - Real-time shortcut performance tracking
+-  **Mobile App** - Native iOS companion app
+-  **API Marketplace** - Third-party integrations
+-  **AI Model Training** - Custom model for iOS shortcuts
+-  **Performance Analytics** - Real-time shortcut performance tracking
 
 ---
 
 <div align="center">
 
 ##  Project Stats
-
 <table>
 <tr>
 <td align="center">
@@ -528,9 +473,6 @@ Lines of Code
 
 ###  Special Thanks
 
-```
-
-                                                               
     Built with passion for iOS automation enthusiasts       
                                                                
     Star us on GitHub — it means the world to us!           
@@ -538,7 +480,6 @@ Lines of Code
     Made with  and lots of                              
                                                                
 
-```
 
 <p align="center">
 <a href="https://github.com/scrimwiggins/shortcut-genius">
@@ -557,7 +498,6 @@ Lines of Code
 </p>
 
 ###  License
-
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 </div>
