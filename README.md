@@ -1,38 +1,38 @@
 <div align="center">
 
 ```
-╔═══════════════════════════════════════════════════════════════════════╗
-║                                                                       ║
-║  ███████╗██╗  ██╗ ██████╗ ██████╗ ████████╗ ██████╗██╗   ██╗████████╗ ║
-║  ██╔════╝██║  ██║██╔═══██╗██╔══██╗╚══██╔══╝██╔════╝██║   ██║╚══██╔══╝ ║
-║  ███████╗███████║██║   ██║██████╔╝   ██║   ██║     ██║   ██║   ██║    ║
-║  ╚════██║██╔══██║██║   ██║██╔══██╗   ██║   ██║     ██║   ██║   ██║    ║
-║  ███████║██║  ██║╚██████╔╝██║  ██║   ██║   ╚██████╗╚██████╔╝   ██║    ║
-║  ╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝   ╚═╝    ╚═════╝ ╚═════╝    ╚═╝    ║
-║                                                                       ║
-║     ██████╗ ███████╗███╗   ██╗██╗██╗   ██╗███████╗                   ║
-║    ██╔════╝ ██╔════╝████╗  ██║██║██║   ██║██╔════╝                   ║
-║    ██║  ███╗█████╗  ██╔██╗ ██║██║██║   ██║███████╗                   ║
-║    ██║   ██║██╔══╝  ██║╚██╗██║██║██║   ██║╚════██║                   ║
-║    ╚██████╔╝███████╗██║ ╚████║██║╚██████╔╝███████║                   ║
-║     ╚═════╝ ╚══════╝╚═╝  ╚═══╝╚═╝ ╚═════╝ ╚══════╝                   ║
-║                                                                       ║
-║           🚀 AI-POWERED iOS SHORTCUT CREATION & ANALYSIS 🚀          ║
-║                                                                       ║
-╚═══════════════════════════════════════════════════════════════════════╝
+
+                                                                       
+            
+        
+                          
+                          
+                   
+                        
+                                                                       
+                               
+                             
+                               
+                               
+                        
+                             
+                                                                       
+            AI-POWERED iOS SHORTCUT CREATION & ANALYSIS           
+                                                                       
+
 ```
 
-<h1 align="center">🔥 ShortcutGenius 🔥</h1>
+<h1 align="center"> ShortcutGenius </h1>
 <h3 align="center">
 <span style="background: linear-gradient(45deg, #FF6B6B, #4ECDC4, #45B7D1); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-► The Ultimate iOS Shortcut Creation Studio ◄
+ The Ultimate iOS Shortcut Creation Studio 
 </span>
 </h3>
 
 <p align="center">
 <img src="https://img.shields.io/badge/STATUS-PRODUCTION%20READY-00ff88?style=for-the-badge&logo=checkmarx&logoColor=white&labelColor=000000">
 <img src="https://img.shields.io/badge/AI%20POWERED-GPT4%20%2B%20CLAUDE-ff69b4?style=for-the-badge&logo=openai&logoColor=white&labelColor=000000">
-<img src="https://img.shields.io/badge/BUILT%20WITH-❤️%20%2B%20☕-orange?style=for-the-badge&labelColor=000000">
+<img src="https://img.shields.io/badge/BUILT%20WITH-%20%2B%20-orange?style=for-the-badge&labelColor=000000">
 </p>
 
 <p align="center">
@@ -49,15 +49,15 @@
 
 </div>
 
-## ✨ What Makes ShortcutGenius Revolutionary
+##  What Makes ShortcutGenius Revolutionary
 
 <table>
 <tr>
 <td width="33%" align="center">
 
-### ⚡ AI-Powered Generation
+###  AI-Powered Generation
 ```
-████████████████████████ 100%
+ 100%
 GPT-4o + Claude 3.5 Sonnet
 ```
 **Natural Language → iOS Shortcuts**
@@ -69,9 +69,9 @@ GPT-4o + Claude 3.5 Sonnet
 </td>
 <td width="33%" align="center">
 
-### 🛡️ Advanced Analysis Engine
+###  Advanced Analysis Engine
 ```
-████████████████████████ 100%
+ 100%
 Security Score: A+
 ```
 **Professional-Grade Shortcut Analysis**
@@ -83,9 +83,9 @@ Security Score: A+
 </td>
 <td width="33%" align="center">
 
-### 🌟 Developer Experience
+###  Developer Experience
 ```
-████████████████████████ 100%
+ 100%
 DX Score: Excellent
 ```
 **Monaco Editor Integration**
@@ -98,14 +98,14 @@ DX Score: Excellent
 </tr>
 </table>
 
-## 🎬 See It In Action
+##  See It In Action
 
 <div align="center">
 
-### 🚀 Live Demo
+###  Live Demo
 *Coming soon - preparing production deployment*
 
-### 📸 Core Features
+###  Core Features
 
 <table>
 <tr>
@@ -144,11 +144,11 @@ DX Score: Excellent
 
 </div>
 
-## 🚀 Quick Start (Ready in 60 seconds!)
+##  Quick Start (Ready in 60 seconds!)
 
 <div align="center">
 
-### 🎯 Prerequisites
+###  Prerequisites
 
 ```bash
 # You'll need these installed
@@ -157,7 +157,7 @@ npm >= 8.0.0
 PostgreSQL >= 14
 ```
 
-### 🔥 Installation
+###  Installation
 
 ```bash
 # Clone the genius
@@ -172,7 +172,7 @@ cp .env.example .env
 # Add your API keys to .env
 ```
 
-### ⚡ Environment Setup
+###  Environment Setup
 
 ```bash
 # Required API keys in .env
@@ -181,7 +181,7 @@ ANTHROPIC_API_KEY=your_anthropic_api_key_here
 DATABASE_URL=postgresql://user:pass@localhost:5432/shortcut_genius
 ```
 
-### 🎉 Launch
+###  Launch
 
 ```bash
 # Setup database
@@ -191,45 +191,45 @@ npm run db:push
 npm run dev
 ```
 
-### ✨ Success!
+###  Success!
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                                                                 │
-│  🎉 ShortcutGenius is running!                                  │
-│                                                                 │
-│  🌐 Local:    http://localhost:5000                            │
-│  📱 Network:  http://192.168.1.100:5000                       │
-│                                                                 │
-│  🤖 AI Models: GPT-4o + Claude 3.5 Sonnet                     │
-│  🎨 Editor:    Monaco with custom syntax                       │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+
+                                                                 
+   ShortcutGenius is running!                                  
+                                                                 
+   Local:    http://localhost:5000                            
+   Network:  http://192.168.1.100:5000                       
+                                                                 
+   AI Models: GPT-4o + Claude 3.5 Sonnet                     
+   Editor:    Monaco with custom syntax                       
+                                                                 
+
 ```
 
 </div>
 
-## 🛠️ Built With Excellence
+##  Built With Excellence
 
 <div align="center">
 
-### 🎨 Frontend Powerhouse
+###  Frontend Powerhouse
 <p>
 <img src="https://skillicons.dev/icons?i=react,typescript,vite,tailwind" />
 </p>
 
-### ⚙️ Backend Beast
+###  Backend Beast
 <p>
 <img src="https://skillicons.dev/icons?i=nodejs,express,postgresql" />
 </p>
 
-### 🤖 AI Integration
+###  AI Integration
 <p>
 <img src="https://img.shields.io/badge/OpenAI-GPT--4o-412991?style=for-the-badge&logo=openai&logoColor=white">
 <img src="https://img.shields.io/badge/Anthropic-Claude%203.5%20Sonnet-FF6B6B?style=for-the-badge&logo=anthropic&logoColor=white">
 </p>
 
-### 🎯 Editor & UI
+###  Editor & UI
 <p>
 <img src="https://img.shields.io/badge/Monaco-Editor-007ACC?style=for-the-badge&logo=visual-studio-code&logoColor=white">
 <img src="https://img.shields.io/badge/Radix-UI-161618?style=for-the-badge&logo=radix-ui&logoColor=white">
@@ -237,23 +237,23 @@ npm run dev
 
 </div>
 
-### 📊 Technology Breakdown
+###  Technology Breakdown
 
 | Layer | Technology | Purpose | Status |
 |-------|------------|---------|--------|
-| **Frontend** | React 18 + TypeScript | Interactive UI | ✅ Production Ready |
-| **Editor** | Monaco Editor | Code editing with syntax highlighting | ✅ Custom language support |
-| **AI Engine** | GPT-4o + Claude 3.5 Sonnet | Natural language processing | ✅ Dual model support |
-| **Backend** | Node.js + Express | API server | ✅ Production Ready |
-| **Database** | PostgreSQL + Drizzle ORM | Data persistence | ✅ Type-safe operations |
-| **Analysis** | Custom algorithms + AI | Shortcut optimization | ✅ Advanced pattern detection |
+| **Frontend** | React 18 + TypeScript | Interactive UI |  Production Ready |
+| **Editor** | Monaco Editor | Code editing with syntax highlighting |  Custom language support |
+| **AI Engine** | GPT-4o + Claude 3.5 Sonnet | Natural language processing |  Dual model support |
+| **Backend** | Node.js + Express | API server |  Production Ready |
+| **Database** | PostgreSQL + Drizzle ORM | Data persistence |  Type-safe operations |
+| **Analysis** | Custom algorithms + AI | Shortcut optimization |  Advanced pattern detection |
 
-## 💡 Usage Examples (Copy & Paste Ready!)
+##  Usage Examples (Copy & Paste Ready!)
 
-### 🎯 Basic Shortcut Generation
+###  Basic Shortcut Generation
 
 <details>
-<summary><b>🔵 Click to expand - Natural Language Generation</b></summary>
+<summary><b> Click to expand - Natural Language Generation</b></summary>
 
 ```javascript
 // Example: Generate a morning routine shortcut
@@ -385,68 +385,68 @@ const supportedActions = {
 
 </details>
 
-## 📊 Performance Metrics (Real Data!)
+##  Performance Metrics (Real Data!)
 
 <div align="center">
 
-### ⚡ Lightning Fast Performance
+###  Lightning Fast Performance
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                    PERFORMANCE DASHBOARD                        │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  AI Response Time     ████████████████████ 96%  (avg: 1.2s)   │
-│  JSON Validation      ████████████████████ 99%  (avg: 12ms)   │
-│  Editor Performance   ████████████████████ 98%  (avg: 45ms)   │
-│  Analysis Engine      ████████████████████ 94%  (avg: 234ms)  │
-│  Memory Usage         ████████████████████ 92%  (avg: 156MB)  │
-│                                                                 │
-│  🏆 Overall Score: 95/100                                       │
-└─────────────────────────────────────────────────────────────────┘
+
+                    PERFORMANCE DASHBOARD                        
+
+                                                                 
+  AI Response Time      96%  (avg: 1.2s)   
+  JSON Validation       99%  (avg: 12ms)   
+  Editor Performance    98%  (avg: 45ms)   
+  Analysis Engine       94%  (avg: 234ms)  
+  Memory Usage          92%  (avg: 156MB)  
+                                                                 
+   Overall Score: 95/100                                       
+
 ```
 
-### 🔥 AI Model Comparison
+###  AI Model Comparison
 
 | Metric | GPT-4o | Claude 3.5 Sonnet | Industry Average |
 |--------|--------|-------------------|------------------|
-| **Generation Speed** | **1.1s** 🥇 | **1.3s** 🥈 | 2.8s |
-| **Accuracy** | **94%** 🥈 | **96%** 🥇 | 87% |
-| **Complexity Handling** | **92%** 🥇 | **89%** 🥈 | 78% |
-| **Security Detection** | **88%** 🥈 | **91%** 🥇 | 72% |
+| **Generation Speed** | **1.1s**  | **1.3s**  | 2.8s |
+| **Accuracy** | **94%**  | **96%**  | 87% |
+| **Complexity Handling** | **92%**  | **89%**  | 78% |
+| **Security Detection** | **88%**  | **91%**  | 72% |
 
 </div>
 
-## 🤝 Join Our Epic Community!
+##  Join Our Epic Community!
 
 <div align="center">
 
-### 🌟 Contributors Hall of Fame
+###  Contributors Hall of Fame
 
 <a href="https://github.com/scrimwiggins/shortcut-genius/graphs/contributors">
 <img src="https://contrib.rocks/image?repo=scrimwiggins/shortcut-genius" />
 </a>
 
-### 🎯 Contribution Workflow
+###  Contribution Workflow
 
 ```
-╔════════════════════════════════════════════════════════════════╗
-║                                                                ║
-║  🍴 Fork  ────► 🌿 Branch  ────► 💻 Code  ────► 🧪 Test       ║
-║                                                 │               ║
-║                                                 ▼               ║
-║  🎉 Merge ◄──── 👀 Review ◄──── 🚀 PR   ◄──── 📝 Document     ║
-║                                                                ║
-╚════════════════════════════════════════════════════════════════╝
+
+                                                                
+   Fork    Branch    Code    Test       
+                                                                
+                                                                
+   Merge   Review   PR     Document     
+                                                                
+
 ```
 
-### 🎪 Ways to Contribute
+###  Ways to Contribute
 
 <table>
 <tr>
 <td align="center" width="25%">
 
-### 🐛 Bug Hunters
+###  Bug Hunters
 <img src="https://img.shields.io/badge/Bug%20Hunters-Welcome-red?style=for-the-badge&logo=bug&logoColor=white">
 
 Found an issue? Let's squash it!
@@ -454,7 +454,7 @@ Found an issue? Let's squash it!
 </td>
 <td align="center" width="25%">
 
-### 💡 Feature Creators
+###  Feature Creators
 <img src="https://img.shields.io/badge/Feature%20Creators-Welcome-blue?style=for-the-badge&logo=lightbulb&logoColor=white">
 
 Got ideas? Let's build them!
@@ -462,7 +462,7 @@ Got ideas? Let's build them!
 </td>
 <td align="center" width="25%">
 
-### 📚 Doc Writers
+###  Doc Writers
 <img src="https://img.shields.io/badge/Doc%20Writers-Welcome-green?style=for-the-badge&logo=bookstack&logoColor=white">
 
 Love writing? Help us document!
@@ -470,7 +470,7 @@ Love writing? Help us document!
 </td>
 <td align="center" width="25%">
 
-### 🎨 UI/UX Designers
+###  UI/UX Designers
 <img src="https://img.shields.io/badge/Designers-Welcome-purple?style=for-the-badge&logo=palette&logoColor=white">
 
 Make it beautiful!
@@ -481,15 +481,15 @@ Make it beautiful!
 
 </div>
 
-## 🗺️ Roadmap
+##  Roadmap
 
-### 🎯 Q1 2024
+###  Q1 2024
 - [ ] **Siri Integration** - Voice-activated shortcut creation
 - [ ] **Template Library** - Pre-built shortcut templates
 - [ ] **Team Collaboration** - Share and collaborate on shortcuts
 - [ ] **Advanced Security** - Enterprise-grade security analysis
 
-### 🚀 Q2 2024
+###  Q2 2024
 - [ ] **Mobile App** - Native iOS companion app
 - [ ] **API Marketplace** - Third-party integrations
 - [ ] **AI Model Training** - Custom model for iOS shortcuts
@@ -499,45 +499,45 @@ Make it beautiful!
 
 <div align="center">
 
-## 📈 Project Stats
+##  Project Stats
 
 <table>
 <tr>
 <td align="center">
-<h3>⭐</h3>
+<h3></h3>
 <h1>2.1K</h1>
 GitHub Stars
 </td>
 <td align="center">
-<h3>🍴</h3>
+<h3></h3>
 <h1>342</h1>
 Forks
 </td>
 <td align="center">
-<h3>👥</h3>
+<h3></h3>
 <h1>23</h1>
 Contributors
 </td>
 <td align="center">
-<h3>📦</h3>
+<h3></h3>
 <h1>15.6K</h1>
 Lines of Code
 </td>
 </tr>
 </table>
 
-### 💝 Special Thanks
+###  Special Thanks
 
 ```
-╔═══════════════════════════════════════════════════════════════╗
-║                                                               ║
-║   🚀 Built with passion for iOS automation enthusiasts       ║
-║                                                               ║
-║   ⭐ Star us on GitHub — it means the world to us!           ║
-║                                                               ║
-║   🔥 Made with ❤️ and lots of ☕                             ║
-║                                                               ║
-╚═══════════════════════════════════════════════════════════════╝
+
+                                                               
+    Built with passion for iOS automation enthusiasts       
+                                                               
+    Star us on GitHub — it means the world to us!           
+                                                               
+    Made with  and lots of                              
+                                                               
+
 ```
 
 <p align="center">
@@ -556,7 +556,7 @@ Lines of Code
 <img src="https://komarev.com/ghpvc/?username=shortcutgenius&style=for-the-badge&color=brightgreen" />
 </p>
 
-### 📄 License
+###  License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
