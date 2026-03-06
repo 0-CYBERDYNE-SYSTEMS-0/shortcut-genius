@@ -22,6 +22,7 @@ interface SharedShortcut {
   author: string;
   version: string;
   hash: string;
+  icloudUrl?: string;
 }
 
 interface SharingOptions {
@@ -29,6 +30,8 @@ interface SharingOptions {
   description?: string;
   tags?: string[];
   author?: string;
+  icloudUrl?: string;
+  baseUrl?: string;
 }
 
 // Initialize directory paths
@@ -102,7 +105,7 @@ export async function createSharedShortcut(
   }
 
   // Generate URLs
-  const baseUrl = process.env.BASE_URL || 'http://localhost:4321';
+  const baseUrl = options.baseUrl || process.env.BASE_URL || 'http://localhost:4321';
   const shareUrl = `${baseUrl}/share/${id}`;
   const qrCodeUrl = `${baseUrl}/api/qr/${id}`;
 
@@ -133,7 +136,8 @@ export async function createSharedShortcut(
     tags: options.tags || [],
     author: options.author || 'Anonymous',
     version: '1.0.0',
-    hash
+    hash,
+    icloudUrl: options.icloudUrl
   };
 
   // Store in memory and save to file
@@ -154,7 +158,11 @@ export async function getShortcutFile(id: string, signed: boolean = false): Prom
   if (!shared) return null;
 
   try {
-    const filePath = signed && shared.signedFilePath ? shared.signedFilePath : shared.filePath;
+    if (signed && !shared.signedFilePath) {
+      return null;
+    }
+
+    const filePath = signed ? shared.signedFilePath! : shared.filePath;
     return await fs.readFile(filePath);
   } catch (error) {
     console.error(`Failed to read shortcut file for ${id}:`, error);
@@ -290,6 +298,7 @@ export function generateSharingMetadata(shared: SharedShortcut) {
     description: shared.description,
     shareUrl: shared.shareUrl,
     qrCodeUrl: shared.qrCodeUrl,
+    icloudUrl: shared.icloudUrl,
     downloadCount: shared.downloadCount,
     actionCount: shared.originalShortcut.actions.length,
     tags: shared.tags,

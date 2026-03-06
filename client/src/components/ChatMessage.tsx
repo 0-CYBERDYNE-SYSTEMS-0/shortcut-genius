@@ -21,6 +21,9 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
   className = ""
 }) => {
   const [copied, setCopied] = React.useState(false);
+  const phaseLabel = typeof message.metadata?.phase === 'string'
+    ? message.metadata.phase
+    : message.metadata?.phase?.type;
 
   const handleCopy = async () => {
     if (message.content) {
@@ -37,17 +40,19 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
     }
   };
 
+  const isAssistant = message.role === 'assistant';
+
   return (
     <div className={cn("flex gap-3", isLast ? 'mb-6' : 'mb-2', className)}>
       {/* Avatar */}
       <div className="flex-shrink-0">
         <Avatar className="h-8 w-8">
           {message.role === 'user' ? (
-            <AvatarFallback className="bg-blue-500 text-white">
+            <AvatarFallback className="bg-black text-white border-2 border-black rounded-none">
               U
             </AvatarFallback>
           ) : (
-            <AvatarFallback className="bg-purple-500 text-white">
+            <AvatarFallback className="bg-white text-black border-2 border-black rounded-none">
               A
             </AvatarFallback>
           )}
@@ -55,7 +60,12 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
       </div>
 
       {/* Message Content */}
-      <div className="flex-1 min-w-0">
+      <div className={cn(
+        "flex-1 min-w-0 border-2 p-3",
+        isAssistant
+          ? "bg-white text-black border-black shadow-[3px_3px_0_0_rgba(0,0,0,0.95)]"
+          : "bg-black text-white border-black"
+      )}>
         <div className="prose prose-sm max-w-none">
           {isStreaming ? (
             <div className="flex items-center gap-2 text-muted-foreground">
@@ -74,9 +84,9 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
                 {message.metadata.model}
               </Badge>
             )}
-            {message.metadata.phase && (
+            {phaseLabel && (
               <Badge variant="secondary" className="text-xs">
-                {message.metadata.phase}
+                {phaseLabel}
               </Badge>
             )}
             {message.timestamp && (

@@ -230,9 +230,13 @@ export class ConversationalShortcutAgent {
   }
 
   private containsServiceReference(content: string): boolean {
+    if (!this.webSearchTool) return false;
+
+    const hasApiIntent = /\b(api|endpoint|webhook|oauth|token|documentation|docs|developer|sdk)\b/i.test(content);
+    if (!hasApiIntent) return false;
+
     const services = [
-      'api', 'webhook', 'http', 'json', 'xml', 'rest', 'graphql',
-      'weather', 'maps', 'translate', 'news', 'calendar', 'email',
+      'weather', 'maps', 'translate', 'calendar', 'email',
       'github', 'twitter', 'facebook', 'instagram', 'slack',
       'openai', 'anthropic', 'google', 'apple', 'microsoft',
       'spotify', 'youtube', 'netflix', 'discord', 'telegram'
@@ -330,7 +334,7 @@ export class ConversationalShortcutAgent {
           reasoning_effort: 'medium',
           verbosity: 'medium'
         },
-        useComprehensiveActions: false,
+        useComprehensiveActions: true,
         allowTools: false
       });
 
@@ -493,9 +497,9 @@ ${state.userPreferences ? `USER PREFERENCES:\n- Preferred model: ${state.userPre
       }
 
       // Additional validation using existing validateShortcut function
-      const validation = validateShortcut(parsed);
-      if (!validation.success) {
-        return { valid: false, error: validation.error || 'Shortcut validation failed' };
+      const validationErrors = validateShortcut(parsed);
+      if (validationErrors.length > 0) {
+        return { valid: false, error: `Shortcut validation failed: ${validationErrors.join('; ')}` };
       }
 
       return { valid: true, data: parsed };
@@ -530,18 +534,13 @@ ${state.userPreferences ? `USER PREFERENCES:\n- Preferred model: ${state.userPre
       };
     }
 
-    if (lower.includes('note') || lower.includes('save')) {
-      const fileName = 'Hello World.txt';
+    if (lower.includes('note') || lower.includes('notes')) {
       return {
-        name: 'Hello World Note',
+        name: 'Note Shortcut',
         actions: [
           {
-            type: 'text',
-            parameters: { text: 'Hello World' }
-          },
-          {
-            type: 'save_file',
-            parameters: { path: fileName }
+            type: 'create_note',
+            parameters: { text: safeText }
           }
         ]
       };
@@ -589,7 +588,7 @@ ${state.userPreferences ? `USER PREFERENCES:\n- Preferred model: ${state.userPre
   private async tryRepairShortcut(rawContent: string, request: ProcessRequest, systemPrompt: string): Promise<ProcessResult | null> {
     try {
       const repairPrompt = `Fix the following output into a valid JSON shortcut object.\n\n` +
-        `Use only these action identifiers and required parameters:\n${this.buildActionSchemaPrompt()}\n\n` +
+        `Use valid iOS Shortcuts action identifiers (is.workflow.actions.* or com.apple.*) and WF* parameter keys.\n\n` +
         `Original user request:\n${request.content}\n\n` +
         `Model output to repair:\n${rawContent}\n\n` +
         `Return ONLY valid JSON matching this format:\n` +
@@ -604,7 +603,7 @@ ${state.userPreferences ? `USER PREFERENCES:\n- Preferred model: ${state.userPre
           reasoning_effort: 'medium',
           verbosity: 'low'
         },
-        useComprehensiveActions: false,
+        useComprehensiveActions: true,
         allowTools: false
       });
 

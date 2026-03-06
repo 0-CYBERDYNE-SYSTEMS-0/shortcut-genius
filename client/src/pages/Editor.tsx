@@ -123,7 +123,7 @@ export function Editor() {
       const response = await fetch('/api/shortcuts/build', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ shortcut })
+        body: JSON.stringify({ shortcut, sign: true, signMode: 'anyone' })
       });
 
       if (!response.ok) {
@@ -134,7 +134,7 @@ export function Editor() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${shortcut.name.replace(/[^a-zA-Z0-9]/g, '_')}.shortcut`;
+      a.download = `${shortcut.name.replace(/[^a-zA-Z0-9]/g, '_')}_signed.shortcut`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -142,7 +142,40 @@ export function Editor() {
     } catch (error) {
       toast({
         title: 'Download failed',
-        description: error instanceof Error ? error.message : 'Failed to build shortcut',
+        description: error instanceof Error ? error.message : 'Failed to build signed shortcut',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const handleDownloadSignedShortcut = async () => {
+    if (!hasShortcut) return;
+
+    try {
+      const response = await fetch('/api/shortcuts/build', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ shortcut, sign: true })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.details || errorData.error || 'Signing failed');
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${shortcut.name.replace(/[^a-zA-Z0-9]/g, '_')}_signed.shortcut`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      toast({
+        title: 'Signed download failed',
+        description: error instanceof Error ? error.message : 'Failed to sign shortcut',
         variant: 'destructive'
       });
     }
@@ -216,6 +249,7 @@ export function Editor() {
           showAnalysis={showAnalysis}
           onToggleAnalysis={() => setShowAnalysis(!showAnalysis)}
           currentShortcut={shortcut}
+          onDownloadSigned={handleDownloadSignedShortcut}
         />
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
@@ -295,11 +329,11 @@ export function Editor() {
 
   return (
     <div className="app-shell h-screen w-screen flex text-foreground">
-      <aside className="w-64 border-r bg-card/70 backdrop-blur-xl px-4 py-6 flex flex-col gap-6">
+      <aside className="w-64 border-r-2 border-border bg-card px-4 py-6 flex flex-col gap-6">
         <div className="app-stagger">
           <div>
             <div className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Shortcut Genius</div>
-            <h1 className="text-2xl font-semibold tracking-tight">Workspace</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">AI Workbench</h1>
           </div>
           <div className="flex flex-col gap-2">
             <button
@@ -312,7 +346,7 @@ export function Editor() {
               }`}
             >
               <LayoutGrid className="h-4 w-4" />
-              Build
+              Workbench
             </button>
             <button
               type="button"
@@ -324,7 +358,7 @@ export function Editor() {
               }`}
             >
               <LayoutGrid className="h-4 w-4" />
-              Gallery
+              Library
             </button>
           </div>
         </div>
@@ -336,12 +370,13 @@ export function Editor() {
       </aside>
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="border-b bg-card/70 backdrop-blur-xl px-6 py-4 app-enter">
+        <header className="border-b-2 border-border bg-card px-6 py-4 app-enter">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <div className="text-xs uppercase tracking-[0.25em] text-muted-foreground">Design & Build</div>
+              <div className="text-xs uppercase tracking-[0.25em] text-muted-foreground">AI Shortcut Studio</div>
               <div className="flex items-center gap-3">
                 <h2 className="text-2xl font-semibold tracking-tight">{shortcut.name}</h2>
+                <Badge className="text-[10px] uppercase tracking-[0.15em]">AI-first</Badge>
                 <Badge variant="secondary" className="text-xs">
                   {actionCount} actions
                 </Badge>
@@ -408,7 +443,7 @@ export function Editor() {
                 disabled={isProcessing}
                 size="lg"
               >
-                Analyze Shortcut
+                Run Analysis
               </Button>
               <Button
                 variant={sidePanelTab === 'assistant' && isSidePanelOpen ? 'default' : 'secondary'}
@@ -419,7 +454,7 @@ export function Editor() {
                 size="lg"
               >
                 <MessageCircle className="mr-2 h-4 w-4" />
-                Assistant
+                AI Agent
               </Button>
               <Button
                 variant={sidePanelTab === 'analysis' && isSidePanelOpen ? 'default' : 'secondary'}
@@ -440,7 +475,7 @@ export function Editor() {
         <div className="flex-1 overflow-hidden">
           {activeTab === 'editor' ? (
             <ResizablePanelGroup direction="horizontal" className="h-full">
-              <ResizablePanel defaultSize={70} minSize={35}>
+              <ResizablePanel defaultSize={60} minSize={30}>
                 <div className="h-full px-6 py-6">
                   <ResizablePanelGroup direction="horizontal" className="h-full gap-4">
                     <ResizablePanel defaultSize={55} minSize={35}>
@@ -482,8 +517,8 @@ export function Editor() {
               <ResizableHandle withHandle />
               <ResizablePanel
                 ref={assistantPanelRef}
-                defaultSize={30}
-                minSize={20}
+                defaultSize={40}
+                minSize={24}
                 collapsible
                 collapsedSize={0}
               >

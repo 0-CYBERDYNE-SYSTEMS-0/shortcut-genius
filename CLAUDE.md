@@ -6,35 +6,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ShortcutGenius is a web application for creating, analyzing, and optimizing iOS Shortcuts using AI. It features a React frontend with Monaco editor, a Node.js/Express backend, and integrates with multiple AI providers (OpenAI, Anthropic, OpenRouter) plus web search capabilities.
 
-### Chat Integration Status: 🔧 IN DEVELOPMENT
+### Chat System
 
-**Chat System Implementation (70% Complete)**
-
-✅ **Completed Components:**
-- ChatThread component with conversation display and management
-- ChatInput component with auto-resizing and keyboard shortcuts
-- ChatMessage component with role-based display and action buttons
-- Responsive layout integration across mobile/tablet/desktop
-- Toolbar chat toggle buttons on all breakpoints
-- Consistent 3-column tab navigation (Editor, AI Chat, Gallery)
-- Basic frontend components and UI structure
-
-❌ **Critical Issues to Fix:**
-- **No active session creation** - Chat API not properly initializing conversations
-- **Missing loading indicators** - No visual feedback during AI processing
-- **Conversation persistence broken** - History not loading/saving correctly
-- **API integration incomplete** - Chat API client not connecting to backend properly
-- **Error handling missing** - Users see "no active session" errors without resolution
-
-🔧 **Next Steps Required:**
-1. Fix ChatAPIClient initialization and conversation creation
-2. Implement proper loading/pulse indicators during AI processing
-3. Fix conversation persistence and database connectivity
-4. Connect frontend chat components to backend API endpoints
-5. Add comprehensive error handling and user feedback
-6. Test end-to-end chat functionality
-
-**Current State:** Major progress made - ChatAPIClient completely rewritten, loading indicators implemented, backend routes being registered. Still has syntax errors in conversations.ts that need fixing before full functionality.
+The conversational AI chat is implemented end-to-end:
+- `ChatThread`, `ChatMessage`, `ChatInput` components handle the UI
+- 3-column tab navigation: Editor, AI Chat, Gallery
+- Backend uses `ConversationalShortcutAgent` (`server/conversational-agent.ts`) for multi-turn shortcut building
+- Conversation routes registered via `server/routes/simple-conversations.ts` — uses in-memory store as DB fallback
+- Streaming responses sent as newline-delimited JSON events
 
 ## Development Commands
 

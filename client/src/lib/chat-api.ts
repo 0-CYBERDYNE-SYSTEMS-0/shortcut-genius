@@ -5,7 +5,7 @@ import { ChatMessage, ChatRequest, ChatResponse, ChatError } from './chat-types'
  */
 export class ChatAPIClient {
   private baseURL: string;
-  private static readonly DEFAULT_TIMEOUT_MS = 15000;
+  private static readonly DEFAULT_TIMEOUT_MS = 120000;
 
   constructor(baseURL?: string) {
     this.baseURL = baseURL || '';
@@ -145,6 +145,107 @@ export class ChatAPIClient {
         reasoningOptions: options?.reasoningOptions || {}
       })
     });
+  }
+
+  /**
+   * Send a message and stream progress updates before the final response.
+   */
+  async sendMessageStream(
+    conversationId: number,
+    message: string,
+    options?: {
+      model?: string;
+      reasoningOptions?: {
+        reasoning_effort?: 'minimal' | 'low' | 'medium' | 'high';
+        verbosity?: 'silent' | 'brief' | 'verbose' | 'comprehensive';
+      };
+    },
+    onEvent?: (event: { type: string; data: any; timestamp?: string }) => void
+  ): Promise<ChatResponse> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), ChatAPIClient.DEFAULT_TIMEOUT_MS);
+
+    try {
+      const response = await fetch(`${this.baseURL}/api/conversations/${conversationId}/messages/stream`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        signal: controller.signal,
+        body: JSON.stringify({
+          content: message,
+          model: options?.model || 'gpt-4o',
+          reasoningOptions: options?.reasoningOptions || {}
+        })
+      });
+
+      if (!response.ok) {
+        // Stream route may not be available in older deployments.
+        if (response.status === 404) {
+          return this.sendMessage(conversationId, message, options);
+        }
+
+        const errorData = await response.json().catch(() => ({} as any));
+        const errMessage =
+          errorData?.message ||
+          errorData?.error ||
+          `HTTP error: ${response.status}`;
+        throw new Error(errMessage);
+      }
+
+      if (!response.body) {
+        return this.sendMessage(conversationId, message, options);
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let finalResponse: ChatResponse | null = null;
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed) continue;
+
+          let event: { type: string; data: any; timestamp?: string };
+          try {
+            event = JSON.parse(trimmed);
+          } catch {
+            continue;
+          }
+
+          onEvent?.(event);
+
+          if (event.type === 'error') {
+            throw new Error(event.data?.error || 'Streaming failed');
+          }
+
+          if (event.type === 'result') {
+            finalResponse = event.data as ChatResponse;
+          }
+        }
+      }
+
+      if (finalResponse) {
+        return finalResponse;
+      }
+
+      return this.sendMessage(conversationId, message, options);
+    } catch (error: any) {
+      if (error?.name === 'AbortError') {
+        throw new Error('Request timed out');
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeoutId);
+    }
   }
 
   /**

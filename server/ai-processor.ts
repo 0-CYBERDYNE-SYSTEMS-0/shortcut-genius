@@ -471,6 +471,8 @@ IMPORTANT:
 - Use only the action identifiers listed above
 - Include all required parameters for each action
 - Use proper parameter keys as shown in the action descriptions
+- Use iOS Shortcuts action identifiers (is.workflow.actions.* or com.apple.*) when possible
+- For API calls, prefer "Get Contents of URL" and include method/headers/body parameters as needed
 - Consider permission requirements
 - Match input/output types between connected actions`;
     } else {

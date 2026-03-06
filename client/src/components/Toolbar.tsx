@@ -6,7 +6,7 @@ import { ShareDialog } from './ShareDialog';
 import { ThemeToggle } from './theme-toggle';
 import { AIModel, ReasoningOptions } from '@/lib/types';
 import { Shortcut } from '@/lib/shortcuts';
-import { BarChart2, Share2, Download, MoreVertical } from 'lucide-react';
+import { BarChart2, Share2, Download, MoreVertical, Shield } from 'lucide-react';
 import { useBreakpoint } from '@/hooks/use-mobile';
 import {
   DropdownMenu,
@@ -27,6 +27,7 @@ interface ToolbarProps {
   showAnalysis: boolean;
   onToggleAnalysis: () => void;
   currentShortcut?: Shortcut | null;
+  onDownloadSigned?: () => void;
 }
 
 export function Toolbar({
@@ -40,7 +41,8 @@ export function Toolbar({
   isProcessing,
   showAnalysis,
   onToggleAnalysis,
-  currentShortcut
+  currentShortcut,
+  onDownloadSigned
 }: ToolbarProps) {
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const { isMobile, isTablet, isDesktop, isLargeDesktop } = useBreakpoint();
@@ -52,7 +54,7 @@ export function Toolbar({
       const response = await fetch('/api/shortcuts/build', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ shortcut: currentShortcut })
+        body: JSON.stringify({ shortcut: currentShortcut, sign: true, signMode: 'anyone' })
       });
 
       if (!response.ok) {
@@ -64,7 +66,7 @@ export function Toolbar({
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${currentShortcut.name.replace(/[^a-zA-Z0-9]/g, '_')}.shortcut`;
+      a.download = `${currentShortcut.name.replace(/[^a-zA-Z0-9]/g, '_')}_signed.shortcut`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -117,6 +119,10 @@ export function Toolbar({
                   <DropdownMenuItem onClick={handleDownloadShortcut} disabled={!currentShortcut}>
                     <Download className="mr-2 h-4 w-4" />
                     Download
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={onDownloadSigned} disabled={!currentShortcut || !onDownloadSigned}>
+                    <Shield className="mr-2 h-4 w-4" />
+                    Download Signed
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={onExport}>
                     Export JSON
@@ -204,6 +210,15 @@ export function Toolbar({
               </Button>
               <Button
                 variant="secondary"
+                onClick={onDownloadSigned}
+                disabled={!currentShortcut || !onDownloadSigned}
+                title="Download signed .shortcut file"
+              >
+                <Shield className="mr-2 h-4 w-4" />
+                Download Signed
+              </Button>
+              <Button
+                variant="secondary"
                 onClick={() => setShareDialogOpen(true)}
                 disabled={!currentShortcut}
                 title="Share shortcut with others"
@@ -226,6 +241,10 @@ export function Toolbar({
                 <DropdownMenuItem onClick={handleDownloadShortcut} disabled={!currentShortcut}>
                   <Download className="mr-2 h-4 w-4" />
                   Download
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={onDownloadSigned} disabled={!currentShortcut || !onDownloadSigned}>
+                  <Shield className="mr-2 h-4 w-4" />
+                  Download Signed
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setShareDialogOpen(true)} disabled={!currentShortcut}>
                   <Share2 className="mr-2 h-4 w-4" />

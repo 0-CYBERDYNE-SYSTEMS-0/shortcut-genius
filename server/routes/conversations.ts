@@ -12,6 +12,10 @@ import { AgentLogger } from '../agents/base/agent-logger';
 import { sql, eq, and, or, ilike, desc } from 'drizzle-orm';
 
 export function registerConversationRoutes(app: Express, conversationalAgent: ConversationalShortcutAgent) {
+  const writeStreamEvent = (res: any, type: string, data: any) => {
+    res.write(`${JSON.stringify({ type, data, timestamp: new Date().toISOString() })}\n`);
+  };
+
   // POST /api/conversations/create - Create new conversation
   app.post('/api/conversations/create', async (req, res) => {
     const { userId, title, initialPrompt, model = 'gpt-4o' } = req.body;
@@ -289,6 +293,124 @@ export function registerConversationRoutes(app: Express, conversationalAgent: Co
         error: 'Failed to send message',
         details: error.message
       });
+    }
+  });
+
+  // POST /api/conversations/:id/messages/stream - stream message processing phases and final response
+  app.post('/api/conversations/:id/messages/stream', async (req, res) => {
+    const conversationId = parseInt(req.params.id);
+    const { content, model = 'gpt-4o', reasoningOptions = {} } = req.body;
+
+    if (!content || !content.trim()) {
+      return res.status(400).json({
+        error: 'Message content is required'
+      });
+    }
+
+    res.setHeader('Content-Type', 'application/x-ndjson');
+    res.setHeader('Cache-Control', 'no-cache, no-store, no-transform');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+
+    try {
+      const [conversation] = await db
+        .select({ userId: conversations.userId })
+        .from(conversations)
+        .where(eq(conversations.id, conversationId))
+        .limit(1);
+
+      if (!conversation) {
+        writeStreamEvent(res, 'error', { error: 'Conversation not found' });
+        return res.end();
+      }
+
+      const [userMessage] = await db.insert(messages)
+        .values({
+          conversationId,
+          role: 'user',
+          content: content.trim(),
+          timestamp: new Date(),
+          metadata: { model, reasoningOptions }
+        })
+        .returning();
+
+      const keyStatus = conversationalAgent.checkApiKeyAvailability(model);
+      if (!keyStatus.available) {
+        writeStreamEvent(res, 'error', {
+          error: keyStatus.error || 'Model API key not configured'
+        });
+        return res.end();
+      }
+
+      writeStreamEvent(res, 'phase', {
+        phase: 'analysis',
+        message: 'Understanding your shortcut request...'
+      });
+      writeStreamEvent(res, 'phase', {
+        phase: 'research',
+        message: 'Researching actions and constraints...'
+      });
+      writeStreamEvent(res, 'phase', {
+        phase: 'implementation',
+        message: 'Building your shortcut...'
+      });
+
+      const aiResponse = await conversationalAgent.processRequest({
+        conversationId,
+        userId: conversation.userId,
+        content: content.trim(),
+        model,
+        type: 'generate',
+        reasoningOptions,
+        persistMessages: false
+      });
+
+      writeStreamEvent(res, 'phase', {
+        phase: 'validation',
+        message: 'Validating output and preparing response...'
+      });
+
+      const [assistantMessage] = await db.insert(messages)
+        .values({
+          conversationId,
+          role: 'assistant',
+          content: aiResponse.content,
+          timestamp: new Date(),
+          metadata: {
+            model,
+            phase: aiResponse.phase?.type || aiResponse.phase,
+            shortcut: aiResponse.shortcut,
+            analysis: aiResponse.analysis,
+            nextActions: aiResponse.nextActions
+          }
+        })
+        .returning();
+
+      await db.update(conversations)
+        .set({ updatedAt: new Date() })
+        .where(eq(conversations.id, conversationId));
+
+      writeStreamEvent(res, 'result', {
+        success: true,
+        id: assistantMessage.id,
+        userMessage,
+        assistantMessage,
+        content: aiResponse.content,
+        phase: aiResponse.phase,
+        model,
+        shortcut: aiResponse.shortcut,
+        analysis: aiResponse.analysis,
+        nextActions: aiResponse.nextActions,
+        requiresClarification: aiResponse.requiresClarification,
+        timestamp: assistantMessage.timestamp
+      });
+
+      return res.end();
+    } catch (error: any) {
+      writeStreamEvent(res, 'error', {
+        error: error.message || 'Failed to stream message'
+      });
+      return res.end();
     }
   });
 

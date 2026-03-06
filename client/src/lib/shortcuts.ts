@@ -10,8 +10,14 @@ export interface Shortcut {
   actions: ShortcutAction[];
 }
 
+const APPLE_ACTION_PREFIXES = ['is.workflow.actions.', 'com.apple.'];
+
+export function isAppleActionIdentifier(type: string): boolean {
+  return APPLE_ACTION_PREFIXES.some(prefix => type.startsWith(prefix));
+}
+
 // Maximum allowed actions in a shortcut
-const MAX_ACTIONS = 50;
+const MAX_ACTIONS = 100;
 
 // Permission levels for different action types
 export const ACTION_PERMISSIONS = {
@@ -30,6 +36,7 @@ export const ACTION_PERMISSIONS = {
   set_do_not_disturb: 'device',
   url: 'network',
   notification: 'notification',
+  create_note: 'notes',
   files: 'files',
   save_file: 'files',
   calendar: 'calendar',
@@ -61,6 +68,7 @@ const parameterSchemas = {
   device: z.string(),
   headers: z.record(z.string(), z.string()).optional(),
   value: z.number(),
+  title: z.string(),
   condition: z.string(),
   then: z.array(z.lazy(() => actionSchema)),
   else: z.array(z.lazy(() => actionSchema)).optional(),
@@ -211,74 +219,73 @@ export function validateShortcut(shortcut: Shortcut): string[] {
   errors.push(...circularErrors);
 
   // Action validation
-  const requiredPermissions = new Set<string>();
-  
   shortcut.actions.forEach((action, index) => {
-    const actionType = SHORTCUT_ACTIONS[action.type];
-    
+    const actionType = SHORTCUT_ACTIONS[action.type as keyof typeof SHORTCUT_ACTIONS];
+    const isAppleAction = isAppleActionIdentifier(action.type);
+
     // Action type validation
-    if (!actionType) {
+    if (!actionType && !isAppleAction) {
       errors.push(formatError('Invalid Action', `Unknown action type: ${action.type}`, index));
       return;
     }
 
-    // Permission tracking
-    const permission = ACTION_PERMISSIONS[action.type as keyof typeof ACTION_PERMISSIONS];
-    if (permission && permission !== 'none') {
-      requiredPermissions.add(permission);
-    }
-
     // Parameter validation
     try {
+      if (!action.parameters || typeof action.parameters !== 'object') {
+        errors.push(formatError('Parameters', 'Action parameters must be an object', index));
+        return;
+      }
+
       const sanitizedParams = sanitizeParameters(action.parameters);
       action.parameters = sanitizedParams;
 
-      actionType.parameters.forEach(param => {
-        if (!sanitizedParams.hasOwnProperty(param)) {
-          errors.push(formatError('Parameters', `Missing required parameter: ${param}`, index));
-        } else {
-          const schema = parameterSchemas[param as keyof typeof parameterSchemas];
-          if (schema) {
-            try {
-              schema.parse(sanitizedParams[param]);
-            } catch (e) {
-              if (e instanceof z.ZodError) {
-                errors.push(formatError('Validation', `Invalid ${param}: ${e.errors[0].message}`, index));
+      if (actionType) {
+        const requiredParams = actionType.parameters;
+        const optionalParams = actionType.optionalParameters || [];
+        const allowedParams = new Set([...requiredParams, ...optionalParams]);
+
+        requiredParams.forEach(param => {
+          if (!sanitizedParams.hasOwnProperty(param)) {
+            errors.push(formatError('Parameters', `Missing required parameter: ${param}`, index));
+          } else {
+            const schema = parameterSchemas[param as keyof typeof parameterSchemas];
+            if (schema) {
+              try {
+                schema.parse(sanitizedParams[param]);
+              } catch (e) {
+                if (e instanceof z.ZodError) {
+                  errors.push(formatError('Validation', `Invalid ${param}: ${e.errors[0].message}`, index));
+                }
               }
             }
           }
-        }
-      });
-
-      // Extra parameter check
-      Object.keys(sanitizedParams).forEach(param => {
-        if (!actionType.parameters.includes(param)) {
-          errors.push(formatError('Parameters', `Unknown parameter: ${param}`, index));
-        }
-      });
-
-      // Nested action validation for if/repeat
-      if (action.type === 'if' || action.type === 'repeat') {
-        const nestedActions = action.type === 'if'
-          ? [...(action.parameters.then || []), ...(action.parameters.else || [])]
-          : action.parameters.actions;
-        
-        const nestedErrors = validateShortcut({ 
-          name: `${shortcut.name}_nested`, 
-          actions: nestedActions 
         });
-        
-        errors.push(...nestedErrors.map(error => formatError('Nested', error, index)));
+
+        // Extra parameter check
+        Object.keys(sanitizedParams).forEach(param => {
+          if (!allowedParams.has(param)) {
+            errors.push(formatError('Parameters', `Unknown parameter: ${param}`, index));
+          }
+        });
+
+        // Nested action validation for if/repeat
+        if (action.type === 'if' || action.type === 'repeat') {
+          const nestedActions = action.type === 'if'
+            ? [...(action.parameters.then || []), ...(action.parameters.else || [])]
+            : action.parameters.actions;
+          
+          const nestedErrors = validateShortcut({ 
+            name: `${shortcut.name}_nested`, 
+            actions: nestedActions 
+          });
+          
+          errors.push(...nestedErrors.map(error => formatError('Nested', error, index)));
+        }
       }
     } catch (error) {
       errors.push(formatError('Parameters', 'Invalid parameters structure', index));
     }
   });
-
-  // Add permission requirements to errors
-  if (requiredPermissions.size > 0) {
-    errors.push(formatError('Permissions', `Required permissions: ${Array.from(requiredPermissions).join(', ')}`));
-  }
 
   return errors;
 }
@@ -374,11 +381,17 @@ export const SHORTCUT_ACTIONS = {
   // System
   url: {
     name: 'URL',
-    parameters: ['url', 'method', 'headers']
+    parameters: ['url'],
+    optionalParameters: ['method', 'headers', 'body', 'bodyType']
   },
   notification: {
     name: 'Notification',
     parameters: ['title', 'body', 'sound']
+  },
+  create_note: {
+    name: 'Create Note',
+    parameters: ['text'],
+    optionalParameters: ['title']
   },
   files: {
     name: 'Files',

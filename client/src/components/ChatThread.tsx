@@ -54,6 +54,7 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [agentUpdates, setAgentUpdates] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const isMountedRef = useRef(true);
@@ -70,6 +71,8 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
 
   // Cleanup on unmount
   useEffect(() => {
+    isMountedRef.current = true;
+
     return () => {
       isMountedRef.current = false;
     };
@@ -273,19 +276,38 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
     setMessages(prev => [...prev, normalizeMessage(userMessage)]);
     setIsStreaming(true);
     setStreamingPhase('Processing your request...');
+    setAgentUpdates(['Request queued']);
     setError(null);
 
     try {
       let response: any;
       if (conversationId) {
-        // Send message to API
-        response = await chatAPI.sendMessage(conversationId, content, {
+        // Send message to API with streamed progress updates.
+        response = await chatAPI.sendMessageStream(
+          conversationId,
+          content,
+          {
           model,
           reasoningOptions: {
             reasoning_effort: 'medium',
             verbosity: 'verbose'
           }
-        });
+        },
+          (event) => {
+            if (!isMountedRef.current) return;
+
+            if (event.type === 'phase') {
+              const message = event.data?.message || event.data?.phase || 'Working...';
+              setStreamingPhase(message);
+              setAgentUpdates(prev => {
+                if (prev[prev.length - 1] === message) {
+                  return prev;
+                }
+                return [...prev, message].slice(-8);
+              });
+            }
+          }
+        );
       } else {
         response = await runFallback();
       }
@@ -368,6 +390,7 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
       if (isMountedRef.current) {
         setIsStreaming(false);
         setStreamingPhase('');
+        setAgentUpdates([]);
       }
     }
   }, [activeConversationId, createNewConversation, currentShortcut, model, onShortcutUpdate]);
@@ -390,12 +413,12 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
     return (
       <div className={cn("flex flex-col h-full", className)}>
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b">
-          <div className="flex items-center gap-2">
-            <Brain className="h-5 w-5 text-primary" />
-            <h3 className="font-semibold">AI Assistant</h3>
-          </div>
+      <div className="flex items-center justify-between p-4 border-b">
+        <div className="flex items-center gap-2">
+          <Brain className="h-5 w-5 text-primary" />
+          <h3 className="font-semibold uppercase tracking-wide">AI Agent Console</h3>
         </div>
+      </div>
 
         {/* Loading State */}
         <div className="flex-1 flex items-center justify-center">
@@ -443,7 +466,7 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
       <div className="flex items-center justify-between p-4 border-b">
         <div className="flex items-center gap-2">
           <Brain className="h-5 w-5 text-primary" />
-          <h3 className="font-semibold">AI Assistant</h3>
+          <h3 className="font-semibold uppercase tracking-wide">AI Agent Console</h3>
           {isStreaming && (
             <Badge variant="secondary" className="text-xs animate-pulse">
               <Loader2 className="h-3 w-3 mr-1 animate-spin" />
@@ -595,6 +618,17 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
                 <Sparkles className="h-3 w-3 animate-pulse text-primary" />
               </div>
               <span className="text-sm">{streamingPhase || 'AI is thinking...'}</span>
+            </div>
+          )}
+
+          {agentUpdates.length > 0 && (
+            <div className="rounded-md border border-border/60 bg-muted/20 p-3 space-y-2">
+              <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Agent Activity</div>
+              {agentUpdates.map((update, index) => (
+                <div key={`${update}-${index}`} className="text-xs text-foreground/90">
+                  {index + 1}. {update}
+                </div>
+              ))}
             </div>
           )}
 

@@ -1,15 +1,7 @@
 import { setTimeout as delay } from 'node:timers/promises';
-import pg from 'pg';
 
 const baseUrl = process.env.BASE_URL || 'http://localhost:4321';
 const databaseUrl = process.env.DATABASE_URL;
-
-if (!databaseUrl) {
-  console.error('DATABASE_URL is required for verification.');
-  process.exit(1);
-}
-
-const { Pool } = pg;
 
 const requireOk = (condition, message) => {
   if (!condition) {
@@ -44,6 +36,11 @@ const waitForHealth = async () => {
 };
 
 const ensureUser = async () => {
+  if (!databaseUrl) {
+    throw new Error('DATABASE_URL is required to bootstrap a database user.');
+  }
+
+  const { Pool } = await import('pg');
   const pool = new Pool({ connectionString: databaseUrl });
   try {
     await pool.query(
@@ -94,21 +91,36 @@ const signMultipart = async (path, payload) => {
   return res;
 };
 
+const createConversation = async (payload) => {
+  try {
+    return await postJson(`${baseUrl}/api/conversations/create`, payload);
+  } catch (error) {
+    // If strict DB-backed routes enforce a user FK, bootstrap one and retry.
+    if (!databaseUrl) {
+      throw error;
+    }
+
+    const userId = await ensureUser();
+    return postJson(`${baseUrl}/api/conversations/create`, {
+      ...payload,
+      userId
+    });
+  }
+};
+
 const run = async () => {
   await waitForHealth();
-  const userId = await ensureUser();
-
-  const conv = await postJson(`${baseUrl}/api/conversations/create`, {
-    title: 'Hello World Save Note',
-    initialPrompt: 'Create a hello world text note saved shortcut',
-    userId,
+  const conv = await createConversation({
+    title: 'Hello World Note',
+    initialPrompt: 'Create a hello world note in Notes',
+    userId: 1,
     model: 'gpt-4o'
   });
 
   requireOk(conv.id, 'Conversation creation failed');
 
   const response = await postJson(`${baseUrl}/api/conversations/${conv.id}/messages`, {
-    content: 'Create a hello world text note saved shortcut',
+    content: 'Create a hello world note in Notes',
     model: 'gpt-4o',
     reasoningOptions: {}
   });
@@ -116,9 +128,11 @@ const run = async () => {
   requireOk(response.shortcut, 'No shortcut returned from AI');
   requireOk(Array.isArray(response.shortcut.actions), 'Shortcut actions missing');
 
-  const actionTypes = response.shortcut.actions.map(action => action.type);
-  requireOk(actionTypes.includes('text'), 'Expected text action missing');
-  requireOk(actionTypes.includes('save_file'), 'Expected save_file action missing');
+  const actionTypes = response.shortcut.actions.map(action => String(action.type || '').toLowerCase());
+  requireOk(
+    actionTypes.includes('create_note') || actionTypes.includes('is.workflow.actions.createnote'),
+    'Expected Notes action missing from generated shortcut'
+  );
 
   const buildRes = await fetch(`${baseUrl}/api/shortcuts/build`, {
     method: 'POST',

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { AIModel, OpenRouterModel } from "@/lib/types";
-import { MODEL_CONFIGS } from "@/lib/models";
+import { MODEL_CONFIGS, isOpenRouterModel } from "@/lib/models";
 import { fetchOpenRouterModels } from "@/lib/openrouter-api";
 import {
   Select,
@@ -99,6 +99,12 @@ export function ModelSelector({ value, onChange }: ModelSelectorProps) {
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
+  const [availability, setAvailability] = useState<{
+    openai: { available: boolean; direct: boolean; viaOpenRouter: boolean };
+    anthropic: { available: boolean };
+    openrouter: { available: boolean };
+    suggestedDefault?: AIModel;
+  } | null>(null);
 
   // Memoized callbacks to prevent unnecessary re-renders
   const handleSearchChange = useCallback((newSearchQuery: string) => {
@@ -109,12 +115,46 @@ export function ModelSelector({ value, onChange }: ModelSelectorProps) {
     setIsOpen(newIsOpen);
   }, []);
 
-  // Load OpenRouter models when component mounts or when selector opens
   useEffect(() => {
-    if (isOpen && Object.keys(openRouterModels).length === 0) {
-      loadOpenRouterModels();
+    const fetchAvailability = async () => {
+      try {
+        const response = await fetch('/api/models/availability');
+        if (!response.ok) {
+          throw new Error('Failed to fetch model availability');
+        }
+        const data = await response.json();
+        setAvailability(data);
+      } catch (error) {
+        console.warn('Model availability check failed, showing all models.', error);
+        setAvailability(null);
+      }
+    };
+
+    fetchAvailability();
+  }, []);
+
+  const isModelAvailable = useCallback((modelId: AIModel) => {
+    if (!availability) return true;
+    if (isOpenRouterModel(modelId)) {
+      return availability.openrouter.available;
     }
-  }, [isOpen, openRouterModels]);
+    const config = MODEL_CONFIGS[modelId];
+    if (config?.provider === 'openai') {
+      return availability.openai.available;
+    }
+    if (config?.provider === 'anthropic') {
+      return availability.anthropic.available;
+    }
+    return true;
+  }, [availability]);
+
+  useEffect(() => {
+    if (!availability) return;
+    if (isModelAvailable(value)) return;
+
+    const fallback = availability.suggestedDefault || 'gpt-4o';
+    onChange(fallback);
+  }, [availability, isModelAvailable, onChange, value]);
 
   const loadOpenRouterModels = useCallback(async () => {
     if (loading) return;
@@ -132,12 +172,19 @@ export function ModelSelector({ value, onChange }: ModelSelectorProps) {
     }
   }, [loading]);
 
+  // Load OpenRouter models when component mounts or when selector opens
+  useEffect(() => {
+    if (isOpen && availability?.openrouter?.available && Object.keys(openRouterModels).length === 0) {
+      loadOpenRouterModels();
+    }
+  }, [isOpen, openRouterModels, availability, loadOpenRouterModels]);
+
   // Group static models by provider (memoized)
   const staticModels = useMemo(() => ({
-    openai: Object.values(MODEL_CONFIGS).filter(m => m.provider === 'openai'),
-    anthropic: Object.values(MODEL_CONFIGS).filter(m => m.provider === 'anthropic'),
-    openrouter: Object.values(MODEL_CONFIGS).filter(m => m.provider === 'openrouter')
-  }), []);
+    openai: Object.values(MODEL_CONFIGS).filter(m => m.provider === 'openai' && (!availability || availability.openai.available)),
+    anthropic: Object.values(MODEL_CONFIGS).filter(m => m.provider === 'anthropic' && (!availability || availability.anthropic.available)),
+    openrouter: Object.values(MODEL_CONFIGS).filter(m => m.provider === 'openrouter' && (!availability || availability.openrouter.available))
+  }), [availability]);
 
   // Enhanced filter function with better matching (memoized)
   const filterModels = useCallback((models: any[], query: string) => {

@@ -147,6 +147,12 @@ function extractShortcutJson(payload: string): any | null {
 
 async function canUseConversationStore(): Promise<boolean> {
   try {
+    const storageMode = (process.env.CONVERSATION_STORE_MODE || '').toLowerCase();
+    if (storageMode === 'memory' || storageMode === 'none' || process.env.NO_STORAGE_MODE === 'true') {
+      console.log('🧪 Conversation store forced to memory mode via environment');
+      return false;
+    }
+
     if (!db?.$client?.query) {
       return false;
     }
@@ -627,7 +633,12 @@ export async function registerRoutes(app: Express) {
   // Build shortcut as plist
   app.post('/api/shortcuts/build', async (req, res) => {
     try {
-      const { shortcut, format = 'plist' }: { shortcut: Shortcut; format?: 'plist' | 'binary' } = req.body;
+      const {
+        shortcut,
+        format = 'plist',
+        sign = true,
+        signMode = 'anyone'
+      }: { shortcut: Shortcut; format?: 'plist' | 'binary'; sign?: boolean; signMode?: 'anyone' | 'contacts-only' } = req.body;
 
       if (!shortcut || !shortcut.name || !Array.isArray(shortcut.actions)) {
         return res.status(400).json({ error: 'Invalid shortcut data' });
@@ -647,16 +658,47 @@ export async function registerRoutes(app: Express) {
 
       // Convert to requested format
       const buffer = format === 'binary' ? convertToBinaryPlist(shortcut) : convertToPlist(shortcut);
+      let outputBuffer = buffer;
+      let isSigned = false;
+
+      if (sign) {
+        const capability = await checkSigningCapability();
+        if (!capability.available) {
+          return res.status(400).json({
+            error: 'Signing not available',
+            details: capability.reason
+          });
+        }
+
+        const tempDir = '/tmp/shortcut-signing';
+        const fs = await import('fs/promises');
+        await fs.mkdir(tempDir, { recursive: true });
+
+        const inputPath = `${tempDir}/${Date.now()}_build.shortcut`;
+        await fs.writeFile(inputPath, buffer);
+
+        const signingResult = await signShortcut(inputPath, { mode: signMode, outputDir: tempDir });
+        if (!signingResult.success || !signingResult.signedFilePath) {
+          return res.status(400).json({
+            error: 'Signing failed',
+            details: signingResult.error || 'Unknown signing error'
+          });
+        }
+
+        outputBuffer = await fs.readFile(signingResult.signedFilePath);
+        isSigned = true;
+      }
 
       res.set({
         'Content-Type': 'application/octet-stream',
-        'Content-Disposition': `attachment; filename="${shortcut.name.replace(/[^a-zA-Z0-9]/g, '_')}.shortcut"`,
+        'Content-Disposition': `attachment; filename="${shortcut.name.replace(/[^a-zA-Z0-9]/g, '_')}${isSigned ? '_signed' : ''}.shortcut"`,
         'X-Shortcut-ID': metadata.id,
         'X-Shortcut-Hash': metadata.hash,
-        'X-Action-Count': metadata.actionCount.toString()
+        'X-Action-Count': metadata.actionCount.toString(),
+        'X-Is-Signed': isSigned.toString()
       });
 
-      res.send(buffer);
+      res.send(outputBuffer);
 
     } catch (error) {
       console.error('Build shortcut error:', error);
@@ -772,11 +814,12 @@ export async function registerRoutes(app: Express) {
     try {
       const {
         shortcut,
-        signFile = false,
+        signFile = true,
         isPublic = true,
         description,
         tags = [],
-        author = 'Anonymous'
+        author = 'Anonymous',
+        icloudUrl
       }: {
         shortcut: Shortcut;
         signFile?: boolean;
@@ -784,6 +827,7 @@ export async function registerRoutes(app: Express) {
         description?: string;
         tags?: string[];
         author?: string;
+        icloudUrl?: string;
       } = req.body;
 
       if (!shortcut || !shortcut.name || !Array.isArray(shortcut.actions)) {
@@ -797,24 +841,39 @@ export async function registerRoutes(app: Express) {
       // Sign if requested and available
       if (signFile) {
         const capability = await checkSigningCapability();
-        if (capability.available) {
-          const tempPath = `/tmp/share_${Date.now()}.shortcut`;
-          const fs = await import('fs/promises');
-          await fs.writeFile(tempPath, shortcutBuffer);
-
-          const signingResult = await signShortcut(tempPath);
-          if (signingResult.success && signingResult.signedFilePath) {
-            signedBuffer = await fs.readFile(signingResult.signedFilePath);
-          }
+        if (!capability.available) {
+          return res.status(400).json({
+            error: 'Signing not available',
+            details: capability.reason
+          });
         }
+
+        const tempPath = `/tmp/share_${Date.now()}.shortcut`;
+        const fs = await import('fs/promises');
+        await fs.writeFile(tempPath, shortcutBuffer);
+
+        const signingResult = await signShortcut(tempPath);
+        if (!signingResult.success || !signingResult.signedFilePath) {
+          return res.status(400).json({
+            error: 'Signing failed',
+            details: signingResult.error || 'Unknown signing error'
+          });
+        }
+
+        signedBuffer = await fs.readFile(signingResult.signedFilePath);
       }
 
+      const sanitizedIcloudUrl = typeof icloudUrl === 'string' && icloudUrl.trim().length > 0
+        ? icloudUrl.trim()
+        : undefined;
+
       // Create shared shortcut
+      const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
       const shared = await createSharedShortcut(
         shortcut,
         shortcutBuffer,
         signedBuffer,
-        { isPublic, description, tags, author }
+        { isPublic, description, tags, author, icloudUrl: sanitizedIcloudUrl, baseUrl }
       );
 
       res.json(generateSharingMetadata(shared));
@@ -848,14 +907,20 @@ export async function registerRoutes(app: Express) {
   // Download shared shortcut
   app.get('/api/shortcuts/download/:id', async (req, res) => {
     try {
-      const { signed = 'false' } = req.query;
+      const { signed = 'true' } = req.query;
       const shared = await getSharedShortcut(req.params.id);
 
       if (!shared) {
         return res.status(404).json({ error: 'Shared shortcut not found' });
       }
 
-      const wantSigned = signed === 'true';
+      const wantSigned = signed !== 'false';
+      if (wantSigned && !shared.signedFilePath) {
+        return res.status(409).json({
+          error: 'Signed shortcut unavailable',
+          details: 'This shared shortcut does not include a signed file.'
+        });
+      }
       const buffer = await getShortcutFile(req.params.id, wantSigned);
 
       if (!buffer) {
@@ -1065,14 +1130,21 @@ export async function registerRoutes(app: Express) {
             </div>
 
             <div class="download-section">
-              <a href="${baseUrl}/api/shortcuts/download/${shared.id}" class="btn">
-                📱 Download Shortcut
-              </a>
-              ${shared.signedFilePath ? `
-                <a href="${baseUrl}/api/shortcuts/download/${shared.id}?signed=true" class="btn secondary">
-                  ✅ Download Signed
+              ${shared.icloudUrl ? `
+                <a href="${shared.icloudUrl}" class="btn secondary">
+                  ☁️ Open iCloud Link
                 </a>
               ` : ''}
+              ${shared.signedFilePath ? `
+                <a href="${baseUrl}/api/shortcuts/download/${shared.id}?signed=true" class="btn secondary">
+                  ✅ Download Signed Shortcut
+                </a>
+                <a href="${baseUrl}/api/shortcuts/download/${shared.id}?signed=false" class="btn">
+                  📦 Download Unsigned (Advanced)
+                </a>
+              ` : `
+                <p><strong>Signed file unavailable.</strong> This shortcut must be re-shared with signing enabled.</p>
+              `}
               <br><br>
               <img src="${baseUrl}/api/qr/${shared.id}" alt="QR Code" style="max-width: 200px; border-radius: 8px;">
               <p><small>Scan with your iPhone to open directly in Shortcuts app</small></p>
@@ -1099,6 +1171,39 @@ export async function registerRoutes(app: Express) {
   });
 
   // OpenRouter models API endpoints
+  app.get('/api/models/availability', (req, res) => {
+    const openaiKey = Boolean(process.env.OPENAI_API_KEY);
+    const openrouterKey = Boolean(process.env.OPENROUTER_API_KEY);
+    const anthropicKey = Boolean(process.env.ANTHROPIC_API_KEY);
+
+    const openaiAvailable = openaiKey || openrouterKey;
+    const anthropicAvailable = anthropicKey;
+    const openrouterAvailable = openrouterKey;
+
+    const suggestedDefault = openaiAvailable
+      ? 'gpt-4o'
+      : anthropicAvailable
+        ? 'claude-3-5-sonnet-20241022'
+        : openrouterAvailable
+          ? 'minimax/minimax-m2.1'
+          : 'gpt-4o';
+
+    res.json({
+      openai: {
+        available: openaiAvailable,
+        direct: openaiKey,
+        viaOpenRouter: !openaiKey && openrouterKey
+      },
+      anthropic: {
+        available: anthropicAvailable
+      },
+      openrouter: {
+        available: openrouterAvailable
+      },
+      suggestedDefault
+    });
+  });
+
   app.get('/api/models/openrouter', async (req, res) => {
     try {
       const models = await openRouterModelsService.fetchAvailableModels();

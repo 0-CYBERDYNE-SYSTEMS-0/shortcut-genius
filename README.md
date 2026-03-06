@@ -179,6 +179,9 @@ cp .env.example .env
 OPENAI_API_KEY=your_openai_api_key_here
 ANTHROPIC_API_KEY=your_anthropic_api_key_here
 DATABASE_URL=postgresql://user:pass@localhost:5432/shortcut_genius
+# Optional: force local memory-only conversation mode (no Postgres required)
+# CONVERSATION_STORE_MODE=memory
+# or NO_STORAGE_MODE=true
 ```
 
 ### 🎉 Launch

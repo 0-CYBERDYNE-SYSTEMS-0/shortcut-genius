@@ -24,6 +24,12 @@ interface AppleAction {
   WFWorkflowActionParameters: Record<string, any>;
 }
 
+const APPLE_ACTION_PREFIXES = ['is.workflow.actions.', 'com.apple.'];
+
+function isAppleActionIdentifier(type: string): boolean {
+  return APPLE_ACTION_PREFIXES.some(prefix => type.startsWith(prefix));
+}
+
 // Mapping from ShortcutGenius actions to Apple Shortcuts actions
 const ACTION_MAPPING: Record<string, string> = {
   text: 'is.workflow.actions.gettext',
@@ -41,6 +47,7 @@ const ACTION_MAPPING: Record<string, string> = {
   set_do_not_disturb: 'is.workflow.actions.dnd.set',
   url: 'is.workflow.actions.url',
   notification: 'is.workflow.actions.shownotification',
+  create_note: 'is.workflow.actions.createnote',
   files: 'is.workflow.actions.documentpicker.open',
   save_file: 'is.workflow.actions.savefile',
   calendar: 'is.workflow.actions.addnewevent',
@@ -75,6 +82,13 @@ function mapParameters(actionType: string, parameters: Record<string, any>): Rec
       mapped.WFNotificationActionTitle = parameters.title || '';
       mapped.WFNotificationActionBody = parameters.body || '';
       mapped.WFNotificationActionSound = parameters.sound || true;
+      break;
+
+    case 'create_note':
+      mapped.WFNoteActionNote = parameters.text || '';
+      if (parameters.title) {
+        mapped.WFNoteActionTitle = parameters.title;
+      }
       break;
 
     case 'save_file':
@@ -126,6 +140,13 @@ function mapParameters(actionType: string, parameters: Record<string, any>): Rec
 
 // Convert ShortcutGenius action to Apple Shortcuts action
 function convertAction(action: ShortcutAction): AppleAction {
+  if (isAppleActionIdentifier(action.type)) {
+    return {
+      WFWorkflowActionIdentifier: action.type,
+      WFWorkflowActionParameters: action.parameters || {}
+    };
+  }
+
   const appleIdentifier = ACTION_MAPPING[action.type];
   if (!appleIdentifier) {
     throw new Error(`Unsupported action type: ${action.type}`);
@@ -215,7 +236,7 @@ export function validateAppleCompatibility(shortcut: Shortcut): string[] {
 
   // Check for unsupported actions
   shortcut.actions.forEach((action, index) => {
-    if (!ACTION_MAPPING[action.type]) {
+    if (!ACTION_MAPPING[action.type] && !isAppleActionIdentifier(action.type)) {
       errors.push(`Action ${index + 1}: "${action.type}" is not supported in Apple Shortcuts`);
     }
   });

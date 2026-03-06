@@ -26,6 +26,9 @@ export function registerSimpleConversationRoutes(app: Express, agent?: Conversat
   const mockConversations: MemoryConversation[] = [];
   const mockMessages = new Map<number, MemoryMessage[]>();
   const defaultUserId = 1;
+  const writeStreamEvent = (res: any, type: string, data: any) => {
+    res.write(`${JSON.stringify({ type, data, timestamp: new Date().toISOString() })}\n`);
+  };
 
   // POST /api/conversations/create - Create new conversation
   app.post('/api/conversations/create', async (req, res) => {
@@ -232,7 +235,7 @@ export function registerSimpleConversationRoutes(app: Express, agent?: Conversat
         timestamp: new Date(),
         metadata: {
           model: model,
-          phase: aiResponse.phase,
+          phase: aiResponse.phase?.type || aiResponse.phase,
           nextActions: aiResponse.nextActions,
           shortcut: aiResponse.shortcut,
           analysis: aiResponse.analysis
@@ -255,6 +258,9 @@ export function registerSimpleConversationRoutes(app: Express, agent?: Conversat
         content: aiResponse.content,
         phase: aiResponse.phase,
         model: model,
+        shortcut: aiResponse.shortcut,
+        analysis: aiResponse.analysis,
+        requiresClarification: aiResponse.requiresClarification,
         nextActions: aiResponse.nextActions,
         timestamp: assistantMessage.timestamp
       });
@@ -265,6 +271,142 @@ export function registerSimpleConversationRoutes(app: Express, agent?: Conversat
         error: 'Failed to send message',
         details: error.message
       });
+    }
+  });
+
+  // POST /api/conversations/:id/messages/stream - stream message processing phases and final response
+  app.post('/api/conversations/:id/messages/stream', async (req, res) => {
+    const conversationId = parseInt(req.params.id);
+    const { content, model = 'gpt-4o', reasoningOptions = {} } = req.body;
+
+    if (!content || !content.trim()) {
+      return res.status(400).json({
+        error: 'Message content is required'
+      });
+    }
+
+    res.setHeader('Content-Type', 'application/x-ndjson');
+    res.setHeader('Cache-Control', 'no-cache, no-store, no-transform');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+
+    try {
+      const userMessageId = `msg_${conversationId}_${Date.now()}`;
+      const userMessage: MemoryMessage = {
+        id: userMessageId,
+        role: 'user',
+        content: content.trim(),
+        timestamp: new Date(),
+        metadata: { model, reasoningOptions }
+      };
+
+      const messagesForConversation = mockMessages.get(conversationId) || [];
+      messagesForConversation.push(userMessage);
+      mockMessages.set(conversationId, messagesForConversation);
+
+      const conversation = mockConversations.find(c => c.id === conversationId);
+      if (conversation) {
+        conversation.messageCount += 1;
+        conversation.updatedAt = new Date();
+      }
+
+      writeStreamEvent(res, 'phase', {
+        phase: 'analysis',
+        message: 'Understanding your shortcut request...'
+      });
+
+      let aiResponse: any;
+
+      if (agent) {
+        const keyStatus = agent.checkApiKeyAvailability(model as any);
+        if (!keyStatus.available) {
+          writeStreamEvent(res, 'error', {
+            error: keyStatus.error || 'Model API key not configured'
+          });
+          return res.end();
+        }
+
+        writeStreamEvent(res, 'phase', {
+          phase: 'research',
+          message: 'Researching actions and constraints...'
+        });
+
+        writeStreamEvent(res, 'phase', {
+          phase: 'implementation',
+          message: 'Building your shortcut...'
+        });
+
+        aiResponse = await agent.processRequest({
+          conversationId: undefined,
+          userId: defaultUserId,
+          content: content.trim(),
+          model: model as any,
+          type: 'generate',
+          reasoningOptions,
+          context: { messages: messagesForConversation },
+          persistMessages: false
+        });
+      } else {
+        aiResponse = {
+          content: `I received your message: "${content.trim()}". This is a mock response since the AI processing is not yet connected.`,
+          model: model,
+          phase: {
+            type: 'mock',
+            message: 'Mock response for testing'
+          },
+          nextActions: ['Try asking me to create a shortcut', 'Describe your shortcut in detail']
+        };
+      }
+
+      writeStreamEvent(res, 'phase', {
+        phase: 'validation',
+        message: 'Validating output and preparing response...'
+      });
+
+      const assistantMessageId = `msg_${conversationId}_${Date.now() + 1}`;
+      const assistantMessage: MemoryMessage = {
+        id: assistantMessageId,
+        role: 'assistant',
+        content: aiResponse.content,
+        timestamp: new Date(),
+        metadata: {
+          model: model,
+          phase: aiResponse.phase?.type || aiResponse.phase,
+          nextActions: aiResponse.nextActions,
+          shortcut: aiResponse.shortcut,
+          analysis: aiResponse.analysis
+        }
+      };
+
+      messagesForConversation.push(assistantMessage);
+      mockMessages.set(conversationId, messagesForConversation);
+      if (conversation) {
+        conversation.messageCount += 1;
+        conversation.updatedAt = new Date();
+      }
+
+      writeStreamEvent(res, 'result', {
+        success: true,
+        userMessage: userMessage,
+        assistantMessage: assistantMessage,
+        userMessageId: userMessage.id,
+        assistantMessageId: assistantMessage.id,
+        content: aiResponse.content,
+        phase: aiResponse.phase,
+        model: model,
+        shortcut: aiResponse.shortcut,
+        analysis: aiResponse.analysis,
+        requiresClarification: aiResponse.requiresClarification,
+        nextActions: aiResponse.nextActions,
+        timestamp: assistantMessage.timestamp
+      });
+
+      return res.end();
+    } catch (error: any) {
+      writeStreamEvent(res, 'error', {
+        error: error.message || 'Failed to process message'
+      });
+      return res.end();
     }
   });
 
