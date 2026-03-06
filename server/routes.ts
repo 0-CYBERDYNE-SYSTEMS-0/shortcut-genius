@@ -52,6 +52,15 @@ import {
 } from './shortcut-sharing';
 import { registerConversationRoutes } from './routes/conversations';
 import { registerSimpleConversationRoutes } from './routes/simple-conversations';
+import {
+  loadProviders,
+  setProviderKey,
+  getProvidersStatus,
+  startCodexOAuth,
+  exchangeCodexToken,
+  PROVIDER_URLS,
+  type ProviderName,
+} from './providers';
 import { ConversationalShortcutAgent } from './conversational-agent';
 import { db } from '../db';
 import { conversations } from '../db/schema';
@@ -193,6 +202,40 @@ The assistant has access to comprehensive web search and content extraction tool
 - If you find good documentation URLs, use web_extract to get detailed information
 - For comprehensive API understanding, use web_crawl on the main documentation site
 - Always extract endpoints, parameters, authentication methods, and code examples
+
+CRITICAL iOS ACTION IDENTIFIERS — use these EXACT types in JSON:
+| Intent                        | Correct type                                      | Notes                                  |
+|-------------------------------|---------------------------------------------------|----------------------------------------|
+| Set a URL value               | url                                               | params: { url: "https://..." }         |
+| Fetch URL / HTTP request      | getcontentsofurl (NOT downloadurl)                | Takes implicit input from url action   |
+| Show result text              | showresult                                        | params: { text: "..." }                |
+| Quick Look preview            | quicklook                                         | Takes implicit input from prior action |
+| Show a notification           | notification                                      | params: { title, body }                |
+| Ask for input                 | ask                                               | params: { prompt }                     |
+| Text / string value           | text                                              | params: { text: "..." }                |
+| Speak text aloud              | speak                                             | Takes implicit input                   |
+| Get clipboard                 | get_clipboard                                     | No params needed                       |
+| Set clipboard                 | set_clipboard                                     | Takes implicit input                   |
+| Open URL in Safari            | open_url                                          | Takes implicit input or URL param      |
+
+CANONICAL DATA FLOW PATTERNS:
+1. Fetch URL and preview:
+   [url → getcontentsofurl → quicklook]
+2. Fetch and show text:
+   [url → getcontentsofurl → showresult]
+3. Ask and notify:
+   [ask → notification]
+4. Take photo and save:
+   [take_photo → save_file]
+5. Speak text:
+   [text → speak]
+
+NEVER use "downloadurl" or "previewdocument" — they are deprecated and will fail.
+ALWAYS use real URLs, never placeholders like "example.com" or "your-url-here".
+
+ERROR RECOVERY: If the user reports that a shortcut didn't work or pastes an error message,
+immediately offer to fix it. Ask which step failed and what error appeared, then regenerate
+a corrected shortcut addressing the specific failure.
 
 Example valid shortcut:
 {
@@ -637,8 +680,9 @@ export async function registerRoutes(app: Express) {
         shortcut,
         format = 'plist',
         sign = true,
-        signMode = 'anyone'
-      }: { shortcut: Shortcut; format?: 'plist' | 'binary'; sign?: boolean; signMode?: 'anyone' | 'contacts-only' } = req.body;
+        signMode = 'anyone',
+        debug = false
+      }: { shortcut: Shortcut; format?: 'plist' | 'binary'; sign?: boolean; signMode?: 'anyone' | 'contacts-only'; debug?: boolean } = req.body;
 
       if (!shortcut || !shortcut.name || !Array.isArray(shortcut.actions)) {
         return res.status(400).json({ error: 'Invalid shortcut data' });
@@ -657,7 +701,7 @@ export async function registerRoutes(app: Express) {
       const metadata = generateShortcutMetadata(shortcut);
 
       // Convert to requested format
-      const buffer = format === 'binary' ? convertToBinaryPlist(shortcut) : convertToPlist(shortcut);
+      const buffer = format === 'binary' ? convertToBinaryPlist(shortcut, { debug }) : convertToPlist(shortcut, { debug });
       let outputBuffer = buffer;
       let isSigned = false;
 
@@ -1506,6 +1550,105 @@ export async function registerRoutes(app: Express) {
         error: 'Comprehensive test failed',
         details: error instanceof Error ? error.message : 'Unknown error'
       });
+    }
+  });
+
+  // --- Provider management routes ---
+
+  // GET /api/providers — return connection status for all providers
+  app.get('/api/providers', async (_req, res) => {
+    try {
+      const status = await getProvidersStatus();
+      res.json(status);
+    } catch (err) {
+      res.status(500).json({ error: String(err) });
+    }
+  });
+
+  // POST /api/providers/:name — save API key
+  app.post('/api/providers/:name', async (req, res) => {
+    try {
+      const name = req.params.name as ProviderName;
+      const { apiKey } = req.body;
+      if (!apiKey?.trim()) return res.status(400).json({ error: 'apiKey required' });
+      await setProviderKey(name, apiKey.trim());
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ success: false, error: String(err) });
+    }
+  });
+
+  // DELETE /api/providers/:name — disconnect / remove key
+  app.delete('/api/providers/:name', async (req, res) => {
+    try {
+      const name = req.params.name as ProviderName;
+      const store = await loadProviders();
+      store[name] = { connected: false };
+      const fs = await import('fs/promises');
+      const path = await import('path');
+      await fs.writeFile(path.join(process.cwd(), 'providers.json'), JSON.stringify(store, null, 2));
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ success: false, error: String(err) });
+    }
+  });
+
+  // POST /api/providers/:name/test — test connection with a simple chat completions call
+  app.post('/api/providers/:name/test', async (req, res) => {
+    try {
+      const name = req.params.name as ProviderName;
+      const store = await loadProviders();
+      const provider = store[name];
+
+      if (!provider.connected || (!provider.apiKey && !provider.oauthToken)) {
+        return res.json({ ok: false, error: 'Provider not configured' });
+      }
+
+      const baseURL = PROVIDER_URLS[name];
+      const token = provider.apiKey || provider.oauthToken || '';
+
+      // Use the provider's own default model for the test
+      const modelMap: Record<ProviderName, string> = {
+        glm: 'glm-4',
+        kimi: 'kimi-k2-0711-preview',
+        minimax: 'MiniMax-M2.1',
+        opencode: 'opencode-go/default',
+        codex: 'codex-1',
+      };
+
+      const testClient = new OpenAI({ apiKey: token, baseURL, timeout: 15000 });
+      await testClient.chat.completions.create({
+        model: modelMap[name] || 'default',
+        messages: [{ role: 'user', content: 'Say OK' }],
+        max_tokens: 5,
+      });
+
+      res.json({ ok: true });
+    } catch (err: any) {
+      res.json({ ok: false, error: err?.message || String(err) });
+    }
+  });
+
+  // GET /api/providers/oauth/codex/start — begin Codex PKCE OAuth flow
+  app.get('/api/providers/oauth/codex/start', (_req, res) => {
+    const { url } = startCodexOAuth();
+    res.json({ url });
+  });
+
+  // GET /api/providers/oauth/codex/callback — receive OAuth code from browser redirect
+  app.get('/api/providers/oauth/codex/callback', async (req, res) => {
+    const { code, error } = req.query as Record<string, string>;
+    if (error) {
+      return res.send(`<html><body><p>OAuth error: ${error}</p><script>window.close()</script></body></html>`);
+    }
+    if (!code) {
+      return res.send('<html><body><p>Missing code</p><script>window.close()</script></body></html>');
+    }
+    const result = await exchangeCodexToken(code);
+    if (result.success) {
+      res.send('<html><body><p>Codex connected! You can close this window.</p><script>window.close()</script></body></html>');
+    } else {
+      res.send(`<html><body><p>Error: ${result.error}</p><script>window.close()</script></body></html>`);
     }
   });
 }

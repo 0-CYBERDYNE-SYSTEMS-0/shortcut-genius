@@ -8,11 +8,14 @@ import { GlyphMappingSystem } from './glyph-mapping-system';
 import {
   getModelConfig,
   isOpenRouterModel,
+  isCustomProvider,
   getOpenRouterModelName,
   supportsReasoning,
   supportsVerbosity,
-  DEFAULT_REASONING_OPTIONS
+  DEFAULT_REASONING_OPTIONS,
+  CUSTOM_PROVIDER_PREFIXES,
 } from '../client/src/lib/models';
+import { loadProviders, PROVIDER_URLS, type ProviderName } from './providers';
 import { SHORTCUT_ACTIONS } from '../client/src/lib/shortcuts';
 import { AIModel, ReasoningOptions } from '../client/src/lib/types';
 
@@ -119,6 +122,10 @@ export class AIProcessor {
   async process(request: ProcessRequest): Promise<ProcessResult> {
     const { model, prompt, type, systemPrompt, reasoningOptions } = request;
     const modelConfig = getModelConfig(model);
+
+    if (isCustomProvider(model)) {
+      return this.processCustomProvider(request);
+    }
 
     if (isOpenRouterModel(model)) {
       return this.processOpenRouter(request);
@@ -478,6 +485,52 @@ IMPORTANT:
     } else {
       return `Analyze this shortcut and suggest improvements: ${prompt}`;
     }
+  }
+
+  private async processCustomProvider(request: ProcessRequest): Promise<ProcessResult> {
+    const { model, prompt, type, systemPrompt, useComprehensiveActions } = request;
+
+    // Determine provider name from prefix (e.g. "glm/glm-4" → "glm")
+    const prefix = CUSTOM_PROVIDER_PREFIXES.find(p => model.startsWith(p));
+    if (!prefix) throw new Error(`Unknown custom provider for model: ${model}`);
+
+    // Provider key is the prefix without slash and without -direct suffix
+    const providerName = prefix.replace('/', '').replace('-direct', '') as ProviderName;
+    const store = await loadProviders();
+    const providerCfg = store[providerName];
+    const apiKey = providerCfg?.apiKey || providerCfg?.oauthToken;
+
+    if (!apiKey) {
+      throw new Error(`${providerName} API key not configured. Add it in Model Settings → Providers.`);
+    }
+
+    const baseURL = PROVIDER_URLS[providerName];
+    // Strip the "prefix/" from the model ID to get the raw model name for the API
+    const rawModel = model.startsWith(prefix) ? model.slice(prefix.length) : model;
+
+    const client = new OpenAI({ apiKey, baseURL, timeout: 60000 });
+
+    const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
+      { role: 'system', content: this.buildSystemPrompt(systemPrompt, type, useComprehensiveActions) },
+      { role: 'user', content: this.buildUserPrompt(prompt, type, useComprehensiveActions) },
+    ];
+
+    const response = await client.chat.completions.create({
+      model: rawModel,
+      messages,
+      temperature: 0.7,
+      max_tokens: 8192,
+    });
+
+    const content = response.choices[0].message.content || '';
+    return {
+      content,
+      usage: response.usage ? {
+        prompt_tokens: response.usage.prompt_tokens,
+        completion_tokens: response.usage.completion_tokens,
+        total_tokens: response.usage.total_tokens,
+      } : undefined,
+    };
   }
 
   private getOpenAIModelName(model: AIModel): string {

@@ -11,6 +11,7 @@ import { Toolbar } from '@/components/Toolbar';
 import { AnalysisPane } from '@/components/AnalysisPane';
 import { ShortcutsGallery } from '@/components/ShortcutsGallery';
 import { ReasoningControls } from '@/components/ReasoningControls';
+import { ProviderSettings } from '@/components/ProviderSettings';
 import { FileUpload } from '@/components/FileUpload';
 import { ModelSelector } from '@/components/ModelSelector';
 import { ShareDialog } from '@/components/ShareDialog';
@@ -19,7 +20,7 @@ import ChatThread from '@/components/ChatThread';
 import { useToast } from '@/hooks/use-toast';
 import { useBreakpoint } from '@/hooks/use-mobile';
 import { AIModel, ReasoningOptions } from '@/lib/types';
-import { DEFAULT_REASONING_OPTIONS } from '@/lib/models';
+import { DEFAULT_REASONING_OPTIONS, getModelConfig, supportsReasoning, supportsVerbosity } from '@/lib/models';
 import { processWithAI } from '@/lib/ai';
 import { Shortcut, parseShortcutFile, exportShortcut } from '@/lib/shortcuts';
 import { analyzeShortcut } from '@/lib/shortcut-analyzer';
@@ -397,17 +398,54 @@ export function Editor() {
                     Model
                   </Button>
                 </SheetTrigger>
-                <SheetContent side="right" className="w-[360px]">
-                  <SheetHeader>
+                <SheetContent side="right" className="w-[380px] flex flex-col">
+                  <SheetHeader className="shrink-0">
                     <SheetTitle>Model Settings</SheetTitle>
                   </SheetHeader>
-                  <div className="mt-4">
-                    <ReasoningControls
-                      model={model}
-                      options={reasoningOptions}
-                      onChange={setReasoningOptions}
-                    />
-                  </div>
+                  <Tabs defaultValue="model" className="flex-1 flex flex-col min-h-0 mt-3">
+                    <TabsList className="grid grid-cols-2 shrink-0">
+                      <TabsTrigger value="model">Model</TabsTrigger>
+                      <TabsTrigger value="providers">Providers</TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="model" className="flex-1 overflow-y-auto mt-3 space-y-4">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Active Model</label>
+                        <ModelSelector value={model} onChange={setModel} />
+                      </div>
+
+                      {(() => {
+                        const cfg = getModelConfig(model as AIModel);
+                        return (
+                          <div className="rounded-md border p-3 space-y-1 text-sm">
+                            <div className="font-medium">{cfg.name}</div>
+                            <div className="text-muted-foreground capitalize">
+                              {cfg.provider} · {cfg.category}
+                            </div>
+                            <div className="text-muted-foreground">
+                              Context: {(cfg.capabilities.contextWindow / 1000).toFixed(0)}k tokens
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                      {(supportsReasoning(model as AIModel) || supportsVerbosity(model as AIModel)) ? (
+                        <ReasoningControls
+                          model={model}
+                          options={reasoningOptions}
+                          onChange={setReasoningOptions}
+                        />
+                      ) : (
+                        <p className="text-sm text-muted-foreground">
+                          No advanced settings available for this model.
+                        </p>
+                      )}
+                    </TabsContent>
+
+                    <TabsContent value="providers" className="flex-1 overflow-y-auto mt-3">
+                      <ProviderSettings />
+                    </TabsContent>
+                  </Tabs>
                 </SheetContent>
               </Sheet>
               <FileUpload onUpload={handleImport} />

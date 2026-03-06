@@ -180,10 +180,12 @@ export function ModelSelector({ value, onChange }: ModelSelectorProps) {
   }, [isOpen, openRouterModels, availability, loadOpenRouterModels]);
 
   // Group static models by provider (memoized)
+  const DIRECT_PROVIDER_NAMES = ['glm', 'kimi', 'minimax', 'opencode', 'codex'];
   const staticModels = useMemo(() => ({
     openai: Object.values(MODEL_CONFIGS).filter(m => m.provider === 'openai' && (!availability || availability.openai.available)),
     anthropic: Object.values(MODEL_CONFIGS).filter(m => m.provider === 'anthropic' && (!availability || availability.anthropic.available)),
-    openrouter: Object.values(MODEL_CONFIGS).filter(m => m.provider === 'openrouter' && (!availability || availability.openrouter.available))
+    openrouter: Object.values(MODEL_CONFIGS).filter(m => m.provider === 'openrouter' && (!availability || availability.openrouter.available)),
+    coding: Object.values(MODEL_CONFIGS).filter(m => DIRECT_PROVIDER_NAMES.includes(m.provider)),
   }), [availability]);
 
   // Enhanced filter function with better matching (memoized)
@@ -229,7 +231,8 @@ export function ModelSelector({ value, onChange }: ModelSelectorProps) {
   const filteredModels = useMemo(() => ({
     openai: filterModels(staticModels.openai, searchQuery),
     anthropic: filterModels(staticModels.anthropic, searchQuery),
-    openrouter: filterModels(staticModels.openrouter, searchQuery)
+    openrouter: filterModels(staticModels.openrouter, searchQuery),
+    coding: filterModels(staticModels.coding, searchQuery),
   }), [staticModels, searchQuery, filterModels]);
 
   return (
@@ -278,6 +281,23 @@ export function ModelSelector({ value, onChange }: ModelSelectorProps) {
                   <span>{model.name}</span>
                   <span className="ml-2 px-1 py-0.5 text-xs bg-orange-100 text-orange-800 rounded">
                     {model.category}
+                  </span>
+                </div>
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        )}
+
+        {/* Direct Coding Providers (GLM, Kimi, MiniMax, OpenCode, Codex) */}
+        {filteredModels.coding.length > 0 && (
+          <SelectGroup>
+            <SelectLabel>Coding Providers</SelectLabel>
+            {filteredModels.coding.map(model => (
+              <SelectItem key={model.id} value={model.id}>
+                <div className="flex items-center justify-between w-full gap-2">
+                  <span>{model.name}</span>
+                  <span className="ml-2 px-1 py-0.5 text-xs bg-emerald-100 text-emerald-800 rounded capitalize">
+                    {model.provider}
                   </span>
                 </div>
               </SelectItem>

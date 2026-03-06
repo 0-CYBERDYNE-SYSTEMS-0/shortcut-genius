@@ -86,25 +86,123 @@ export const MODEL_CONFIGS: Record<AIModel, ModelConfig> = {
     cost: { input: 0.5, output: 1.5 }
   },
 
+  // --- Direct provider models (not via OpenRouter) ---
+
+  // Zai / GLM (Zhipu AI) — https://api.z.ai/api/paas/v4
+  'glm/glm-4.7': {
+    id: 'glm/glm-4.7',
+    name: 'GLM-4.7',
+    provider: 'glm',
+    category: 'coding',
+    capabilities: { maxTokens: 8192, contextWindow: 128000, hasKnowledgeCutoff: 'Recent', supportsCustomTools: true },
+    cost: { input: 1.2, output: 3.5 }
+  },
+  'glm/glm-4.6': {
+    id: 'glm/glm-4.6',
+    name: 'GLM-4.6',
+    provider: 'glm',
+    category: 'coding',
+    capabilities: { maxTokens: 8192, contextWindow: 128000, hasKnowledgeCutoff: 'Recent', supportsCustomTools: true },
+    cost: { input: 1, output: 3 }
+  },
+  'glm/glm-4.5': {
+    id: 'glm/glm-4.5',
+    name: 'GLM-4.5',
+    provider: 'glm',
+    category: 'coding',
+    capabilities: { maxTokens: 8192, contextWindow: 128000, hasKnowledgeCutoff: 'Recent', supportsCustomTools: true },
+    cost: { input: 0.7, output: 2 }
+  },
+
+  // Kimi / Moonshot AI — https://api.moonshot.ai/v1
+  'kimi/kimi-k2-5': {
+    id: 'kimi/kimi-k2-5',
+    name: 'Kimi K2.5',
+    provider: 'kimi',
+    category: 'coding',
+    capabilities: { maxTokens: 8192, contextWindow: 256000, hasKnowledgeCutoff: 'Recent', supportsCustomTools: true },
+    cost: { input: 1, output: 3 }
+  },
+  'kimi/kimi-k2-0711-preview': {
+    id: 'kimi/kimi-k2-0711-preview',
+    name: 'Kimi K2',
+    provider: 'kimi',
+    category: 'coding',
+    capabilities: { maxTokens: 8192, contextWindow: 128000, hasKnowledgeCutoff: 'Recent', supportsCustomTools: true },
+    cost: { input: 0.6, output: 2.5 }
+  },
+
+  // MiniMax Direct — https://api.minimax.io
+  'minimax-direct/MiniMax-M2.5': {
+    id: 'minimax-direct/MiniMax-M2.5',
+    name: 'MiniMax M2.5',
+    provider: 'minimax',
+    category: 'coding',
+    capabilities: { maxTokens: 8192, contextWindow: 200000, hasKnowledgeCutoff: 'Recent', supportsCustomTools: true },
+    cost: { input: 0.5, output: 1.5 }
+  },
+  'minimax-direct/MiniMax-M2.1': {
+    id: 'minimax-direct/MiniMax-M2.1',
+    name: 'MiniMax M2.1',
+    provider: 'minimax',
+    category: 'balanced',
+    capabilities: { maxTokens: 8192, contextWindow: 200000, hasKnowledgeCutoff: 'Recent', supportsCustomTools: true },
+    cost: { input: 0.3, output: 1 }
+  },
+  'minimax-direct/MiniMax-M2': {
+    id: 'minimax-direct/MiniMax-M2',
+    name: 'MiniMax M2',
+    provider: 'minimax',
+    category: 'balanced',
+    capabilities: { maxTokens: 4096, contextWindow: 200000, hasKnowledgeCutoff: 'Recent', supportsCustomTools: true },
+    cost: { input: 0.2, output: 0.8 }
+  },
+
+  // OpenCode Zen — https://opencode.ai/zen
+  'opencode/default': {
+    id: 'opencode/default',
+    name: 'OpenCode Zen',
+    provider: 'opencode',
+    category: 'coding',
+    capabilities: { maxTokens: 8192, contextWindow: 128000, hasKnowledgeCutoff: 'Recent', supportsCustomTools: true },
+    cost: { input: 0, output: 0 } // subscription-based
+  },
+
+  // OpenAI Codex (OAuth) — uses ChatGPT Plus/Pro subscription
+  'codex/codex-1': {
+    id: 'codex/codex-1',
+    name: 'Codex (ChatGPT)',
+    provider: 'codex',
+    category: 'coding',
+    capabilities: { maxTokens: 8192, contextWindow: 128000, hasKnowledgeCutoff: 'Recent', supportsCustomTools: true },
+    cost: { input: 0, output: 0 } // subscription-based
+  },
+
   // OpenRouter models will be loaded dynamically
+};
+
+// Prefixes that route to direct (non-OpenRouter) custom providers
+export const CUSTOM_PROVIDER_PREFIXES = ['glm/', 'kimi/', 'minimax-direct/', 'opencode/', 'codex/'] as const;
+
+export const isCustomProvider = (modelId: AIModel): boolean =>
+  CUSTOM_PROVIDER_PREFIXES.some(p => modelId.startsWith(p));
+
+// Resolve the custom provider name from a model ID
+export const getCustomProviderName = (modelId: AIModel): string | null => {
+  for (const prefix of CUSTOM_PROVIDER_PREFIXES) {
+    if (modelId.startsWith(prefix)) return prefix.replace('/', '').replace('-direct', '');
+  }
+  return null;
 };
 
 // Check if a model is from OpenRouter
 export const isOpenRouterModel = (modelId: AIModel): boolean => {
-  // Direct OpenAI and Anthropic models (not from OpenRouter)
   const directModels = ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo', 'claude-3-5-sonnet-20241022'];
+  if (directModels.includes(modelId)) return false;
+  if (isCustomProvider(modelId)) return false;
 
-  // If it's a direct model, it's not from OpenRouter
-  if (directModels.includes(modelId)) {
-    return false;
-  }
-
-  // Models with provider/model format are from OpenRouter
-  const hasProviderSlash = modelId.includes('/') && !modelId.startsWith('openrouter/');
-
-  // Old format with openrouter/ prefix
   const isOpenRouterPrefixed = modelId.startsWith('openrouter/');
-
+  const hasProviderSlash = modelId.includes('/') && !isOpenRouterPrefixed;
   return hasProviderSlash || isOpenRouterPrefixed;
 };
 
