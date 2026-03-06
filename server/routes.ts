@@ -1609,7 +1609,7 @@ export async function registerRoutes(app: Express) {
 
       // Use the provider's own default model for the test
       const modelMap: Record<ProviderName, string> = {
-        glm: 'glm-4',
+        glm: 'glm-4.7',
         kimi: 'kimi-k2-0711-preview',
         minimax: 'MiniMax-M2.1',
         opencode: 'opencode-go/default',

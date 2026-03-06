@@ -522,7 +522,9 @@ IMPORTANT:
       max_tokens: 8192,
     });
 
-    const content = response.choices[0].message.content || '';
+    const msg = response.choices[0].message as any;
+    // GLM-4.7 (and other reasoning models) may return content in reasoning_content when content is empty
+    const content = msg.content || msg.reasoning_content || '';
     return {
       content,
       usage: response.usage ? {

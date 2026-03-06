@@ -67,7 +67,7 @@ export async function getProvidersStatus(): Promise<Record<ProviderName, { conne
 
 // Provider base URLs
 export const PROVIDER_URLS: Record<ProviderName, string> = {
-  glm:      'https://api.z.ai/api/paas/v4',
+  glm:      'https://api.z.ai/api/coding/paas/v4',
   kimi:     'https://api.moonshot.ai/v1',
   minimax:  'https://api.minimax.io/v1',
   opencode: 'https://opencode.ai/zen/v1',
