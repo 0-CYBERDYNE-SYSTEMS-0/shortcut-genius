@@ -186,3 +186,20 @@ replit_zip_error_log.txt
 
 # Database files
 drizzle/
+
+# Generated action database files (runtime-generated, do not commit)
+action-database.json
+enhanced-action-database.json
+comprehensive-action-database.json
+final-action-database.json
+test-enhanced-database.json
+action-system-integration-report.json
+ai-action-prompt.md
+
+# Generated stats and update tracking files
+final-stats.json
+comprehensive-stats.json
+discovery-stats.json
+last-update.json
+update-report.json
+update-error.json
