@@ -1,8 +1,10 @@
 import fs from 'fs/promises';
 import path from 'path';
 import crypto from 'crypto';
+import { getCodexRedirectUri } from './runtime-config';
 
-const PROVIDERS_FILE = path.join(process.cwd(), 'providers.json');
+const PROVIDERS_DIR = path.join(process.cwd(), '.local', 'shortcut-genius');
+const PROVIDERS_FILE = path.join(PROVIDERS_DIR, 'providers.json');
 
 export type ProviderName = 'glm' | 'kimi' | 'minimax' | 'opencode' | 'codex';
 
@@ -40,6 +42,7 @@ export async function loadProviders(): Promise<ProvidersStore> {
 }
 
 async function saveProviders(store: ProvidersStore): Promise<void> {
+  await fs.mkdir(PROVIDERS_DIR, { recursive: true });
   await fs.writeFile(PROVIDERS_FILE, JSON.stringify(store, null, 2));
 }
 
@@ -52,6 +55,12 @@ export async function setProviderKey(name: ProviderName, apiKey: string): Promis
 export async function getProviderKey(name: ProviderName): Promise<string | undefined> {
   const store = await loadProviders();
   return store[name]?.apiKey;
+}
+
+export async function disconnectProvider(name: ProviderName): Promise<void> {
+  const store = await loadProviders();
+  store[name] = { connected: false };
+  await saveProviders(store);
 }
 
 export async function getProvidersStatus(): Promise<Record<ProviderName, { connected: boolean; hasKey: boolean }>> {
@@ -88,12 +97,12 @@ export const PROVIDER_DEFAULT_MODELS: Record<ProviderName, string> = {
 const CODEX_CLIENT_ID = 'app_EMoamEEZ73f0CkXaXp7hrann';
 const CODEX_AUTH_URL = 'https://auth.openai.com/oauth/authorize';
 const CODEX_TOKEN_URL = 'https://auth.openai.com/oauth/token';
-const CODEX_REDIRECT_URI = `http://localhost:${process.env.PORT || 4321}/api/providers/oauth/codex/callback`;
 
 // In-memory PKCE verifier (one flow at a time is fine for a local app)
 let pendingCodeVerifier: string | null = null;
 
 export function startCodexOAuth(): { url: string } {
+  const redirectUri = getCodexRedirectUri();
   const verifier = crypto.randomBytes(32).toString('base64url');
   const challenge = crypto.createHash('sha256').update(verifier).digest('base64url');
   pendingCodeVerifier = verifier;
@@ -101,7 +110,7 @@ export function startCodexOAuth(): { url: string } {
   const params = new URLSearchParams({
     response_type: 'code',
     client_id: CODEX_CLIENT_ID,
-    redirect_uri: CODEX_REDIRECT_URI,
+    redirect_uri: redirectUri,
     scope: 'openid profile email offline_access',
     code_challenge: challenge,
     code_challenge_method: 'S256',
@@ -117,6 +126,7 @@ export async function exchangeCodexToken(code: string): Promise<{ success: boole
   }
 
   try {
+    const redirectUri = getCodexRedirectUri();
     const res = await fetch(CODEX_TOKEN_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -124,7 +134,7 @@ export async function exchangeCodexToken(code: string): Promise<{ success: boole
         grant_type: 'authorization_code',
         client_id: CODEX_CLIENT_ID,
         code,
-        redirect_uri: CODEX_REDIRECT_URI,
+        redirect_uri: redirectUri,
         code_verifier: pendingCodeVerifier,
       }),
     });

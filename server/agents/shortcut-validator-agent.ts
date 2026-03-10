@@ -3,6 +3,7 @@ import { ValidationReport, ValidationError, ValidationWarning, PermissionInfo, B
 import { validateShortcut } from '../../client/src/lib/shortcuts';
 import { analyzeShortcut } from '../../client/src/lib/shortcut-analyzer';
 import { AgentLogger } from './base/agent-logger';
+import { getFinalActionDatabasePath } from '../runtime-config';
 
 interface ValidationInput {
   shortcut: any;
@@ -404,7 +405,7 @@ export class ShortcutValidatorAgent extends Agent<ValidationInput, ValidationRep
     // Load action database for parameter validation
     try {
       const fs = await import('fs/promises');
-      const actionDbPath = '/Users/scrimwiggins/shortcut-genius-main/final-action-database.json';
+      const actionDbPath = getFinalActionDatabasePath();
       const actionDb = JSON.parse(await fs.readFile(actionDbPath, 'utf8'));
 
       shortcut.actions.forEach((action: any, index) => {

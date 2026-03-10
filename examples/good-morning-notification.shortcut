@@ -3,7 +3,7 @@
 <plist version="1.0">
   <dict>
     <key>WFWorkflowName</key>
-    <string>Test Good Morning</string>
+    <string>Good Morning Notification</string>
     <key>WFWorkflowIcon</key>
     <dict>
       <key>WFWorkflowIconStartColor</key>
@@ -26,23 +26,7 @@
     </array>
     <key>WFWorkflowInputContentItemClasses</key>
     <array>
-      <string>WFAppStoreAppContentItem</string>
-      <string>WFArticleContentItem</string>
-      <string>WFContactContentItem</string>
-      <string>WFDateContentItem</string>
-      <string>WFEmailAddressContentItem</string>
-      <string>WFGenericFileContentItem</string>
-      <string>WFImageContentItem</string>
-      <string>WFiTunesProductContentItem</string>
-      <string>WFLocationContentItem</string>
-      <string>WFDCMapsLinkContentItem</string>
-      <string>WFAVAssetContentItem</string>
-      <string>WFPDFContentItem</string>
-      <string>WFPhoneNumberContentItem</string>
-      <string>WFRichTextContentItem</string>
-      <string>WFSafariWebPageContentItem</string>
       <string>WFStringContentItem</string>
-      <string>WFURLContentItem</string>
     </array>
     <key>WFWorkflowActions</key>
     <array>

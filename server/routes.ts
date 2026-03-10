@@ -53,6 +53,7 @@ import {
 import { registerConversationRoutes } from './routes/conversations';
 import { registerSimpleConversationRoutes } from './routes/simple-conversations';
 import {
+  disconnectProvider,
   loadProviders,
   setProviderKey,
   getProvidersStatus,
@@ -61,6 +62,7 @@ import {
   PROVIDER_URLS,
   type ProviderName,
 } from './providers';
+import { getAiActionPromptPath, getBaseUrl } from './runtime-config';
 import { ConversationalShortcutAgent } from './conversational-agent';
 import { db } from '../db';
 import { conversations } from '../db/schema';
@@ -77,12 +79,6 @@ async function initializeServices() {
   openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || '', timeout: 60000 });
   anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY || '', timeout: 60000 });
   openrouter = new OpenRouterClient(process.env.OPENROUTER_API_KEY || '');
-
-  // Debug: Log API key status (don't log the actual key)
-  console.log('🔑 API Keys Status:');
-  console.log('- OpenAI:', process.env.OPENAI_API_KEY ? 'configured' : 'not configured');
-  console.log('- Anthropic:', process.env.ANTHROPIC_API_KEY ? 'configured' : 'not configured');
-  console.log('- OpenRouter:', process.env.OPENROUTER_API_KEY ? 'configured' : 'not configured');
 
   // Initialize services
   openRouterModelsService = new OpenRouterModelsService(process.env.OPENROUTER_API_KEY || '');
@@ -112,7 +108,7 @@ async function initializeServices() {
 
     // Load action prompt for agentic builder
     const fs = await import('fs/promises');
-    const actionPrompt = await fs.readFile('/Users/scrimwiggins/shortcut-genius-main/ai-action-prompt.md', 'utf8');
+    const actionPrompt = await fs.readFile(getAiActionPromptPath(), 'utf8');
 
     // Initialize agentic builder
     agenticBuilder = new AgenticShortcutBuilder(
@@ -912,7 +908,7 @@ export async function registerRoutes(app: Express) {
         : undefined;
 
       // Create shared shortcut
-      const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
+      const baseUrl = getBaseUrl();
       const shared = await createSharedShortcut(
         shortcut,
         shortcutBuffer,
@@ -1094,7 +1090,7 @@ export async function registerRoutes(app: Express) {
         `);
       }
 
-      const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
+      const baseUrl = getBaseUrl();
 
       res.send(`
         <!DOCTYPE html>
@@ -1582,11 +1578,7 @@ export async function registerRoutes(app: Express) {
   app.delete('/api/providers/:name', async (req, res) => {
     try {
       const name = req.params.name as ProviderName;
-      const store = await loadProviders();
-      store[name] = { connected: false };
-      const fs = await import('fs/promises');
-      const path = await import('path');
-      await fs.writeFile(path.join(process.cwd(), 'providers.json'), JSON.stringify(store, null, 2));
+      await disconnectProvider(name);
       res.json({ success: true });
     } catch (err) {
       res.status(500).json({ success: false, error: String(err) });

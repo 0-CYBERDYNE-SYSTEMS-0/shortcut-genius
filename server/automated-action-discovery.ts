@@ -2,6 +2,14 @@ import fs from 'fs/promises';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import path from 'path';
+import {
+  ensureLocalDataDir,
+  getFinalActionDatabasePath,
+  getFinalStatsPath,
+  getLastUpdatePath,
+  getUpdateErrorPath,
+  getUpdateReportPath,
+} from './runtime-config';
 
 const execAsync = promisify(exec);
 
@@ -10,7 +18,7 @@ export class AutomatedActionDiscovery {
   private updateInterval: number = 24 * 60 * 60 * 1000; // 24 hours
   private databasePath: string;
 
-  constructor(databasePath: string = '/Users/scrimwiggins/shortcut-genius-main/final-action-database.json') {
+  constructor(databasePath: string = getFinalActionDatabasePath()) {
     this.databasePath = databasePath;
     this.lastUpdate = new Date(0);
   }
@@ -35,8 +43,7 @@ export class AutomatedActionDiscovery {
 
   private async loadLastUpdate(): Promise<void> {
     try {
-      const statsPath = '/Users/scrimwiggins/shortcut-genius-main/last-update.json';
-      const data = await fs.readFile(statsPath, 'utf8');
+      const data = await fs.readFile(getLastUpdatePath(), 'utf8');
       const stats = JSON.parse(data);
       this.lastUpdate = new Date(stats.lastUpdate);
       console.log(`  Last update: ${this.lastUpdate.toISOString()}`);
@@ -255,15 +262,17 @@ export class AutomatedActionDiscovery {
   }
 
   private async saveLastUpdate(): Promise<void> {
+    await ensureLocalDataDir();
     const updateData = {
       lastUpdate: this.lastUpdate.toISOString(),
       version: '1.0.0'
     };
 
-    await fs.writeFile('/Users/scrimwiggins/shortcut-genius-main/last-update.json', JSON.stringify(updateData, null, 2));
+    await fs.writeFile(getLastUpdatePath(), JSON.stringify(updateData, null, 2));
   }
 
   private async generateUpdateReport(stats: any): Promise<void> {
+    await ensureLocalDataDir();
     const duration = stats.endTime.getTime() - stats.startTime.getTime();
     const report = {
       timestamp: new Date().toISOString(),
@@ -275,11 +284,12 @@ export class AutomatedActionDiscovery {
       success: true
     };
 
-    await fs.writeFile('/Users/scrimwiggins/shortcut-genius-main/update-report.json', JSON.stringify(report, null, 2));
+    await fs.writeFile(getUpdateReportPath(), JSON.stringify(report, null, 2));
     console.log(`  Update report generated: ${report.duration} duration, ${stats.newActions} new actions`);
   }
 
   private async logUpdateError(error: any): Promise<void> {
+    await ensureLocalDataDir();
     const errorReport = {
       timestamp: new Date().toISOString(),
       error: error.message || 'Unknown error',
@@ -287,7 +297,7 @@ export class AutomatedActionDiscovery {
       phase: 'automated-update'
     };
 
-    await fs.writeFile('/Users/scrimwiggins/shortcut-genius-main/update-error.json', JSON.stringify(errorReport, null, 2));
+    await fs.writeFile(getUpdateErrorPath(), JSON.stringify(errorReport, null, 2));
   }
 
   private setupMonitoring(): void {
@@ -394,7 +404,7 @@ export class AutomatedActionDiscovery {
 
   async getUpdateStatus(): Promise<any> {
     try {
-      const stats = await fs.readFile('/Users/scrimwiggins/shortcut-genius-main/final-stats.json', 'utf8');
+      const stats = await fs.readFile(getFinalStatsPath(), 'utf8');
       const database = JSON.parse(await fs.readFile(this.databasePath, 'utf8'));
 
       return {

@@ -3,6 +3,7 @@ import { GlyphMappingSystem } from './glyph-mapping-system';
 import { WebSearchTool } from './web-search-tool';
 import fs from 'fs/promises';
 import path from 'path';
+import { getActionDatabasePath } from './runtime-config';
 
 interface EnhancedShortcutRequest {
   prompt: string;
@@ -70,7 +71,7 @@ export class AIActionEnhancer {
   private webSearch: WebSearchTool;
   private actionDatabasePath: string;
 
-  constructor(actionDatabasePath: string = '/Users/scrimwiggins/shortcut-genius-main/action-database.json') {
+  constructor(actionDatabasePath: string = getActionDatabasePath()) {
     this.extractor = new ShortcutActionExtractor();
     this.glyphSystem = new GlyphMappingSystem();
     this.webSearch = new WebSearchTool();

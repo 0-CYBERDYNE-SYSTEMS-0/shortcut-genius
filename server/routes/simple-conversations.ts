@@ -336,6 +336,11 @@ export function registerSimpleConversationRoutes(app: Express, agent?: Conversat
           message: 'Building your shortcut...'
         });
 
+        writeStreamEvent(res, 'phase', {
+          phase: 'verification',
+          message: 'Verifying shortcut data flow...'
+        });
+
         aiResponse = await agent.processRequest({
           conversationId: undefined,
           userId: defaultUserId,

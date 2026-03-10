@@ -6,6 +6,7 @@ import { conversations, messages, shortcutVersions } from '../db/schema';
 import { eq, desc, and } from 'drizzle-orm';
 import { validateShortcut, SHORTCUT_ACTIONS, Shortcut as ShortcutSchema } from '../client/src/lib/shortcuts';
 import { analyzeShortcut } from '../client/src/lib/shortcut-analyzer';
+import { validateShortcutDataFlow, formatValidationIssuesForAI } from './shortcut-validator';
 
 export interface ConversationState {
   id: number;
@@ -334,8 +335,7 @@ export class ConversationalShortcutAgent {
           reasoning_effort: 'medium',
           verbosity: 'medium'
         },
-        useComprehensiveActions: true,
-        allowTools: false
+        useComprehensiveActions: true
       });
 
       // Validate and parse the generated shortcut
@@ -363,21 +363,52 @@ export class ConversationalShortcutAgent {
         };
       }
 
+      // Layer 3: AI self-verification loop — up to 3 passes
+      let currentShortcut = validation.data;
+      const MAX_VERIFICATION = 3;
+      for (let pass = 0; pass < MAX_VERIFICATION; pass++) {
+        const issues = validateShortcutDataFlow(currentShortcut);
+        const errors = issues.filter(i => i.severity === 'error');
+        if (errors.length === 0) break;
+
+        console.log(`[Verification pass ${pass + 1}] Found ${errors.length} error(s), asking AI to fix...`);
+
+        const fixPrompt = formatValidationIssuesForAI(currentShortcut, errors);
+        try {
+          const fixedResponse = await this.aiProcessor.process({
+            model,
+            prompt: fixPrompt,
+            type: 'generate',
+            systemPrompt,
+            allowTools: false
+          });
+          const fixedValidation = this.validateAndParseShortcut(fixedResponse.content);
+          if (fixedValidation.valid && fixedValidation.data) {
+            currentShortcut = fixedValidation.data;
+          } else {
+            break;
+          }
+        } catch (err) {
+          console.error('[Verification] AI fix pass failed:', err);
+          break;
+        }
+      }
+
       // Run local analysis
       let localAnalysis;
       try {
-        localAnalysis = await analyzeShortcut(validation.data);
+        localAnalysis = await analyzeShortcut(currentShortcut);
       } catch (error) {
         console.error('Local analysis failed:', error);
       }
 
       return {
-        content: this.formatAssistantResponse(result.content, validation.data),
+        content: this.formatAssistantResponse(result.content, currentShortcut),
         phase: {
           type: 'validation',
           message: 'Validating shortcut...'
         },
-        shortcut: validation.data,
+        shortcut: currentShortcut,
         analysis: localAnalysis,
         nextActions: [
           'Apply shortcut to editor',

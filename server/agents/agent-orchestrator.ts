@@ -5,6 +5,7 @@ import { ShortcutValidatorAgent } from './shortcut-validator-agent';
 import { SecurityAnalyzerAgent } from './security-analyzer-agent';
 import { OptimizationAgent } from './optimization-agent';
 import { DocumentationAgent } from './documentation-agent';
+import { getFinalActionDatabasePath } from '../runtime-config';
 
 export interface OrchestratorConfig {
   timeout?: number;
@@ -58,7 +59,7 @@ export class AgentOrchestrator {
     // For now, we'll create placeholder instances
     this.agents.set('ios-research', new IOSResearchAgent({
       webSearchTool: {} as any, // Would inject actual WebSearchTool
-      actionDatabasePath: '/Users/scrimwiggins/shortcut-genius-main/final-action-database.json'
+      actionDatabasePath: getFinalActionDatabasePath()
     }));
 
     this.agents.set('shortcut-validator', new ShortcutValidatorAgent({

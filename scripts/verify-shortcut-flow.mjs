@@ -1,7 +1,32 @@
 import { setTimeout as delay } from 'node:timers/promises';
 
-const baseUrl = process.env.BASE_URL || 'http://localhost:4321';
 const databaseUrl = process.env.DATABASE_URL;
+const defaultPort = Number(process.env.PORT || 4321);
+
+const resolveBaseUrl = async () => {
+  if (process.env.BASE_URL) {
+    return process.env.BASE_URL;
+  }
+
+  const candidatePorts = [];
+  for (let port = defaultPort; port <= defaultPort + 20; port += 1) {
+    candidatePorts.push(port);
+  }
+
+  for (const port of candidatePorts) {
+    const candidate = `http://localhost:${port}`;
+    try {
+      const res = await fetch(`${candidate}/api/health`);
+      if (res.ok) {
+        return candidate;
+      }
+    } catch {}
+  }
+
+  return `http://localhost:${defaultPort}`;
+};
+
+const baseUrl = await resolveBaseUrl();
 
 const requireOk = (condition, message) => {
   if (!condition) {

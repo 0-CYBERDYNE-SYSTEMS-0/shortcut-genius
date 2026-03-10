@@ -1,6 +1,13 @@
 import fs from 'fs/promises';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import {
+  ensureLocalDataDir,
+  getAiActionPromptPath,
+  getComprehensiveActionDatabasePath,
+  getFinalActionDatabasePath,
+  getFinalStatsPath,
+} from './runtime-config';
 
 const execAsync = promisify(exec);
 
@@ -66,7 +73,7 @@ export class FinalDatabaseBuilder {
     console.log('📂 Loading comprehensive database...');
 
     try {
-      const data = await fs.readFile('/Users/scrimwiggins/shortcut-genius-main/comprehensive-action-database.json', 'utf8');
+      const data = await fs.readFile(getComprehensiveActionDatabasePath(), 'utf8');
       const comprehensive = JSON.parse(data);
 
       // Convert to final format with enhanced details
@@ -806,10 +813,7 @@ export class FinalDatabaseBuilder {
     });
 
     // Save final database
-    await fs.writeFile(
-      '/Users/scrimwiggins/shortcut-genius-main/final-action-database.json',
-      JSON.stringify(finalDatabase, null, 2)
-    );
+    await fs.writeFile(getFinalActionDatabasePath(), JSON.stringify(finalDatabase, null, 2));
 
     // Generate statistics
     await this.generateFinalStatistics(finalDatabase);
@@ -868,7 +872,8 @@ export class FinalDatabaseBuilder {
     console.log(`  Actions requiring permissions: ${actions.filter(a => a.permissions !== 'none').length}`);
 
     // Save statistics
-    await fs.writeFile('/Users/scrimwiggins/shortcut-genius-main/final-stats.json', JSON.stringify(stats, null, 2));
+    await ensureLocalDataDir();
+    await fs.writeFile(getFinalStatsPath(), JSON.stringify(stats, null, 2));
   }
 
   private async createOptimizedPrompt(database: Record<string, FinalAction>): Promise<void> {
@@ -984,7 +989,7 @@ Generated: ${new Date().toISOString()}
 Total Actions: ${Object.keys(database).length}
 `;
 
-    await fs.writeFile('/Users/scrimwiggins/shortcut-genius-main/ai-action-prompt.md', prompt);
+    await fs.writeFile(getAiActionPromptPath(), prompt);
     console.log('  Optimized AI prompt created');
   }
 

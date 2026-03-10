@@ -3,6 +3,7 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import fs from 'fs/promises';
 import path from 'path';
+import { getActionDatabasePath, getSharesDirectoryPath } from './runtime-config';
 
 const execAsync = promisify(exec);
 
@@ -17,7 +18,7 @@ export class ActionDatabaseBuilder {
   private shortcutsDir: string;
   private outputPath: string;
 
-  constructor(shortcutsDir: string = '/Users/scrimwiggins/shortcut-genius-main/shares', outputPath: string = '/Users/scrimwiggins/shortcut-genius-main/action-database.json') {
+  constructor(shortcutsDir: string = getSharesDirectoryPath(), outputPath: string = getActionDatabasePath()) {
     this.extractor = new ShortcutActionExtractor();
     this.shortcutsDir = shortcutsDir;
     this.outputPath = outputPath;

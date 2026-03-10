@@ -63,11 +63,8 @@ jspm_packages/
 
 # Environment variables
 .env
-providers.json
-.env.development.local
-.env.test.local
-.env.production.local
-.env.local
+.env.*
+!.env.example
 
 # Parcel-bundler cache
 .cache
@@ -113,6 +110,7 @@ public
 # IDE
 .vscode/
 .idea/
+.factory/
 *.swp
 *.swo
 *~
@@ -133,12 +131,13 @@ server/public
 vite.config.ts.*
 *.tgz
 *.tar.gz
+shares/
+test-results/
 
 # Database
 *.sqlite
 *.sqlite3
 *.db
-.local/
 
 # Logs
 logs
@@ -187,3 +186,6 @@ replit_zip_error_log.txt
 
 # Database files
 drizzle/
+
+# Local app/runtime data
+.local/shortcut-genius/

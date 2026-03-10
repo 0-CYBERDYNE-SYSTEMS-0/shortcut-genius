@@ -3,6 +3,7 @@ import { ResearchResult, ResearchFinding, BaseAgentConfig } from './base/agent-t
 import { WebSearchTool } from '../web-search-tool';
 import { AgentLogger } from './base/agent-logger';
 import fs from 'fs/promises';
+import { getFinalActionDatabasePath } from '../runtime-config';
 
 interface IOSResearchInput {
   query: string;
@@ -24,7 +25,7 @@ export class IOSResearchAgent extends Agent<IOSResearchInput, ResearchResult> {
   constructor(config: IOSResearchConfig) {
     super(config);
     this.webSearchTool = config.webSearchTool;
-    this.actionDatabasePath = config.actionDatabasePath || '/Users/scrimwiggins/shortcut-genius-main/final-action-database.json';
+    this.actionDatabasePath = config.actionDatabasePath || getFinalActionDatabasePath();
     this.logger = AgentLogger.getInstance();
   }
 

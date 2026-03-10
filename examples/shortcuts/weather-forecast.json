@@ -1,0 +1,20 @@
+{
+  "name": "Weather Forecast",
+  "description": "Example shortcut that fetches weather text from wttr.in.",
+  "actions": [
+    {
+      "type": "getcurrentlocation",
+      "parameters": {}
+    },
+    {
+      "type": "getcontentsofurl",
+      "parameters": {
+        "WFURLActionURL": "https://wttr.in/~0,0?format=v2"
+      }
+    },
+    {
+      "type": "showresult",
+      "parameters": {}
+    }
+  ]
+}

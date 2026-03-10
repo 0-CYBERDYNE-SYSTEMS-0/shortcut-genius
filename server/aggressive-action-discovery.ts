@@ -2,6 +2,12 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import fs from 'fs/promises';
 import path from 'path';
+import {
+  ensureLocalDataDir,
+  getActionDatabasePath,
+  getComprehensiveActionDatabasePath,
+  getComprehensiveStatsPath,
+} from './runtime-config';
 
 const execAsync = promisify(exec);
 
@@ -381,7 +387,7 @@ export class AggressiveActionDiscovery {
     // Load existing database
     let existingDatabase: any = {};
     try {
-      const data = await fs.readFile('/Users/scrimwiggins/shortcut-genius-main/action-database.json', 'utf8');
+      const data = await fs.readFile(getActionDatabasePath(), 'utf8');
       existingDatabase = JSON.parse(data);
     } catch (error) {
       console.log('  No existing database found');
@@ -419,10 +425,7 @@ export class AggressiveActionDiscovery {
     console.log(`  Total actions: ${Object.keys(enhancedDatabase).length}`);
 
     // Save comprehensive database
-    await fs.writeFile(
-      '/Users/scrimwiggins/shortcut-genius-main/comprehensive-action-database.json',
-      JSON.stringify(enhancedDatabase, null, 2)
-    );
+    await fs.writeFile(getComprehensiveActionDatabasePath(), JSON.stringify(enhancedDatabase, null, 2));
 
     // Generate statistics
     await this.generateStatistics(enhancedDatabase);
@@ -600,7 +603,8 @@ export class AggressiveActionDiscovery {
     });
 
     // Save statistics
-    await fs.writeFile('/Users/scrimwiggins/shortcut-genius-main/comprehensive-stats.json', JSON.stringify(stats, null, 2));
+    await ensureLocalDataDir();
+    await fs.writeFile(getComprehensiveStatsPath(), JSON.stringify(stats, null, 2));
   }
 
   getDiscoveredActions(): Set<string> {

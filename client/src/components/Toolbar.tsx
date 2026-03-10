@@ -45,16 +45,17 @@ export function Toolbar({
   onDownloadSigned
 }: ToolbarProps) {
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [debugBuild, setDebugBuild] = useState(false);
   const { isMobile, isTablet, isDesktop, isLargeDesktop } = useBreakpoint();
 
-  const handleDownloadShortcut = async () => {
+  const handleDownloadShortcut = async (debug = false) => {
     if (!currentShortcut) return;
 
     try {
       const response = await fetch('/api/shortcuts/build', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ shortcut: currentShortcut, sign: true, signMode: 'anyone' })
+        body: JSON.stringify({ shortcut: currentShortcut, sign: true, signMode: 'anyone', debug: debug || debugBuild })
       });
 
       if (!response.ok) {
@@ -66,7 +67,8 @@ export function Toolbar({
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${currentShortcut.name.replace(/[^a-zA-Z0-9]/g, '_')}_signed.shortcut`;
+      const suffix = (debug || debugBuild) ? '_debug' : '_signed';
+      a.download = `${currentShortcut.name.replace(/[^a-zA-Z0-9]/g, '_')}${suffix}.shortcut`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -201,12 +203,20 @@ export function Toolbar({
               </Button>
               <Button
                 variant="secondary"
-                onClick={handleDownloadShortcut}
+                onClick={() => handleDownloadShortcut()}
                 disabled={!currentShortcut}
                 title="Download as .shortcut file"
               >
                 <Download className="mr-2 h-4 w-4" />
                 Download
+              </Button>
+              <Button
+                variant={debugBuild ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setDebugBuild(d => !d)}
+                title="Toggle debug build — inserts Show Result after each action for step-by-step tracing"
+              >
+                {debugBuild ? 'Debug ON' : 'Debug'}
               </Button>
               <Button
                 variant="secondary"

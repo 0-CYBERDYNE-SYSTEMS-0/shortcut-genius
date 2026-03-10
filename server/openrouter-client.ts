@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
 import axios, { AxiosInstance } from 'axios';
+import { getOpenRouterReferer } from './runtime-config';
 
 export interface OpenRouterResponse {
   id: string;
@@ -56,7 +57,7 @@ export class OpenRouterClient {
       apiKey: apiKey,
       baseURL: 'https://openrouter.ai/api/v1',
       defaultHeaders: {
-        'HTTP-Referer': process.env.BASE_URL || 'http://localhost:4321',
+        'HTTP-Referer': getOpenRouterReferer(),
         'X-Title': 'ShortcutGenius'
       },
       timeout: 120000
@@ -68,7 +69,7 @@ export class OpenRouterClient {
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
-        'HTTP-Referer': process.env.BASE_URL || 'http://localhost:4321',
+        'HTTP-Referer': getOpenRouterReferer(),
         'X-Title': 'ShortcutGenius'
       },
       timeout: 120000

@@ -24,8 +24,8 @@ async function buildDatabase() {
     });
 
     console.log('\n✅ Action database built successfully!');
-    console.log('📁 Database saved to: /Users/scrimwiggins/shortcut-genius-main/action-database.json');
-    console.log('📝 AI prompt saved to: /Users/scrimwiggins/shortcut-genius-main/action-database-prompt.txt');
+    console.log(`📁 Database saved to: ${path.join(process.cwd(), 'action-database.json')}`);
+    console.log(`📝 AI prompt saved to: ${path.join(process.cwd(), 'action-database-prompt.txt')}`);
 
   } catch (error) {
     console.error('❌ Error building database:', error);

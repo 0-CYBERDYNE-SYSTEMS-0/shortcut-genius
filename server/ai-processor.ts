@@ -18,6 +18,7 @@ import {
 import { loadProviders, PROVIDER_URLS, type ProviderName } from './providers';
 import { SHORTCUT_ACTIONS } from '../client/src/lib/shortcuts';
 import { AIModel, ReasoningOptions } from '../client/src/lib/types';
+import { getAiActionPromptPath, getFinalActionDatabasePath } from './runtime-config';
 
 interface AIProcessorOptions {
   openai: OpenAI;
@@ -77,12 +78,12 @@ export class AIProcessor {
   private async loadComprehensiveActionDatabase(): Promise<void> {
     try {
       // Load final comprehensive database
-      const databasePath = '/Users/scrimwiggins/shortcut-genius-main/final-action-database.json';
+      const databasePath = getFinalActionDatabasePath();
       const data = await fs.readFile(databasePath, 'utf8');
       this.comprehensiveActionDatabase = JSON.parse(data);
 
       // Load optimized AI prompt
-      const promptPath = '/Users/scrimwiggins/shortcut-genius-main/ai-action-prompt.md';
+      const promptPath = getAiActionPromptPath();
       const promptData = await fs.readFile(promptPath, 'utf8');
       this.aiPrompt = promptData;
 

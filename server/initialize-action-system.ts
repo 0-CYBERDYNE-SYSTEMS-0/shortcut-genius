@@ -1,6 +1,16 @@
 import { AutomatedActionDiscovery } from './automated-action-discovery';
 import { FinalDatabaseBuilder } from './final-database-builder';
 import fs from 'fs/promises';
+import {
+  ensureLocalDataDir,
+  getActionDatabasePath,
+  getActionSystemIntegrationReportPath,
+  getAiActionPromptPath,
+  getComprehensiveActionDatabasePath,
+  getFinalActionDatabasePath,
+  getFinalStatsPath,
+  getLastUpdatePath,
+} from './runtime-config';
 
 export class ActionSystemInitializer {
   private discovery: AutomatedActionDiscovery;
@@ -46,20 +56,20 @@ export class ActionSystemInitializer {
   private async checkIfRebuildNeeded(): Promise<boolean> {
     try {
       // Check if final database exists
-      await fs.access('/Users/scrimwiggins/shortcut-genius-main/final-action-database.json');
+      await fs.access(getFinalActionDatabasePath());
 
       // Check if comprehensive database exists
-      await fs.access('/Users/scrimwiggins/shortcut-genius-main/comprehensive-action-database.json');
+      await fs.access(getComprehensiveActionDatabasePath());
 
       // Check if original database exists
-      await fs.access('/Users/scrimwiggins/shortcut-genius-main/action-database.json');
+      await fs.access(getActionDatabasePath());
 
       // Check if AI prompt exists
-      await fs.access('/Users/scrimwiggins/shortcut-genius-main/ai-action-prompt.md');
+      await fs.access(getAiActionPromptPath());
 
       // Load statistics
-      const finalStats = JSON.parse(await fs.readFile('/Users/scrimwiggins/shortcut-genius-main/final-stats.json', 'utf8'));
-      const originalStats = JSON.parse(await fs.readFile('/Users/scrimwiggins/shortcut-genius-main/action-database.json', 'utf8'));
+      const finalStats = JSON.parse(await fs.readFile(getFinalStatsPath(), 'utf8'));
+      const originalStats = JSON.parse(await fs.readFile(getActionDatabasePath(), 'utf8'));
 
       const originalCount = Object.keys(originalStats).length;
       const finalCount = finalStats.totalActions;
@@ -78,7 +88,7 @@ export class ActionSystemInitializer {
 
   private async generateIntegrationReport(): Promise<void> {
     try {
-      const finalStats = JSON.parse(await fs.readFile('/Users/scrimwiggins/shortcut-genius-main/final-stats.json', 'utf8'));
+      const finalStats = JSON.parse(await fs.readFile(getFinalStatsPath(), 'utf8'));
       const updateStatus = await this.discovery.getUpdateStatus();
 
       const report = {
@@ -114,18 +124,16 @@ export class ActionSystemInitializer {
           }
         },
         files: {
-          finalDatabase: '/Users/scrimwiggins/shortcut-genius-main/final-action-database.json',
-          comprehensiveDatabase: '/Users/scrimwiggins/shortcut-genius-main/comprehensive-action-database.json',
-          aiPrompt: '/Users/scrimwiggins/shortcut-genius-main/ai-action-prompt.md',
-          automatedDiscovery: '/Users/scrimwiggins/shortcut-genius-main/last-update.json',
-          statistics: '/Users/scrimwiggins/shortcut-genius-main/final-stats.json'
+          finalDatabase: getFinalActionDatabasePath(),
+          comprehensiveDatabase: getComprehensiveActionDatabasePath(),
+          aiPrompt: getAiActionPromptPath(),
+          automatedDiscovery: getLastUpdatePath(),
+          statistics: getFinalStatsPath()
         }
       };
 
-      await fs.writeFile(
-        '/Users/scrimwiggins/shortcut-genius-main/action-system-integration-report.json',
-        JSON.stringify(report, null, 2)
-      );
+      await ensureLocalDataDir();
+      await fs.writeFile(getActionSystemIntegrationReportPath(), JSON.stringify(report, null, 2));
 
       console.log('\n📋 Integration Summary:');
       console.log(`  Total Actions: ${report.system.totalActions} (${report.performance.improvementFactor}x improvement)`);
@@ -133,7 +141,7 @@ export class ActionSystemInitializer {
       console.log(`  Categories: ${Object.keys(report.system.categories).length}`);
       console.log(`  Actions with Parameters: ${report.system.actionsWithParameters}`);
       console.log(`  Automated Monitoring: ${report.automatedDiscovery.needsUpdate ? 'Update Available' : 'Current'}`);
-      console.log(`  Integration Report: /Users/scrimwiggins/shortcut-genius-main/action-system-integration-report.json`);
+      console.log(`  Integration Report: ${getActionSystemIntegrationReportPath()}`);
 
     } catch (error) {
       console.log('Could not generate integration report:', error);
@@ -151,9 +159,9 @@ export class ActionSystemInitializer {
 
   async getSystemStatus(): Promise<any> {
     try {
-      const finalStats = JSON.parse(await fs.readFile('/Users/scrimwiggins/shortcut-genius-main/final-stats.json', 'utf8'));
+      const finalStats = JSON.parse(await fs.readFile(getFinalStatsPath(), 'utf8'));
       const updateStatus = await this.discovery.getUpdateStatus();
-      const integrationReport = JSON.parse(await fs.readFile('/Users/scrimwiggins/shortcut-genius-main/action-system-integration-report.json', 'utf8'));
+      const integrationReport = JSON.parse(await fs.readFile(getActionSystemIntegrationReportPath(), 'utf8'));
 
       return {
         status: 'operational',

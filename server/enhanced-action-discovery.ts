@@ -2,6 +2,12 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import fs from 'fs/promises';
 import path from 'path';
+import {
+  ensureLocalDataDir,
+  getActionDatabasePath,
+  getDiscoveryStatsPath,
+  getEnhancedActionDatabasePath,
+} from './runtime-config';
 
 const execAsync = promisify(exec);
 
@@ -45,7 +51,7 @@ export class EnhancedActionDiscovery {
 
   private async loadExistingDatabase(): Promise<void> {
     try {
-      const data = await fs.readFile('/Users/scrimwiggins/shortcut-genius-main/action-database.json', 'utf8');
+      const data = await fs.readFile(getActionDatabasePath(), 'utf8');
       const existingDatabase = JSON.parse(data);
 
       // Migrate existing actions to new format
@@ -358,7 +364,7 @@ export class EnhancedActionDiscovery {
   }
 
   private async saveDatabase(): Promise<void> {
-    const outputPath = '/Users/scrimwiggins/shortcut-genius-main/enhanced-action-database.json';
+    const outputPath = getEnhancedActionDatabasePath();
     await fs.writeFile(outputPath, JSON.stringify(this.actionDatabase, null, 2));
     console.log(`  Enhanced database saved to: ${outputPath}`);
   }
@@ -394,7 +400,8 @@ export class EnhancedActionDiscovery {
     });
 
     // Save statistics
-    await fs.writeFile('/Users/scrimwiggins/shortcut-genius-main/discovery-stats.json', JSON.stringify(stats, null, 2));
+    await ensureLocalDataDir();
+    await fs.writeFile(getDiscoveryStatsPath(), JSON.stringify(stats, null, 2));
   }
 
   getDiscoveredActions(): Map<string, DiscoveredAction> {
