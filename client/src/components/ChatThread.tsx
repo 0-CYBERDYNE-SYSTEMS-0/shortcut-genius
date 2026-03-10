@@ -55,6 +55,12 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const [agentUpdates, setAgentUpdates] = useState<string[]>([]);
+  const [agentProgress, setAgentProgress] = useState<Array<{
+    type: 'info' | 'progress' | 'warning' | 'error' | 'success';
+    message: string;
+    phase?: string;
+    progress?: number;
+  }>>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const isMountedRef = useRef(true);
@@ -296,6 +302,7 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
     setIsStreaming(true);
     setStreamingPhase('Processing your request...');
     setAgentUpdates(['Request queued']);
+    setAgentProgress([]);
     setError(null);
 
     try {
@@ -323,6 +330,36 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
                   return prev;
                 }
                 return [...prev, message].slice(-8);
+              });
+            }
+
+            // Handle structured agent updates
+            if (event.type === 'update' && event.data) {
+              const update = event.data as {
+                type: 'info' | 'progress' | 'warning' | 'error' | 'success';
+                message: string;
+                phase?: string;
+                progress?: number;
+              };
+
+              setStreamingPhase(update.message);
+              setAgentUpdates(prev => [...prev, update.message].slice(-8));
+              
+              setAgentProgress(prev => {
+                // Add new update or update existing
+                const existingIndex = prev.findIndex(u => 
+                  u.message === update.message && u.phase === update.phase
+                );
+                
+                if (existingIndex >= 0) {
+                  // Update existing
+                  const updated = [...prev];
+                  updated[existingIndex] = update;
+                  return updated.slice(-5); // Keep last 5 updates
+                } else {
+                  // Add new
+                  return [...prev, update].slice(-5);
+                }
               });
             }
           }
