@@ -94,7 +94,7 @@ export const PROVIDER_DEFAULT_MODELS: Record<ProviderName, string> = {
 
 // --- Codex OAuth PKCE ---
 
-const CODEX_CLIENT_ID = 'app_EMoamEEZ73f0CkXaXp7hrann';
+const CODEX_CLIENT_ID = process.env.OPENAI_CODEX_CLIENT_ID || 'app_EMoamEEZ73f0CkXaXp7hrann';
 const CODEX_AUTH_URL = 'https://auth.openai.com/oauth/authorize';
 const CODEX_TOKEN_URL = 'https://auth.openai.com/oauth/token';
 
