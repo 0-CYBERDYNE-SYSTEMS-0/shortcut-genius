@@ -508,8 +508,10 @@ IMPORTANT:
     }
 
     const baseURL = PROVIDER_URLS[providerName];
+    console.log(`🌐 Base URL: ${baseURL}`);
     // Strip the "prefix/" from the model ID to get the raw model name for the API
     const rawModel = model.startsWith(prefix) ? model.slice(prefix.length) : model;
+    console.log(`📝 Raw model for API: ${rawModel}`);
 
     const client = new OpenAI({ apiKey, baseURL, timeout: 60000 });
 
@@ -517,6 +519,8 @@ IMPORTANT:
       { role: 'system', content: this.buildSystemPrompt(systemPrompt, type, useComprehensiveActions) },
       { role: 'user', content: this.buildUserPrompt(prompt, type, useComprehensiveActions) },
     ];
+
+    console.log(`💬 Sending request with ${messages.length} messages, max_tokens: 8192`);
 
     const response = await client.chat.completions.create({
       model: rawModel,
@@ -528,6 +532,9 @@ IMPORTANT:
     const msg = response.choices[0].message as any;
     // GLM-4.7 (and other reasoning models) may return content in reasoning_content when content is empty
     const content = msg.content || msg.reasoning_content || '';
+
+    console.log(`📄 Response length: ${content.length} chars`);
+
     return {
       content,
       usage: response.usage ? {
