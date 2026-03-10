@@ -241,10 +241,27 @@ class ModelRouter {
     const taskProfile = this.analyzeTask(prompt, type);
     const availableModels = Object.keys(MODEL_CAPABILITIES);
 
+    // Import CUSTOM_PROVIDER_PREFIXES from models.ts to identify custom providers
+    const { CUSTOM_PROVIDER_PREFIXES } = require('../client/src/lib/models');
+
     // If user selected a model, check if we should honor their choice
     if (userSelectedModel) {
-      // Always honor OpenRouter model selections
-      if (userSelectedModel.includes('/') || userSelectedModel.startsWith('openrouter/')) {
+      // Check if it's a custom provider (glm, kimi, minimax, opencode, codex)
+      const isCustomProvider = CUSTOM_PROVIDER_PREFIXES.some(prefix =>
+        userSelectedModel.startsWith(prefix)
+      );
+
+      if (isCustomProvider) {
+        return {
+          model: userSelectedModel,
+          confidence: 1.0,
+          reasoning: `User-selected custom provider model: ${userSelectedModel}`,
+          wasOverridden: true
+        };
+      }
+
+      // Honor OpenRouter model selections (any model with / that's not a custom provider)
+      if (userSelectedModel.includes('/')) {
         return {
           model: userSelectedModel,
           confidence: 1.0,
