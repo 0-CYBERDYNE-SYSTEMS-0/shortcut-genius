@@ -2,6 +2,8 @@
 
 ShortcutGenius is a React + Express workspace for creating, validating, analyzing, and sharing iOS Shortcuts with AI-assisted workflows.
 
+> ⚠️ **IMPORTANT**: This tool is designed for **local development only**. It is not intended for public deployment without implementing proper security measures (authentication, rate limiting, input validation). See [SECURITY.md](./SECURITY.md) for details.
+
 ## Status
 
 - Public OSS release candidate
