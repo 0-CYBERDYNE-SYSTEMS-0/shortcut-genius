@@ -62,6 +62,7 @@ import {
   PROVIDER_URLS,
   type ProviderName,
 } from './providers';
+import { getShortcutTester, type TestRequest, type TestResult } from './shortcut-tester';
 import { getAiActionPromptPath, getBaseUrl } from './runtime-config';
 import { ConversationalShortcutAgent } from './conversational-agent';
 import { db } from '../db';
@@ -1641,6 +1642,85 @@ export async function registerRoutes(app: Express) {
       res.send('<html><body><p>Codex connected! You can close this window.</p><script>window.close()</script></body></html>');
     } else {
       res.send(`<html><body><p>Error: ${result.error}</p><script>window.close()</script></body></html>`);
+    }
+  });
+
+  // Shortcut Testing API Endpoints
+
+  // GET /api/shortcuts/test/capability - Check testing availability
+  app.get('/api/shortcuts/test/capability', async (req, res) => {
+    try {
+      const tester = await getShortcutTester();
+      const status = await tester.getCapabilityStatus();
+      res.json(status);
+    } catch (error) {
+      console.error('Capability check error:', error);
+      res.status(500).json({
+        available: false,
+        reason: error instanceof Error ? error.message : 'Unknown error',
+        platform: process.platform
+      });
+    }
+  });
+
+  // POST /api/shortcuts/test/runtime - Run a shortcut test
+  app.post('/api/shortcuts/test/runtime', async (req, res) => {
+    try {
+      const testRequest: TestRequest = {
+        shortcut: req.body.shortcut,
+        input: req.body.input,
+        timeout: req.body.timeout || 30000,
+        skipCleanup: req.body.skipCleanup || false
+      };
+
+      // Validate request
+      if (!testRequest.shortcut) {
+        return res.status(400).json({
+          success: false,
+          error: 'Shortcut is required'
+        });
+      }
+
+      if (!testRequest.shortcut.actions || !Array.isArray(testRequest.shortcut.actions)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Shortcut must have an actions array'
+        });
+      }
+
+      // Run test
+      const tester = await getShortcutTester();
+      const result = await tester.test(testRequest);
+
+      res.json(result);
+    } catch (error) {
+      console.error('Runtime test error:', error);
+      res.status(500).json({
+        success: false,
+        executionTime: 0,
+        actionsExecuted: 0,
+        error: {
+          message: `Test failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          stage: 'run'
+        },
+        warnings: [],
+        validationIssues: []
+      });
+    }
+  });
+
+  // POST /api/shortcuts/test/cleanup - Clean up test files
+  app.post('/api/shortcuts/test/cleanup', async (req, res) => {
+    try {
+      const tester = await getShortcutTester();
+      await tester.cleanup();
+      res.json({ success: true, message: 'Test files cleaned up' });
+    } catch (error) {
+      console.error('Cleanup error:', error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   });
 }

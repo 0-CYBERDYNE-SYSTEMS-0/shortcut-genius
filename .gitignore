@@ -146,6 +146,7 @@ logs
 # Runtime directories
 tmp/
 temp/
+temp_tests/
 .tmp/
 
 # Python (if using Python tools)

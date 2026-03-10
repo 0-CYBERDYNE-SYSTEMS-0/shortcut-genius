@@ -11,6 +11,7 @@ import { Toolbar } from '@/components/Toolbar';
 import { AnalysisPane } from '@/components/AnalysisPane';
 import { ShortcutsGallery } from '@/components/ShortcutsGallery';
 import { ReasoningControls } from '@/components/ReasoningControls';
+import { TestRunner } from '@/components/TestRunner';
 import { ProviderSettings } from '@/components/ProviderSettings';
 import { FileUpload } from '@/components/FileUpload';
 import { ModelSelector } from '@/components/ModelSelector';
@@ -42,6 +43,7 @@ const DEFAULT_SHORTCUT: Shortcut = {
 };
 
 type WorkspaceTab = 'editor' | 'chat' | 'gallery';
+type MobileEditorTab = 'editor' | 'preview' | 'analysis' | 'test';
 
 type SidePanelTab = 'assistant' | 'analysis';
 
@@ -53,7 +55,7 @@ export function Editor() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [activeTab, setActiveTab] = useState<WorkspaceTab>('editor');
-  const [mobileActiveTab, setMobileActiveTab] = useState('editor');
+  const [mobileActiveTab, setMobileActiveTab] = useState<MobileEditorTab>('editor');
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [sidePanelTab, setSidePanelTab] = useState<SidePanelTab>('assistant');
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(true);
@@ -262,10 +264,11 @@ export function Editor() {
 
           <TabsContent value="editor" className="flex-1 mt-0">
             <Tabs value={mobileActiveTab} onValueChange={setMobileActiveTab} className="flex-1 flex flex-col">
-              <TabsList className={`grid w-full h-11 mx-3 mt-3 gap-1 ${showAnalysis ? 'grid-cols-3' : 'grid-cols-2'}`}>
+              <TabsList className={`grid w-full h-11 mx-3 mt-3 gap-1 ${showAnalysis ? 'grid-cols-4' : 'grid-cols-3'}`}>
                 <TabsTrigger value="editor" className="text-xs">Edit</TabsTrigger>
                 <TabsTrigger value="preview" className="text-xs">Preview</TabsTrigger>
                 {showAnalysis && <TabsTrigger value="analysis" className="text-xs">Analysis</TabsTrigger>}
+                <TabsTrigger value="test" className="text-xs">Test</TabsTrigger>
               </TabsList>
 
               <TabsContent value="editor" className="flex-1 mt-0">
@@ -305,6 +308,12 @@ export function Editor() {
                   </div>
                 </TabsContent>
               )}
+
+              <TabsContent value="test" className="flex-1 mt-0">
+                <div className="h-full px-3 pt-3">
+                  <TestRunner shortcut={shortcut} />
+                </div>
+              </TabsContent>
             </Tabs>
           </TabsContent>
 
