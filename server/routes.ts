@@ -175,7 +175,11 @@ async function canUseConversationStore(): Promise<boolean> {
     await db.select({ id: conversations.id }).from(conversations).limit(1);
     return true;
   } catch (error) {
-    console.warn('⚠️ Conversation store not available:', error);
+    // Suppress connection errors - they're expected if DB isn't running
+    if (error instanceof AggregateError && error.code === 'ECONNREFUSED') {
+      return false;
+    }
+    console.warn('⚠️ Conversation store not available:', (error as Error).message);
     return false;
   }
 }

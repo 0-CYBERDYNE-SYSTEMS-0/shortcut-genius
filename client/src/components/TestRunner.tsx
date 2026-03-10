@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Play, RefreshCw, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
+import { Loader2, Play, RefreshCw, AlertTriangle, CheckCircle2, XCircle, Activity } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 interface TestResult {
   success: boolean;
@@ -47,6 +49,9 @@ export function TestRunner({ shortcut, onResult }: TestRunnerProps) {
   const [result, setResult] = useState<TestResult | null>(null);
   const [capability, setCapability] = useState<TestCapability | null>(null);
   const [checkingCapability, setCheckingCapability] = useState(false);
+  const [testProgress, setTestProgress] = useState(0);
+  const [testStage, setTestStage] = useState<string>('');
+  const { toast } = useToast();
 
   const checkCapability = async () => {
     setCheckingCapability(true);
@@ -74,24 +79,70 @@ export function TestRunner({ shortcut, onResult }: TestRunnerProps) {
     // Check capability first
     const cap = await checkCapability();
     if (!cap?.available) {
+      toast({
+        title: 'Testing Not Available',
+        description: cap.reason || 'Check macOS permissions',
+        variant: 'destructive'
+      });
       return;
     }
 
     setIsRunning(true);
     setResult(null);
+    setTestProgress(0);
+    setTestStage('Initializing...');
+
+    // Toast notification for start
+    toast({
+      title: 'Starting Test',
+      description: `Testing ${shortcut.actions?.length || 0} actions`,
+    });
 
     try {
+      setTestStage('Validating shortcut...');
+      setTestProgress(20);
+      await new Promise(r => setTimeout(r, 300)); // Visual feedback
+
+      setTestStage('Building shortcut file...');
+      setTestProgress(40);
+      await new Promise(r => setTimeout(r, 300));
+
+      setTestStage('Importing to Shortcuts...');
+      setTestProgress(60);
+      
       const response = await fetch('/api/shortcuts/test/runtime', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ shortcut })
       });
 
+      setTestStage('Executing shortcut...');
+      setTestProgress(80);
+
       const data: TestResult = await response.json();
+      
+      setTestStage('Cleaning up...');
+      setTestProgress(100);
+
       setResult(data);
       onResult?.(data);
+
+      // Toast notification for result
+      if (data.success) {
+        toast({
+          title: 'Test Passed ✅',
+          description: `Executed ${data.actionsExecuted} actions in ${data.executionTime}ms`,
+        });
+      } else {
+        toast({
+          title: 'Test Failed ❌',
+          description: data.error?.message || 'Unknown error',
+          variant: 'destructive'
+        });
+      }
     } catch (error) {
       console.error('Test failed:', error);
+      
       setResult({
         success: false,
         executionTime: 0,
@@ -103,8 +154,19 @@ export function TestRunner({ shortcut, onResult }: TestRunnerProps) {
         warnings: [],
         validationIssues: []
       });
+
+      toast({
+        title: 'Test Error',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive'
+      });
     } finally {
       setIsRunning(false);
+      // Reset progress after delay
+      setTimeout(() => {
+        setTestProgress(0);
+        setTestStage('');
+      }, 2000);
     }
   };
 
@@ -153,7 +215,7 @@ export function TestRunner({ shortcut, onResult }: TestRunnerProps) {
             {isRunning ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Running Test...
+                {testStage || 'Running Test...'}
               </>
             ) : (
               <>
@@ -173,8 +235,20 @@ export function TestRunner({ shortcut, onResult }: TestRunnerProps) {
           </Button>
         </div>
 
-        {shortcut && (
-          <div className="mt-3 text-sm text-muted-foreground">
+        {/* Progress Bar */}
+        {isRunning && testProgress > 0 && (
+          <div className="mt-4 space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">{testStage}</span>
+              <span className="text-muted-foreground">{testProgress}%</span>
+            </div>
+            <Progress value={testProgress} className="h-2" />
+          </div>
+        )}
+
+        {shortcut && !isRunning && (
+          <div className="mt-3 text-sm text-muted-foreground flex items-center gap-2">
+            <Activity className="h-4 w-4" />
             Ready to test {shortcut.actions?.length || 0} actions
           </div>
         )}
