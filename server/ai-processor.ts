@@ -491,6 +491,8 @@ IMPORTANT:
   private async processCustomProvider(request: ProcessRequest): Promise<ProcessResult> {
     const { model, prompt, type, systemPrompt, useComprehensiveActions } = request;
 
+    console.log(`🔧 Processing custom provider model: ${model}`);
+
     // Determine provider name from prefix (e.g. "glm/glm-4" → "glm")
     const prefix = CUSTOM_PROVIDER_PREFIXES.find(p => model.startsWith(p));
     if (!prefix) throw new Error(`Unknown custom provider for model: ${model}`);
