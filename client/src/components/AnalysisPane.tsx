@@ -15,6 +15,28 @@ interface AnalysisPaneProps {
 }
 
 export function AnalysisPane({ analysis, className }: AnalysisPaneProps) {
+  // Handle undefined or empty analysis
+  if (!analysis || Object.keys(analysis).length === 0) {
+    return (
+      <Card className={`h-full ${className || ''}`}>
+        <CardHeader>
+          <CardTitle>Shortcut Analysis</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
+            <div className="text-center space-y-2">
+              <div className="text-4xl mb-2">📊</div>
+              <p>No analysis available</p>
+              <p className="text-sm">
+                Add actions to your shortcut or click "Analyze" to generate an analysis.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card className={`h-full ${className || ''}`}>
       <CardHeader>

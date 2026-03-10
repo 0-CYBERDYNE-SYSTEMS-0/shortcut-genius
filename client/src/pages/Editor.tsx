@@ -56,6 +56,7 @@ export function Editor() {
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [activeTab, setActiveTab] = useState<WorkspaceTab>('editor');
   const [mobileActiveTab, setMobileActiveTab] = useState<MobileEditorTab>('editor');
+  const [chatSessionKey] = useState(() => `editor-session-${Date.now()}`);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [sidePanelTab, setSidePanelTab] = useState<SidePanelTab>('assistant');
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(true);
@@ -327,7 +328,7 @@ export function Editor() {
                 currentShortcut={shortcut}
                 onShortcutUpdate={handleChatShortcutUpdate}
                 model={model}
-                freshSession
+                sessionKey={chatSessionKey}
                 autoFocus={false}
               />
             </div>

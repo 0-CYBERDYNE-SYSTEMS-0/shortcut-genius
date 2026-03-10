@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { CheckCircle, Copy, ArrowRight } from 'lucide-react';
+import { CheckCircle, Copy, ArrowRight, Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface ChatMessageProps {
@@ -12,13 +12,15 @@ interface ChatMessageProps {
   isStreaming?: boolean;
   isLast?: boolean;
   className?: string;
+  onApplyToEditor?: (shortcut: any) => void;
 }
 
 export const ChatMessage: React.FC<ChatMessageProps> = ({
   message,
   isStreaming = false,
   isLast = false,
-  className = ""
+  className = "",
+  onApplyToEditor
 }) => {
   const [copied, setCopied] = React.useState(false);
   const phaseLabel = typeof message.metadata?.phase === 'string'
@@ -126,8 +128,20 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
                 onClick={handleApplyToEditor}
                 className="text-xs"
               >
-                <ArrowRight className="h-3 w-3" />
+                <ArrowRight className="h-3 w-3 mr-1" />
                 Apply to Editor
+              </Button>
+            )}
+
+            {message.metadata?.shortcut && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDownloadShortcut}
+                className="text-xs"
+              >
+                <Download className="h-3 w-3 mr-1" />
+                Download
               </Button>
             )}
 

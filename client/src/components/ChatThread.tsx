@@ -33,7 +33,7 @@ interface ChatThreadProps {
   userId?: number;
   autoFocus?: boolean;
   model?: string;
-  freshSession?: boolean;
+  sessionKey?: string; // Unique key to preserve session across remounts
 }
 
 export const ChatThread: React.FC<ChatThreadProps> = ({
@@ -43,7 +43,7 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
   userId = 1,
   autoFocus = true,
   model = 'gpt-4o',
-  freshSession = false
+  sessionKey
 }) => {
   const [messages, setMessages] = useState<IChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -58,6 +58,14 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const isMountedRef = useRef(true);
+
+  // Save conversation ID to sessionStorage when it changes
+  const setActiveConversationIdWithSave = useCallback((id: number | undefined) => {
+    setActiveConversationId(id);
+    if (sessionKey && id) {
+      sessionStorage.setItem(`chat-session-${sessionKey}`, String(id));
+    }
+  }, [sessionKey]);
 
   const normalizeMessage = (message: IChatMessage): IChatMessage => {
     if (message.timestamp instanceof Date) {
@@ -81,7 +89,7 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
   // Initialize chat system
   useEffect(() => {
     initializeChat();
-  }, [userId, freshSession]);
+  }, [userId, sessionKey]);
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
@@ -96,17 +104,27 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
       const conversationList = await chatAPI.getConversations(userId);
       setConversations(conversationList);
 
-      if (freshSession) {
-        const newConversationId = await chatAPI.createConversation('New Chat', userId);
-        setActiveConversationId(newConversationId);
-        setMessages([]);
+      // Check if we have a saved conversation ID for this session
+      const savedConversationId = sessionKey 
+        ? parseInt(sessionStorage.getItem(`chat-session-${sessionKey}`) || '0')
+        : 0;
 
-        const updatedList = await chatAPI.getConversations(userId);
-        setConversations(updatedList);
-      } else if (conversationList.length > 0 && !activeConversationId) {
+      // Try to load saved conversation
+      let loadedConversation = false;
+      if (savedConversationId > 0) {
+        const exists = conversationList.find(c => c.id === savedConversationId);
+        if (exists) {
+          await loadConversation(savedConversationId);
+          setActiveConversationIdWithSave(savedConversationId);
+          loadedConversation = true;
+        }
+      }
+
+      // If no saved conversation or it doesn't exist, load most recent
+      if (!loadedConversation && conversationList.length > 0 && !activeConversationId) {
         const mostRecent = conversationList[0];
         await loadConversation(mostRecent.id);
-        setActiveConversationId(mostRecent.id);
+        setActiveConversationIdWithSave(mostRecent.id);
       }
 
       // Only set initialized after ALL async operations complete
@@ -120,8 +138,9 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
         const newConversationId = await chatAPI.createConversation('New Chat', userId);
 
         // Batch state updates
-        setActiveConversationId(newConversationId);
+        setActiveConversationIdWithSave(newConversationId);
         setMessages([]);
+        
         setIsInitialized(true);
       } catch (createError: any) {
         console.error('Failed to create fallback conversation:', createError);
@@ -151,7 +170,7 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
 
     try {
       const conversationId = await chatAPI.createConversation('New Chat', userId);
-      setActiveConversationId(conversationId);
+      setActiveConversationIdWithSave(conversationId);
       setMessages([]);
 
       // Refresh conversation list
@@ -166,7 +185,7 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [userId]);
+  }, [userId, sessionKey]);
 
   const clearConversation = async () => {
     if (!activeConversationId) return;
@@ -190,7 +209,7 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
       await chatAPI.deleteConversation(conversationId);
 
       if (conversationId === activeConversationId) {
-        setActiveConversationId(undefined);
+        setActiveConversationIdWithSave(undefined);
         setMessages([]);
       }
 
@@ -201,7 +220,7 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
       // Auto-select a different conversation if available
       if (conversationList.length > 0 && !activeConversationId) {
         const mostRecent = conversationList[0];
-        setActiveConversationId(mostRecent.id);
+        setActiveConversationIdWithSave(mostRecent.id);
         await loadConversation(mostRecent.id);
       }
     } catch (error: any) {
@@ -527,7 +546,7 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
                         activeConversationId === conv.id && "bg-muted"
                       )}
                       onClick={() => {
-                        setActiveConversationId(conv.id);
+                        setActiveConversationIdWithSave(conv.id);
                         loadConversation(conv.id);
                         setShowConversationHistory(false);
                       }}
@@ -604,6 +623,7 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
                 message={message}
                 isStreaming={isStreaming && index === messages.length - 1}
                 isLast={index === messages.length - 1}
+                onApplyToEditor={handleApplyShortcut}
                 className={cn(
                   "animate-in fade-in-0 slide-in-from-bottom-4 duration-300"
                 )}

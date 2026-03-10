@@ -94,7 +94,17 @@ export function Toolbar({
                 disabled={isProcessing}
                 className="whitespace-nowrap"
               >
-                {isProcessing ? '...' : 'Analyze'}
+                {isProcessing ? (
+                  <>
+                    <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                    Analyzing...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="mr-1 h-3 w-3" />
+                    Analyze
+                  </>
+                )}
               </Button>
             </div>
             <div className="flex items-center gap-1">
