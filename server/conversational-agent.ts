@@ -50,6 +50,14 @@ export interface ProcessResult {
   analysis?: any;
   nextActions?: string[];
   requiresClarification?: boolean;
+  updates?: AgentUpdate[];
+}
+
+export interface AgentUpdate {
+  type: 'info' | 'progress' | 'warning' | 'error' | 'success';
+  message: string;
+  progress?: number;
+  phase?: string;
 }
 
 export class ConversationalShortcutAgent {
@@ -57,10 +65,19 @@ export class ConversationalShortcutAgent {
   private webSearchTool: WebSearchTool;
   private maxContextLength = 4000; // tokens
   private maxMessages = 20; // messages to keep in context
+  private currentUpdates: AgentUpdate[] = [];
 
   constructor(aiProcessor: AIProcessor, webSearchTool: WebSearchTool) {
     this.aiProcessor = aiProcessor;
     this.webSearchTool = webSearchTool;
+  }
+
+  private addUpdate(update: AgentUpdate) {
+    this.currentUpdates.push(update);
+  }
+
+  private clearUpdates() {
+    this.currentUpdates = [];
   }
 
   public checkApiKeyAvailability(model: AIModel): { available: boolean; error?: string } {
@@ -68,6 +85,8 @@ export class ConversationalShortcutAgent {
   }
 
   async processRequest(request: ProcessRequest): Promise<ProcessResult> {
+    this.clearUpdates();
+    
     const contextMessages = request.context?.messages as Array<{
       role: 'user' | 'assistant' | 'system';
       content: string;
@@ -94,6 +113,12 @@ export class ConversationalShortcutAgent {
     if (persistMessages) {
       await this.addMessage(request.conversationId, 'user', request.content);
     }
+
+    this.addUpdate({
+      type: 'info',
+      message: 'Analyzing request...',
+      phase: 'initialization'
+    });
 
     // Determine processing phase
     const phase = await this.determinePhase(request, conversationState);
@@ -325,7 +350,20 @@ export class ConversationalShortcutAgent {
     // Build enhanced system prompt with conversation context
     const systemPrompt = this.buildSystemPrompt(state);
 
+    this.addUpdate({
+      type: 'info',
+      message: `Generating shortcut using ${model.split('/').pop()}...`,
+      phase: 'implementation'
+    });
+
     try {
+      this.addUpdate({
+        type: 'progress',
+        message: 'Processing with AI...',
+        phase: 'implementation',
+        progress: 30
+      });
+
       const result = await this.aiProcessor.process({
         model,
         prompt: request.content,
@@ -336,6 +374,13 @@ export class ConversationalShortcutAgent {
           verbosity: 'medium'
         },
         useComprehensiveActions: true
+      });
+
+      this.addUpdate({
+        type: 'progress',
+        message: 'Validating generated shortcut...',
+        phase: 'implementation',
+        progress: 70
       });
 
       // Validate and parse the generated shortcut
