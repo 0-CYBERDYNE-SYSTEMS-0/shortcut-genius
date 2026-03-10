@@ -1,5 +1,5 @@
 import plist from 'plist';
-import crypto from 'crypto';
+import * as crypto from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 import { Shortcut, ShortcutAction } from '../client/src/lib/shortcuts';
 

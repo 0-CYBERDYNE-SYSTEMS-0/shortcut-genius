@@ -1,24 +1,24 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import path from 'path';
-import crypto from 'crypto';
+import * as path from 'path';
+import * as crypto from 'crypto';
 
 const execAsync = promisify(exec);
 
-interface ImportResult {
+export interface ImportResult {
   success: boolean;
   shortcutName?: string;
   error?: string;
 }
 
-interface RunResult {
+export interface RunResult {
   success: boolean;
   output?: string;
   error?: string;
   executionTime?: number;
 }
 
-interface DeleteResult {
+export interface DeleteResult {
   success: boolean;
   error?: string;
 }
