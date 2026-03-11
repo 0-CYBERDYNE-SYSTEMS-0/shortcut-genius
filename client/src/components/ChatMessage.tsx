@@ -13,6 +13,8 @@ interface ChatMessageProps {
   isLast?: boolean;
   className?: string;
   onApplyToEditor?: (shortcut: any) => void;
+  onOpenInspector?: (panel: 'insights' | 'test' | 'model') => void;
+  onDownloadShortcut?: (shortcut: any) => void;
 }
 
 export const ChatMessage: React.FC<ChatMessageProps> = ({
@@ -20,7 +22,9 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
   isStreaming = false,
   isLast = false,
   className = "",
-  onApplyToEditor
+  onApplyToEditor,
+  onOpenInspector,
+  onDownloadShortcut
 }) => {
   const [copied, setCopied] = React.useState(false);
   const phaseLabel = typeof message.metadata?.phase === 'string'
@@ -37,8 +41,13 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
 
   const handleApplyToEditor = () => {
     if (message.metadata?.shortcut) {
-      // This will be handled by the parent component
-      console.log('Apply shortcut to editor:', message.metadata.shortcut);
+      onApplyToEditor?.(message.metadata.shortcut);
+    }
+  };
+
+  const handleDownloadShortcut = () => {
+    if (message.metadata?.shortcut) {
+      onDownloadShortcut?.(message.metadata.shortcut);
     }
   };
 
@@ -121,7 +130,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
               {copied ? 'Copied!' : 'Copy'}
             </Button>
 
-            {message.metadata?.shortcut && (
+            {message.metadata?.shortcut && onApplyToEditor && (
               <Button
                 variant="default"
                 size="sm"
@@ -133,7 +142,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
               </Button>
             )}
 
-            {message.metadata?.shortcut && (
+            {message.metadata?.shortcut && onDownloadShortcut && (
               <Button
                 variant="outline"
                 size="sm"
@@ -145,13 +154,14 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
               </Button>
             )}
 
-            {message.metadata?.analysis && (
+            {message.metadata?.analysis && onOpenInspector && (
               <Button
                 variant="secondary"
                 size="sm"
+                onClick={() => onOpenInspector('insights')}
                 className="text-xs"
               >
-                <ArrowRight className="h-3 w-3" />
+                <ArrowRight className="mr-1 h-3 w-3" />
                 View Analysis
               </Button>
             )}

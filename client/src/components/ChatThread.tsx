@@ -29,6 +29,7 @@ interface ChatThreadProps {
   className?: string;
   currentShortcut?: Shortcut;
   onShortcutUpdate?: (shortcut: Shortcut) => void;
+  onOpenInspector?: (panel: 'insights' | 'test' | 'model') => void;
   onMessageSend?: (content: string) => Promise<any>;
   userId?: number;
   autoFocus?: boolean;
@@ -40,6 +41,7 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
   className = "",
   currentShortcut,
   onShortcutUpdate,
+  onOpenInspector,
   userId = 1,
   autoFocus = true,
   model = 'gpt-4o',
@@ -461,6 +463,40 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
     }
   };
 
+  const handleDownloadShortcut = async (shortcutToDownload: Shortcut) => {
+    try {
+      const response = await fetch('/api/shortcuts/build', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          shortcut: shortcutToDownload,
+          sign: true,
+          signMode: 'anyone'
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to build shortcut');
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${shortcutToDownload.name.replace(/[^a-zA-Z0-9]/g, '_')}_signed.shortcut`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error: any) {
+      setError(error.message || 'Failed to download shortcut');
+    }
+  };
+
+  const sendStarterPrompt = (content: string) => {
+    void handleSendMessage(content);
+  };
+
   const getActiveConversation = () => {
     return conversations.find(c => c.id === activeConversationId);
   };
@@ -468,11 +504,10 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
   if (!isInitialized) {
     return (
       <div className={cn("flex flex-col h-full", className)}>
-        {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b">
+      <div className="flex items-center justify-between border-b p-4">
         <div className="flex items-center gap-2">
           <Brain className="h-5 w-5 text-primary" />
-          <h3 className="font-semibold uppercase tracking-wide">AI Agent Console</h3>
+          <h3 className="text-accent-pink font-semibold uppercase tracking-wide">Builder Assistant</h3>
         </div>
       </div>
 
@@ -518,17 +553,13 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
 
   return (
     <div className={cn("flex flex-col h-full min-h-0", className)}>
-      {/* Header */}
       <div className="flex items-center justify-between p-4 border-b">
         <div className="flex items-center gap-2">
           <Brain className="h-5 w-5 text-primary" />
-          <h3 className="font-semibold uppercase tracking-wide">AI Agent Console</h3>
-          {isStreaming && (
-            <Badge variant="secondary" className="text-xs animate-pulse">
-              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-              {streamingPhase || 'Thinking...'}
-            </Badge>
-          )}
+          <div>
+            <h3 className="text-accent-pink font-semibold uppercase tracking-wide">Builder Assistant</h3>
+            <p className="text-xs text-muted-foreground">Describe the shortcut, then apply or inspect the result.</p>
+          </div>
         </div>
 
         <div className="flex items-center gap-2">
@@ -614,43 +645,89 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
         </div>
       )}
 
-      {/* Current Shortcut Context */}
       {currentShortcut && (
         <div className="border-b bg-blue-50/30 p-3">
-          <div className="flex items-center gap-2 text-sm">
+          <div className="flex flex-wrap items-center gap-2 text-sm">
             <Badge variant="outline" className="text-xs">
               Context: {currentShortcut.name}
             </Badge>
             <span className="text-muted-foreground">
               {currentShortcut.actions.length} actions
             </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => onOpenInspector?.('insights')}
+            >
+              Inspect
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => sendStarterPrompt('Explain what this shortcut is doing and suggest the best next improvement.')}
+            >
+              Improve
+            </Button>
           </div>
         </div>
       )}
 
-      {/* Messages */}
+      {(isLoading || isStreaming) && (
+        <div className="border-b bg-muted/30 p-3">
+          <div className="rounded-lg border border-border/70 bg-background/80 p-3">
+            <div className="flex items-center gap-2 text-primary">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span className="text-sm font-medium">
+                {streamingPhase || 'Processing with AI...'}
+              </span>
+            </div>
+            {agentUpdates.length > 0 && (
+              <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+                {agentUpdates.map((update, index) => (
+                  <div key={`${update}-${index}`}>{index + 1}. {update}</div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       <ScrollArea ref={scrollAreaRef} className="flex-1 min-h-0 p-4">
         <div className="space-y-4">
           {messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-center py-8">
-              <MessageCircle className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium mb-2">Start a conversation</h3>
-              <p className="text-muted-foreground mb-4">
-                Ask me to help you create, analyze, or optimize your iOS shortcuts.
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <MessageCircle className="text-accent-aqua mb-4 h-12 w-12" />
+              <h3 className="mb-2 text-lg font-medium">Start with intent, not JSON</h3>
+              <p className="mb-5 max-w-sm text-muted-foreground">
+                Describe the shortcut you want, then refine or inspect the generated result without leaving the builder.
               </p>
-              <div className="space-y-2 text-sm text-left">
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  <span>"Create a shortcut to set a timer"</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  <span>"Analyze my current shortcut for improvements"</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  <span>"Add a notification to this shortcut"</span>
-                </div>
+              <div className="grid w-full gap-2 text-left">
+                <Button
+                  variant="outline"
+                  className="h-auto justify-start px-3 py-3 text-left"
+                  onClick={() => sendStarterPrompt('Create a shortcut that captures a note, tags it, and saves it to Notes.')}
+                >
+                  <CheckCircle className="mr-2 h-4 w-4 text-green-500" />
+                  Create from prompt
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-auto justify-start px-3 py-3 text-left"
+                  onClick={() => sendStarterPrompt('Analyze my current shortcut for the highest-impact improvement.')}
+                >
+                  <CheckCircle className="mr-2 h-4 w-4 text-green-500" />
+                  Improve current shortcut
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-auto justify-start px-3 py-3 text-left"
+                  onClick={() => sendStarterPrompt('Explain this shortcut in plain English and call out any risky steps.')}
+                >
+                  <CheckCircle className="mr-2 h-4 w-4 text-green-500" />
+                  Explain the flow
+                </Button>
               </div>
             </div>
           ) : (
@@ -661,6 +738,8 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
                 isStreaming={isStreaming && index === messages.length - 1}
                 isLast={index === messages.length - 1}
                 onApplyToEditor={handleApplyShortcut}
+                onDownloadShortcut={handleDownloadShortcut}
+                onOpenInspector={onOpenInspector}
                 className={cn(
                   "animate-in fade-in-0 slide-in-from-bottom-4 duration-300"
                 )}
@@ -668,32 +747,10 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
             ))
           )}
 
-          {isStreaming && (
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <Sparkles className="h-3 w-3 animate-pulse text-primary" />
-              </div>
-              <span className="text-sm">{streamingPhase || 'AI is thinking...'}</span>
-            </div>
-          )}
-
-          {agentUpdates.length > 0 && (
-            <div className="rounded-md border border-border/60 bg-muted/20 p-3 space-y-2">
-              <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Agent Activity</div>
-              {agentUpdates.map((update, index) => (
-                <div key={`${update}-${index}`} className="text-xs text-foreground/90">
-                  {index + 1}. {update}
-                </div>
-              ))}
-            </div>
-          )}
-
           <div ref={messagesEndRef} />
         </div>
       </ScrollArea>
 
-      {/* Error Display */}
       {error && (
         <div className="border-t p-3 bg-destructive/10">
           <div className="flex items-center gap-2 text-destructive">
@@ -711,25 +768,6 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
         </div>
       )}
 
-      {(isLoading || isStreaming) && (
-        <div className="border-t p-3 bg-muted/40">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 text-primary">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span className="text-sm font-medium">
-                {streamingPhase || 'Processing with AI...'}
-              </span>
-            </div>
-            <div className="flex-1">
-              <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                <div className="h-full w-1/3 bg-primary/70 animate-pulse" />
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Input */}
       <div className="border-t p-4">
         <ChatInput
           onMessageSend={handleSendMessage}
@@ -739,8 +777,8 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
           autoFocus={autoFocus}
           placeholder={
             currentShortcut
-              ? "Ask me about this shortcut or suggest improvements..."
-              : "How can I help you with iOS shortcuts today?"
+              ? "Ask for a change, improvement, or explanation..."
+              : "Describe the shortcut you want to build..."
           }
         />
       </div>

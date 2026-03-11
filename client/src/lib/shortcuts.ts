@@ -5,15 +5,29 @@ export interface ShortcutAction {
   parameters: Record<string, any>;
 }
 
+export type ShortcutSourceFormat = 'json' | 'plist' | 'shortcut';
+export type ShortcutImportIntent = 'debug' | 'reference';
+
+export interface ShortcutProvenance {
+  sourceFormat: ShortcutSourceFormat;
+  importIntent?: ShortcutImportIntent;
+  fileName?: string;
+  warnings?: string[];
+  rawAppleShortcut?: Record<string, any>;
+  rawPlist?: string;
+}
+
 export interface Shortcut {
   name: string;
   actions: ShortcutAction[];
+  _provenance?: ShortcutProvenance;
 }
 
 const APPLE_ACTION_PREFIXES = ['is.workflow.actions.', 'com.apple.'];
+const BUNDLE_LIKE_ACTION_PATTERN = /^[a-z0-9]+(?:[._-][a-z0-9]+)+(?:\.[A-Za-z0-9_-]+)+$/i;
 
 export function isAppleActionIdentifier(type: string): boolean {
-  return APPLE_ACTION_PREFIXES.some(prefix => type.startsWith(prefix));
+  return APPLE_ACTION_PREFIXES.some(prefix => type.startsWith(prefix)) || BUNDLE_LIKE_ACTION_PATTERN.test(type);
 }
 
 // Maximum allowed actions in a shortcut
@@ -307,6 +321,43 @@ export function parseShortcutFile(content: string): Shortcut {
   } catch (error) {
     throw new Error(`Invalid shortcut file: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
+}
+
+export async function importShortcutArtifact(
+  file: File,
+  importIntent: ShortcutImportIntent = 'reference'
+): Promise<{
+  shortcut: Shortcut;
+  metadata: {
+    name: string;
+    actionCount: number;
+    sourceFormat: ShortcutSourceFormat;
+    importIntent?: ShortcutImportIntent;
+    warnings: string[];
+    fileName: string;
+    validationErrors: string[];
+    hasRawAppleDocument?: boolean;
+  };
+}> {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('importIntent', importIntent);
+
+  const response = await fetch('/api/shortcuts/import-artifact', {
+    method: 'POST',
+    body: formData
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.details || data.error || 'Failed to import shortcut artifact');
+  }
+
+  if (Array.isArray(data?.metadata?.validationErrors) && data.metadata.validationErrors.length > 0) {
+    throw new Error(data.metadata.validationErrors.join('\n'));
+  }
+
+  return data;
 }
 
 export function exportShortcut(shortcut: Shortcut): string {

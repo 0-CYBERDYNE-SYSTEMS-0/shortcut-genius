@@ -241,10 +241,10 @@ export function ModelSelector({ value, onChange }: ModelSelectorProps) {
       onValueChange={onChange as (value: string) => void}
       onOpenChange={handleOpenChange}
     >
-      <SelectTrigger className="w-[320px]">
+      <SelectTrigger className="w-full min-w-0 sm:w-[320px]">
         <SelectValue placeholder="Select AI Model" />
       </SelectTrigger>
-      <SelectContent className="max-h-[600px] w-[380px]">
+      <SelectContent className="max-h-[600px] w-[min(380px,calc(100vw-2rem))]">
         {/* Memoized Search Input */}
         <SearchInput
           searchQuery={searchQuery}

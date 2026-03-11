@@ -5,7 +5,7 @@ import { FileUpload } from './FileUpload';
 import { ShareDialog } from './ShareDialog';
 import { ThemeToggle } from './theme-toggle';
 import { AIModel, ReasoningOptions } from '@/lib/types';
-import { Shortcut } from '@/lib/shortcuts';
+import { Shortcut, ShortcutImportIntent } from '@/lib/shortcuts';
 import { BarChart2, Share2, Download, MoreVertical, Shield } from 'lucide-react';
 import { useBreakpoint } from '@/hooks/use-mobile';
 import {
@@ -20,7 +20,7 @@ interface ToolbarProps {
   onModelChange: (model: AIModel) => void;
   reasoningOptions: ReasoningOptions;
   onReasoningOptionsChange: (options: ReasoningOptions) => void;
-  onImport: (content: string) => void;
+  onImport: (file: File, importIntent: ShortcutImportIntent) => void;
   onExport: () => void;
   onProcess: () => void;
   isProcessing: boolean;

@@ -1,13 +1,15 @@
-import { useMemo, useRef, useState, useEffect } from 'react';
-import type { ImperativePanelHandle } from 'react-resizable-panels';
-import { ResizablePanel, ResizablePanelGroup, ResizableHandle } from '@/components/ui/resizable';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useMemo, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { EditorPane } from '@/components/EditorPane';
 import { PreviewPane } from '@/components/PreviewPane';
-import { Toolbar } from '@/components/Toolbar';
 import { AnalysisPane } from '@/components/AnalysisPane';
 import { ShortcutsGallery } from '@/components/ShortcutsGallery';
 import { ReasoningControls } from '@/components/ReasoningControls';
@@ -16,25 +18,36 @@ import { ProviderSettings } from '@/components/ProviderSettings';
 import { FileUpload } from '@/components/FileUpload';
 import { ModelSelector } from '@/components/ModelSelector';
 import { ShareDialog } from '@/components/ShareDialog';
+import { DebugSessionDialog } from '@/components/DebugSessionDialog';
 import { ThemeToggle } from '@/components/theme-toggle';
 import ChatThread from '@/components/ChatThread';
 import { useToast } from '@/hooks/use-toast';
 import { useBreakpoint } from '@/hooks/use-mobile';
 import { AIModel, ReasoningOptions } from '@/lib/types';
-import { DEFAULT_REASONING_OPTIONS, getModelConfig, supportsReasoning, supportsVerbosity } from '@/lib/models';
+import {
+  DEFAULT_REASONING_OPTIONS,
+  getModelConfig,
+  supportsReasoning,
+  supportsVerbosity
+} from '@/lib/models';
 import { processWithAI } from '@/lib/ai';
-import { Shortcut, parseShortcutFile, exportShortcut } from '@/lib/shortcuts';
+import { Shortcut, ShortcutImportIntent, exportShortcut, importShortcutArtifact } from '@/lib/shortcuts';
 import { analyzeShortcut } from '@/lib/shortcut-analyzer';
+import { cn } from '@/lib/utils';
 import {
   BarChart2,
-  ChevronRight,
+  Bot,
+  Bug,
+  Code2,
   Download,
+  GalleryVerticalEnd,
   LayoutGrid,
-  Maximize2,
-  Minimize2,
-  MessageCircle,
-  Settings,
-  Share2
+  MoreVertical,
+  PlayCircle,
+  Settings2,
+  Share2,
+  Sparkles,
+  Wand2
 } from 'lucide-react';
 
 const DEFAULT_SHORTCUT: Shortcut = {
@@ -42,10 +55,76 @@ const DEFAULT_SHORTCUT: Shortcut = {
   actions: []
 };
 
-type WorkspaceTab = 'editor' | 'chat' | 'gallery';
-type MobileEditorTab = 'editor' | 'preview' | 'analysis' | 'test';
+const API_NETWORK_PROBE_TEMPLATE: Shortcut = {
+  name: 'API Network Probe',
+  actions: [
+    { type: 'url', parameters: { url: 'https://jsonplaceholder.typicode.com/todos/1' } },
+    { type: 'is.workflow.actions.getcontentsofurl', parameters: { WFHTTPMethod: 'GET' } },
+    { type: 'is.workflow.actions.showresult', parameters: { WFShowResultActionText: 'Inspect the returned JSON payload.' } }
+  ]
+};
 
-type SidePanelTab = 'assistant' | 'analysis';
+type WorkspaceMode = 'build' | 'library';
+type BuildSurface = 'assistant' | 'preview' | 'editor';
+type InspectorPanel = 'insights' | 'test' | 'model' | null;
+
+interface InspectorPanelProps {
+  panel: InspectorPanel;
+  analysis: ReturnType<typeof analyzeShortcut>;
+  model: AIModel;
+  reasoningOptions: ReasoningOptions;
+  onReasoningOptionsChange: (options: ReasoningOptions) => void;
+  shortcut: Shortcut;
+}
+
+function InspectorPanelContent({
+  panel,
+  analysis,
+  model,
+  reasoningOptions,
+  onReasoningOptionsChange,
+  shortcut,
+}: InspectorPanelProps) {
+  if (panel === 'test') {
+    return <TestRunner shortcut={shortcut} />;
+  }
+
+  if (panel === 'model') {
+    const cfg = getModelConfig(model);
+
+    return (
+      <div className="space-y-4">
+          <div className="rounded-xl border border-border/70 bg-background/80 p-4">
+          <div className="text-accent-indigo text-xs uppercase tracking-[0.22em]">Active model</div>
+          <div className="mt-2 space-y-1">
+            <div className="text-lg font-semibold">{cfg.name}</div>
+            <div className="text-sm text-muted-foreground capitalize">
+              {cfg.provider} · {cfg.category}
+            </div>
+            <div className="text-sm text-muted-foreground">
+              Context window: {(cfg.capabilities.contextWindow / 1000).toFixed(0)}k tokens
+            </div>
+          </div>
+        </div>
+
+        {(supportsReasoning(model) || supportsVerbosity(model)) && (
+          <ReasoningControls
+            model={model}
+            options={reasoningOptions}
+            onChange={onReasoningOptionsChange}
+          />
+        )}
+
+        <div className="rounded-xl border border-border/70 bg-background/80 p-4">
+            <div className="text-accent-coral mb-3 text-xs uppercase tracking-[0.22em]">Providers</div>
+          <ProviderSettings />
+        </div>
+      </div>
+    );
+  }
+
+  return <AnalysisPane analysis={analysis} />;
+}
 
 export function Editor() {
   const [model, setModel] = useState<AIModel>('minimax/minimax-m2.1');
@@ -54,44 +133,63 @@ export function Editor() {
   const [code, setCode] = useState(JSON.stringify(DEFAULT_SHORTCUT, null, 2));
   const [isProcessing, setIsProcessing] = useState(false);
   const [showAnalysis, setShowAnalysis] = useState(false);
-  const [activeTab, setActiveTab] = useState<WorkspaceTab>('editor');
-  const [mobileActiveTab, setMobileActiveTab] = useState<MobileEditorTab>('editor');
-  const [chatSessionKey] = useState(() => `editor-session-${Date.now()}`);
+  const [workspaceMode, setWorkspaceMode] = useState<WorkspaceMode>('build');
+  const [buildSurface, setBuildSurface] = useState<BuildSurface>('assistant');
+  const [inspectorPanel, setInspectorPanel] = useState<InspectorPanel>('insights');
+  const [isDesktopInspectorOpen, setIsDesktopInspectorOpen] = useState(true);
+  const [isMobileInspectorOpen, setIsMobileInspectorOpen] = useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
-  const [sidePanelTab, setSidePanelTab] = useState<SidePanelTab>('assistant');
-  const [isSidePanelOpen, setIsSidePanelOpen] = useState(true);
-  const [isAssistantExpanded, setIsAssistantExpanded] = useState(false);
+  const [debugDialogOpen, setDebugDialogOpen] = useState(false);
+  const [chatSessionKey] = useState(() => `editor-session-${Date.now()}`);
   const { toast } = useToast();
-  const { isMobile } = useBreakpoint();
-  const assistantPanelRef = useRef<ImperativePanelHandle>(null);
-
-  useEffect(() => {
-    if (!assistantPanelRef.current) return;
-    if (activeTab !== 'editor') {
-      assistantPanelRef.current.collapse();
-      return;
-    }
-    if (isSidePanelOpen) {
-      assistantPanelRef.current.expand();
-    } else {
-      assistantPanelRef.current.collapse();
-    }
-  }, [activeTab, isSidePanelOpen]);
+  const { isMobile, isTablet, isDesktop, isLargeDesktop } = useBreakpoint();
 
   const actionCount = shortcut.actions.length;
-  const hasShortcut = shortcut.actions.length > 0;
-
+  const hasShortcut = actionCount > 0;
   const analysis = useMemo(() => analyzeShortcut(shortcut), [shortcut]);
+  const shortcutProvenance = shortcut._provenance;
+  const isWideLayout = isDesktop || isLargeDesktop;
+  const desktopCanvasSurface = buildSurface === 'editor' ? 'editor' : 'preview';
+  const showInlineInspector = isWideLayout && isDesktopInspectorOpen && inspectorPanel !== null;
 
-  const handleImport = (content: string) => {
+  const updateShortcutFromCode = (value: string) => {
+    setCode(value);
+
     try {
-      const imported = parseShortcutFile(content);
-      setShortcut(imported);
-      setCode(JSON.stringify(imported, null, 2));
+      const parsed = JSON.parse(value);
+      setShortcut((current) => ({
+        ...parsed,
+        _provenance: parsed._provenance || current._provenance
+      }));
+    } catch {
+      // Keep the editor editable while the JSON is temporarily invalid.
+    }
+  };
+
+  const openInspector = (panel: Exclude<InspectorPanel, null>) => {
+    setInspectorPanel(panel);
+
+    if (isWideLayout) {
+      setIsDesktopInspectorOpen(true);
+      return;
+    }
+
+    setIsMobileInspectorOpen(true);
+  };
+
+  const handleImport = async (file: File, importIntent: ShortcutImportIntent) => {
+    try {
+      const imported = await importShortcutArtifact(file, importIntent);
+      setShortcut(imported.shortcut);
+      setCode(JSON.stringify(imported.shortcut, null, 2));
+      setWorkspaceMode('build');
+      setBuildSurface(isWideLayout ? 'preview' : 'assistant');
       setShowAnalysis(true);
+      openInspector('insights');
+
       toast({
         title: 'Shortcut imported',
-        description: 'The shortcut file was successfully imported.'
+        description: imported.metadata.warnings[0] || `${imported.metadata.sourceFormat.toUpperCase()} imported as ${importIntent === 'debug' ? 'debug artifact' : 'reference shortcut'}.`
       });
     } catch (error) {
       toast({
@@ -100,6 +198,18 @@ export function Editor() {
         variant: 'destructive'
       });
     }
+  };
+
+  const loadStarterTemplate = () => {
+    setShortcut(API_NETWORK_PROBE_TEMPLATE);
+    setCode(JSON.stringify(API_NETWORK_PROBE_TEMPLATE, null, 2));
+    setWorkspaceMode('build');
+    setBuildSurface(isWideLayout ? 'preview' : 'assistant');
+    openInspector('insights');
+    toast({
+      title: 'Starter loaded',
+      description: 'Loaded the known-good API / Network Probe shortcut for debugging and iteration.'
+    });
   };
 
   const handleExport = () => {
@@ -120,33 +230,61 @@ export function Editor() {
     }
   };
 
+  const handleExportPlist = async () => {
+    if (!hasShortcut) return;
+
+    try {
+      await downloadShortcutBlob(
+        { shortcut, sign: false, format: 'plist' },
+        `${shortcut.name.replace(/[^a-zA-Z0-9]/g, '_')}.plist`
+      );
+    } catch (error) {
+      toast({
+        title: 'PLIST export failed',
+        description: error instanceof Error ? error.message : 'Failed to export plist',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const downloadShortcutBlob = async (
+    payload: { shortcut: Shortcut; sign: boolean; signMode?: string; format?: 'plist' | 'binary' | 'shortcut' },
+    fileName: string
+  ) => {
+    const response = await fetch('/api/shortcuts/build', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.details || errorData.error || 'Failed to build shortcut');
+    }
+
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   const handleDownloadShortcut = async () => {
     if (!hasShortcut) return;
 
     try {
-      const response = await fetch('/api/shortcuts/build', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ shortcut, sign: true, signMode: 'anyone' })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to build shortcut');
-      }
-
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${shortcut.name.replace(/[^a-zA-Z0-9]/g, '_')}_signed.shortcut`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      await downloadShortcutBlob(
+        { shortcut, sign: true, signMode: 'anyone' },
+        `${shortcut.name.replace(/[^a-zA-Z0-9]/g, '_')}_signed.shortcut`
+      );
     } catch (error) {
       toast({
         title: 'Download failed',
-        description: error instanceof Error ? error.message : 'Failed to build signed shortcut',
+        description: error instanceof Error ? error.message : 'Failed to build shortcut',
         variant: 'destructive'
       });
     }
@@ -156,26 +294,10 @@ export function Editor() {
     if (!hasShortcut) return;
 
     try {
-      const response = await fetch('/api/shortcuts/build', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ shortcut, sign: true })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.details || errorData.error || 'Signing failed');
-      }
-
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${shortcut.name.replace(/[^a-zA-Z0-9]/g, '_')}_signed.shortcut`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      await downloadShortcutBlob(
+        { shortcut, sign: true },
+        `${shortcut.name.replace(/[^a-zA-Z0-9]/g, '_')}_signed.shortcut`
+      );
     } catch (error) {
       toast({
         title: 'Signed download failed',
@@ -187,6 +309,7 @@ export function Editor() {
 
   const handleProcess = async () => {
     setIsProcessing(true);
+
     try {
       const response = await processWithAI(
         model,
@@ -201,13 +324,14 @@ export function Editor() {
       }
 
       toast({
-        title: 'AI Processing Complete',
+        title: 'Analysis complete',
         description: response.content
       });
 
+      setWorkspaceMode('build');
       setShowAnalysis(true);
-      setSidePanelTab('analysis');
-      setIsSidePanelOpen(true);
+      setBuildSurface(isWideLayout ? 'preview' : 'assistant');
+      openInspector('insights');
     } catch (error) {
       toast({
         title: 'Processing failed',
@@ -219,445 +343,454 @@ export function Editor() {
     }
   };
 
-  const handleImportFromGallery = (shortcutUrl: string) => {
-    setActiveTab('editor');
+  const handleImportFromGallery = (_shortcutUrl: string) => {
+    setWorkspaceMode('build');
+    setBuildSurface('assistant');
     toast({
-      title: 'Import from Gallery',
-      description: 'This feature will be fully implemented to import shortcuts from shared URLs.'
+      title: 'Import from gallery',
+      description: 'Gallery import is still pending, but the library flow is now separated from the main builder.'
     });
   };
 
   const handleChatShortcutUpdate = (updatedShortcut: Shortcut) => {
-    setShortcut(updatedShortcut);
-    setCode(JSON.stringify(updatedShortcut, null, 2));
+    const nextShortcut = {
+      ...updatedShortcut,
+      _provenance: updatedShortcut._provenance || shortcut._provenance
+    };
+
+    setShortcut(nextShortcut);
+    setCode(JSON.stringify(nextShortcut, null, 2));
+    setWorkspaceMode('build');
+    setBuildSurface(isWideLayout ? 'preview' : 'assistant');
     setShowAnalysis(true);
+    openInspector('insights');
 
     toast({
-      title: 'Shortcut Updated from Chat',
-      description: 'The shortcut has been updated based on the AI conversation.'
+      title: 'Shortcut updated',
+      description: 'The current shortcut was updated from the assistant conversation.'
     });
   };
 
-  if (isMobile) {
-    return (
-      <div className="app-shell h-screen flex flex-col">
-        <Toolbar
-          model={model}
-          onModelChange={setModel}
-          reasoningOptions={reasoningOptions}
-          onReasoningOptionsChange={setReasoningOptions}
-          onImport={handleImport}
-          onExport={handleExport}
-          onProcess={handleProcess}
-          isProcessing={isProcessing}
-          showAnalysis={showAnalysis}
-          onToggleAnalysis={() => setShowAnalysis(!showAnalysis)}
-          currentShortcut={shortcut}
-          onDownloadSigned={handleDownloadSignedShortcut}
-        />
+  const handleApplyDebugShortcut = (updatedShortcut: Shortcut) => {
+    const nextShortcut = {
+      ...updatedShortcut,
+      _provenance: updatedShortcut._provenance || shortcut._provenance
+    };
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-          <TabsList className="grid w-full h-11 mx-3 mt-3 grid-cols-3 gap-1">
-            <TabsTrigger value="editor" className="text-xs">Editor</TabsTrigger>
-            <TabsTrigger value="chat" className="text-xs">Assistant</TabsTrigger>
-            <TabsTrigger value="gallery" className="text-xs">Gallery</TabsTrigger>
-          </TabsList>
+    setShortcut(nextShortcut);
+    setCode(JSON.stringify(nextShortcut, null, 2));
+    setWorkspaceMode('build');
+    setBuildSurface(isWideLayout ? 'editor' : 'assistant');
+    openInspector('insights');
+  };
 
-          <TabsContent value="editor" className="flex-1 mt-0">
-            <Tabs value={mobileActiveTab} onValueChange={setMobileActiveTab} className="flex-1 flex flex-col">
-              <TabsList className={`grid w-full h-11 mx-3 mt-3 gap-1 ${showAnalysis ? 'grid-cols-4' : 'grid-cols-3'}`}>
-                <TabsTrigger value="editor" className="text-xs">Edit</TabsTrigger>
-                <TabsTrigger value="preview" className="text-xs">Preview</TabsTrigger>
-                {showAnalysis && <TabsTrigger value="analysis" className="text-xs">Analysis</TabsTrigger>}
-                <TabsTrigger value="test" className="text-xs">Test</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="editor" className="flex-1 mt-0">
-                <div className="flex flex-col h-full px-3 pt-3">
-                  <div className="flex-1">
-                    <EditorPane
-                      value={code}
-                      onChange={(value) => {
-                        setCode(value);
-                        try {
-                          const parsed = JSON.parse(value);
-                          setShortcut(parsed);
-                        } catch {}
-                      }}
-                    />
-                  </div>
-                  <div className="py-3">
-                    <ReasoningControls
-                      model={model}
-                      options={reasoningOptions}
-                      onChange={setReasoningOptions}
-                    />
-                  </div>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="preview" className="flex-1 mt-0">
-                <div className="h-full px-3 pt-3">
-                  <PreviewPane shortcut={shortcut} />
-                </div>
-              </TabsContent>
-
-              {showAnalysis && (
-                <TabsContent value="analysis" className="flex-1 mt-0">
-                  <div className="h-full px-3 pt-3">
-                    <AnalysisPane analysis={analysis} />
-                  </div>
-                </TabsContent>
-              )}
-
-              <TabsContent value="test" className="flex-1 mt-0">
-                <div className="h-full px-3 pt-3">
-                  <TestRunner shortcut={shortcut} />
-                </div>
-              </TabsContent>
-            </Tabs>
-          </TabsContent>
-
-          <TabsContent value="gallery" className="flex-1 mt-3 px-3 pb-3 overflow-auto">
-            <ShortcutsGallery onImportShortcut={handleImportFromGallery} />
-          </TabsContent>
-
-          <TabsContent value="chat" className="flex-1 mt-0" forceMount>
-            <div className="h-full">
-              <ChatThread
-                currentShortcut={shortcut}
-                onShortcutUpdate={handleChatShortcutUpdate}
-                model={model}
-                sessionKey={chatSessionKey}
-                autoFocus={false}
-              />
+  const renderCanvas = (surface: 'preview' | 'editor') => {
+    if (surface === 'editor') {
+      return (
+        <div className="panel-surface flex h-full flex-col overflow-hidden rounded-2xl">
+          <div className="flex items-center justify-between border-b px-4 py-3">
+            <div>
+              <div className="text-accent-aqua text-xs uppercase tracking-[0.2em]">Refine</div>
+              <div className="text-base font-semibold">JSON editor</div>
             </div>
-          </TabsContent>
-        </Tabs>
+            <Badge variant="outline" className="text-[10px] uppercase tracking-[0.15em]">
+              Advanced
+            </Badge>
+          </div>
+          <div className="flex-1 p-3">
+            <EditorPane
+              value={code}
+              onChange={updateShortcutFromCode}
+              className="h-full border-transparent bg-transparent shadow-none"
+            />
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="panel-surface flex h-full flex-col overflow-hidden rounded-2xl">
+        <div className="flex items-center justify-between border-b px-4 py-3">
+          <div>
+            <div className="text-accent-aqua text-xs uppercase tracking-[0.2em]">Refine</div>
+            <div className="text-base font-semibold">Preview</div>
+          </div>
+          <Badge variant="outline" className="text-[10px] uppercase tracking-[0.15em]">
+            Live
+          </Badge>
+        </div>
+        <div className="flex-1 p-3">
+          <PreviewPane shortcut={shortcut} className="border-transparent bg-transparent shadow-none" />
+        </div>
       </div>
     );
-  }
+  };
 
   return (
-    <div className="app-shell h-screen w-screen flex text-foreground">
-      <aside className="w-64 border-r-2 border-border bg-card px-4 py-6 flex flex-col gap-6">
-        <div className="app-stagger">
-          <div>
-            <div className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Shortcut Genius</div>
-            <h1 className="text-2xl font-semibold tracking-tight">AI Workbench</h1>
-          </div>
-          <div className="flex flex-col gap-2">
-            <button
-              type="button"
-              onClick={() => setActiveTab('editor')}
-              className={`nav-pill flex items-center gap-3 rounded-xl px-3 py-2 text-sm ${
-                activeTab === 'editor'
-                  ? 'bg-primary text-primary-foreground shadow-md'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
-              }`}
-            >
-              <LayoutGrid className="h-4 w-4" />
-              Workbench
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('gallery')}
-              className={`nav-pill flex items-center gap-3 rounded-xl px-3 py-2 text-sm ${
-                activeTab === 'gallery'
-                  ? 'bg-primary text-primary-foreground shadow-md'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
-              }`}
-            >
-              <LayoutGrid className="h-4 w-4" />
-              Library
-            </button>
-          </div>
-        </div>
-
-        <div className="mt-auto flex items-center justify-between rounded-xl border bg-card/90 px-3 py-2">
-          <div className="text-sm text-muted-foreground">Theme</div>
-          <ThemeToggle />
-        </div>
-      </aside>
-
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="border-b-2 border-border bg-card px-6 py-4 app-enter">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <div className="text-xs uppercase tracking-[0.25em] text-muted-foreground">AI Shortcut Studio</div>
-              <div className="flex items-center gap-3">
-                <h2 className="text-2xl font-semibold tracking-tight">{shortcut.name}</h2>
-                <Badge className="text-[10px] uppercase tracking-[0.15em]">AI-first</Badge>
+    <div className="app-shell flex min-h-screen flex-col text-foreground">
+      <header className="border-b-2 border-border bg-card/95 backdrop-blur">
+        <div className="mx-auto flex w-full max-w-[1680px] flex-col gap-4 px-3 py-4 sm:px-4 lg:px-6">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+            <div className="space-y-3">
+              <div className="text-accent-indigo text-xs uppercase tracking-[0.32em]">Shortcut Genius</div>
+              <div className="flex flex-wrap items-center gap-3">
+                <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{shortcut.name}</h1>
+                <Badge variant="outline" className="text-accent-pink border-current text-[10px] uppercase tracking-[0.16em]">
+                  AI-first builder
+                </Badge>
                 <Badge variant="secondary" className="text-xs">
                   {actionCount} actions
                 </Badge>
+                {shortcutProvenance && (
+                  <Badge variant="outline" className="text-xs uppercase tracking-[0.12em]">
+                    {shortcutProvenance.sourceFormat}
+                    {shortcutProvenance.importIntent ? ` · ${shortcutProvenance.importIntent}` : ''}
+                  </Badge>
+                )}
                 {isProcessing && (
                   <Badge variant="outline" className="text-xs">
-                    Processing…
+                    Analyzing...
                   </Badge>
                 )}
               </div>
+              <p className="text-accent-indigo max-w-3xl text-sm">
+                Describe the shortcut, refine the output, then validate it without switching mental models between screens.
+              </p>
             </div>
 
-            <div className="flex items-center gap-2">
-              <ModelSelector value={model} onChange={setModel} />
-              <Sheet>
-                <SheetTrigger asChild>
-                  <Button variant="secondary" size="sm">
-                    <Settings className="mr-2 h-4 w-4" />
-                    Model
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="right" className="w-[380px] flex flex-col">
-                  <SheetHeader className="shrink-0">
-                    <SheetTitle>Model Settings</SheetTitle>
-                  </SheetHeader>
-                  <Tabs defaultValue="model" className="flex-1 flex flex-col min-h-0 mt-3">
-                    <TabsList className="grid grid-cols-2 shrink-0">
-                      <TabsTrigger value="model">Model</TabsTrigger>
-                      <TabsTrigger value="providers">Providers</TabsTrigger>
-                    </TabsList>
+            <div className="flex flex-col gap-2 lg:items-end">
+              <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
+                <div className="w-full sm:w-auto">
+                  <ModelSelector value={model} onChange={setModel} />
+                </div>
+                <FileUpload onUpload={handleImport} />
+                <Button onClick={handleProcess} disabled={isProcessing}>
+                  {isProcessing ? (
+                    <>
+                      <Sparkles className="mr-2 h-4 w-4 animate-pulse" />
+                      Analyzing
+                    </>
+                  ) : (
+                    <>
+                      <Wand2 className="mr-2 h-4 w-4" />
+                      Analyze
+                    </>
+                  )}
+                </Button>
+                <Button variant="secondary" onClick={handleDownloadShortcut} disabled={!hasShortcut}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Download
+                </Button>
+                <Button variant="secondary" onClick={() => setDebugDialogOpen(true)} disabled={!hasShortcut}>
+                  <Bug className="mr-2 h-4 w-4" />
+                  Debug loop
+                </Button>
+                <ThemeToggle />
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="secondary" size="icon" aria-label="More actions">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => setShareDialogOpen(true)} disabled={!hasShortcut}>
+                      <Share2 className="mr-2 h-4 w-4" />
+                      Share
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleExport}>
+                      Export JSON
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleExportPlist} disabled={!hasShortcut}>
+                      Export PLIST
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleDownloadSignedShortcut} disabled={!hasShortcut}>
+                      <Download className="mr-2 h-4 w-4" />
+                      Download Signed
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
 
-                    <TabsContent value="model" className="flex-1 overflow-y-auto mt-3 space-y-4">
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">Active Model</label>
-                        <ModelSelector value={model} onChange={setModel} />
-                      </div>
-
-                      {(() => {
-                        const cfg = getModelConfig(model as AIModel);
-                        return (
-                          <div className="rounded-md border p-3 space-y-1 text-sm">
-                            <div className="font-medium">{cfg.name}</div>
-                            <div className="text-muted-foreground capitalize">
-                              {cfg.provider} · {cfg.category}
-                            </div>
-                            <div className="text-muted-foreground">
-                              Context: {(cfg.capabilities.contextWindow / 1000).toFixed(0)}k tokens
-                            </div>
-                          </div>
-                        );
-                      })()}
-
-                      {(supportsReasoning(model as AIModel) || supportsVerbosity(model as AIModel)) ? (
-                        <ReasoningControls
-                          model={model}
-                          options={reasoningOptions}
-                          onChange={setReasoningOptions}
-                        />
-                      ) : (
-                        <p className="text-sm text-muted-foreground">
-                          No advanced settings available for this model.
-                        </p>
-                      )}
-                    </TabsContent>
-
-                    <TabsContent value="providers" className="flex-1 overflow-y-auto mt-3">
-                      <ProviderSettings />
-                    </TabsContent>
-                  </Tabs>
-                </SheetContent>
-              </Sheet>
-              <FileUpload onUpload={handleImport} />
-              <Button variant="secondary" size="sm" onClick={handleExport}>
-                Export JSON
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={handleDownloadShortcut}
-                disabled={!hasShortcut}
-              >
-                <Download className="mr-2 h-4 w-4" />
-                Download
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => setShareDialogOpen(true)}
-                disabled={!hasShortcut}
-              >
-                <Share2 className="mr-2 h-4 w-4" />
-                Share
-              </Button>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  variant={workspaceMode === 'build' ? 'default' : 'secondary'}
+                  size="sm"
+                  onClick={() => setWorkspaceMode('build')}
+                >
+                  <LayoutGrid className="mr-2 h-4 w-4" />
+                  Build
+                </Button>
+                <Button
+                  variant={workspaceMode === 'library' ? 'default' : 'secondary'}
+                  size="sm"
+                  onClick={() => setWorkspaceMode('library')}
+                  className={workspaceMode !== 'library' ? 'text-accent-indigo' : undefined}
+                >
+                  <GalleryVerticalEnd className="mr-2 h-4 w-4" />
+                  Library
+                </Button>
+              </div>
             </div>
           </div>
 
-          {activeTab === 'editor' && (
-            <div className="mt-4 flex items-center gap-3">
-              <Button
-                variant="secondary"
-                onClick={handleProcess}
-                disabled={isProcessing}
-                size="lg"
-              >
-                Run Analysis
-              </Button>
-              <Button
-                variant={sidePanelTab === 'assistant' && isSidePanelOpen ? 'default' : 'secondary'}
-                onClick={() => {
-                  setSidePanelTab('assistant');
-                  setIsSidePanelOpen(true);
-                }}
-                size="lg"
-              >
-                <MessageCircle className="mr-2 h-4 w-4" />
-                AI Agent
-              </Button>
-              <Button
-                variant={sidePanelTab === 'analysis' && isSidePanelOpen ? 'default' : 'secondary'}
-                onClick={() => {
-                  setSidePanelTab('analysis');
-                  setIsSidePanelOpen(true);
-                  setShowAnalysis(true);
-                }}
-                size="lg"
-              >
-                <BarChart2 className="mr-2 h-4 w-4" />
-                Insights
-              </Button>
-            </div>
-          )}
-        </header>
+          {workspaceMode === 'build' && (
+            <div className="flex flex-col gap-3 border-t pt-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="text-accent-pink mr-2 text-xs uppercase tracking-[0.2em]">Build surface</div>
+                <Button
+                  variant={buildSurface === 'assistant' ? 'default' : 'secondary'}
+                  size="sm"
+                  onClick={() => setBuildSurface('assistant')}
+                >
+                  <Bot className="mr-2 h-4 w-4" />
+                  Assistant
+                </Button>
+                <Button
+                  variant={buildSurface === 'preview' ? 'default' : 'secondary'}
+                  size="sm"
+                  onClick={() => setBuildSurface('preview')}
+                >
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  Preview
+                </Button>
+                <Button
+                  variant={buildSurface === 'editor' ? 'default' : 'secondary'}
+                  size="sm"
+                  onClick={() => setBuildSurface('editor')}
+                >
+                  <Code2 className="mr-2 h-4 w-4" />
+                  JSON
+                </Button>
+              </div>
 
-        <div className="flex-1 overflow-hidden">
-          {activeTab === 'editor' ? (
-            <ResizablePanelGroup direction="horizontal" className="h-full">
-              <ResizablePanel defaultSize={60} minSize={30}>
-                <div className="h-full px-6 py-6">
-                  <ResizablePanelGroup direction="horizontal" className="h-full gap-4">
-                    <ResizablePanel defaultSize={55} minSize={35}>
-                      <div className="panel-surface rounded-2xl h-full flex flex-col">
-                        <div className="flex items-center justify-between px-4 py-3 border-b">
-                          <div className="text-sm font-semibold">Editor</div>
-                          <Badge variant="outline" className="text-xs">JSON</Badge>
-                        </div>
-                        <div className="flex-1 p-3">
-                          <EditorPane
-                            value={code}
-                            onChange={(value) => {
-                              setCode(value);
-                              try {
-                                const parsed = JSON.parse(value);
-                                setShortcut(parsed);
-                              } catch {}
-                            }}
-                            className="h-full border-transparent bg-transparent shadow-none"
-                          />
-                        </div>
-                      </div>
-                    </ResizablePanel>
-                    <ResizableHandle />
-                    <ResizablePanel defaultSize={45} minSize={30}>
-                      <div className="panel-surface rounded-2xl h-full flex flex-col">
-                        <div className="flex items-center justify-between px-4 py-3 border-b">
-                          <div className="text-sm font-semibold">Preview</div>
-                          <Badge variant="outline" className="text-xs">Live</Badge>
-                        </div>
-                        <div className="flex-1 p-3">
-                          <PreviewPane shortcut={shortcut} className="border-transparent bg-transparent shadow-none" />
-                        </div>
-                      </div>
-                    </ResizablePanel>
-                  </ResizablePanelGroup>
-                </div>
-              </ResizablePanel>
-              <ResizableHandle withHandle />
-              <ResizablePanel
-                ref={assistantPanelRef}
-                defaultSize={40}
-                minSize={24}
-                collapsible
-                collapsedSize={0}
-              >
-                <>
-                  {isAssistantExpanded && (
-                    <div
-                      className="fixed inset-0 bg-black/40 z-40"
-                      onClick={() => setIsAssistantExpanded(false)}
-                    />
-                  )}
-                  <aside
-                    className={`border-l bg-card/70 backdrop-blur-xl flex flex-col transition-all duration-200 h-full ${
-                      isAssistantExpanded
-                        ? 'fixed inset-6 z-50 rounded-2xl shadow-2xl'
-                        : ''
-                    }`}
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="text-accent-coral mr-2 text-xs uppercase tracking-[0.2em]">Validate</div>
+                <Button
+                  variant={inspectorPanel === 'insights' && (showInlineInspector || isMobileInspectorOpen) ? 'default' : 'secondary'}
+                  size="sm"
+                  onClick={() => openInspector('insights')}
+                >
+                  <BarChart2 className="mr-2 h-4 w-4" />
+                  Insights
+                </Button>
+                <Button
+                  variant={inspectorPanel === 'test' && (showInlineInspector || isMobileInspectorOpen) ? 'default' : 'secondary'}
+                  size="sm"
+                  onClick={() => openInspector('test')}
+                >
+                  <PlayCircle className="mr-2 h-4 w-4" />
+                  Test
+                </Button>
+                <Button
+                  variant={inspectorPanel === 'model' && (showInlineInspector || isMobileInspectorOpen) ? 'default' : 'secondary'}
+                  size="sm"
+                  onClick={() => openInspector('model')}
+                >
+                  <Settings2 className="mr-2 h-4 w-4" />
+                  Model settings
+                </Button>
+                {showInlineInspector && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsDesktopInspectorOpen(false)}
                   >
-                    <Tabs value={sidePanelTab} onValueChange={(value) => setSidePanelTab(value as SidePanelTab)} className="flex-1 min-h-0 flex flex-col">
-                      <div className="flex items-center justify-between px-4 py-3 border-b">
-                        <TabsList className="grid w-full grid-cols-2 rounded-full">
-                          <TabsTrigger value="assistant" className="text-xs">Assistant</TabsTrigger>
-                          <TabsTrigger value="analysis" className="text-xs">Analysis</TabsTrigger>
-                        </TabsList>
-                        <div className="ml-2 flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setIsAssistantExpanded(!isAssistantExpanded)}
-                          >
-                            {isAssistantExpanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => {
-                              setIsSidePanelOpen(false);
-                              setIsAssistantExpanded(false);
-                            }}
-                          >
-                            <ChevronRight className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-
-                      <div className="flex-1 min-h-0 overflow-hidden">
-                        <TabsContent value="assistant" className="h-full min-h-0 mt-0">
-                          <ChatThread
-                            currentShortcut={shortcut}
-                            onShortcutUpdate={handleChatShortcutUpdate}
-                            model={model}
-                            freshSession
-                            autoFocus={false}
-                          />
-                        </TabsContent>
-                        <TabsContent value="analysis" className="h-full min-h-0 mt-0">
-                          <div className="h-full p-4">
-                            {showAnalysis ? (
-                              <AnalysisPane analysis={analysis} className="border-transparent bg-transparent shadow-none" />
-                            ) : (
-                              <div className="panel-surface rounded-2xl h-full flex items-center justify-center text-center px-6">
-                                <div className="space-y-3">
-                                  <BarChart2 className="h-8 w-8 text-muted-foreground mx-auto" />
-                                  <div className="text-sm font-medium">Insights appear after processing</div>
-                                  <p className="text-xs text-muted-foreground">
-                                    Generate or analyze a shortcut to populate insights here.
-                                  </p>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </TabsContent>
-                      </div>
-                    </Tabs>
-                  </aside>
-                </>
-              </ResizablePanel>
-            </ResizablePanelGroup>
-          ) : (
-            <div className="h-full px-6 py-6">
-              <div className="panel-surface rounded-2xl h-full overflow-auto p-6">
-                <ShortcutsGallery onImportShortcut={handleImportFromGallery} />
+                    Hide panel
+                  </Button>
+                )}
               </div>
             </div>
           )}
         </div>
-      </div>
+      </header>
+
+      <main className="mx-auto flex w-full max-w-[1680px] flex-1 flex-col overflow-hidden px-3 py-3 sm:px-4 lg:px-6 lg:py-6">
+        {workspaceMode === 'library' ? (
+          <div className="panel-surface flex min-h-[70vh] flex-1 flex-col overflow-hidden rounded-2xl">
+            <div className="border-b px-4 py-3">
+              <div className="text-accent-indigo text-xs uppercase tracking-[0.2em]">Library</div>
+              <div className="text-base font-semibold">Templates and shared shortcuts</div>
+            </div>
+            <div className="flex-1 overflow-auto p-4">
+              <div className="mb-4 rounded-2xl border border-border/70 bg-background/80 p-4">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                  <div>
+                    <div className="text-accent-aqua text-xs uppercase tracking-[0.2em]">Starter</div>
+                    <div className="text-base font-semibold">API / Network Probe</div>
+                    <p className="text-accent-indigo mt-1 text-sm">
+                      Known-good request and output blocks for proving the debug loop before you iterate on custom flows.
+                    </p>
+                  </div>
+                  <Button onClick={loadStarterTemplate}>
+                    Load starter
+                  </Button>
+                </div>
+              </div>
+              <ShortcutsGallery onImportShortcut={handleImportFromGallery} />
+            </div>
+          </div>
+        ) : (
+          <div
+            className={cn(
+              'grid flex-1 gap-4 overflow-hidden',
+              showInlineInspector
+                ? 'lg:grid-cols-[minmax(340px,0.95fr)_minmax(0,1.05fr)_320px]'
+                : isWideLayout
+                  ? 'lg:grid-cols-[minmax(340px,0.95fr)_minmax(0,1.1fr)]'
+                  : 'grid-cols-1'
+            )}
+          >
+            {(isWideLayout || buildSurface === 'assistant') && (
+              <div className="min-h-[420px] overflow-hidden">
+                <div className={cn(
+                  'panel-surface flex h-full flex-col overflow-hidden rounded-2xl',
+                  buildSurface === 'assistant' && 'ring-2 ring-primary/30'
+                )}>
+                  <div className="flex items-center justify-between border-b px-4 py-3">
+                    <div>
+                      <div className="text-accent-pink text-xs uppercase tracking-[0.2em]">Describe</div>
+                      <div className="text-accent-indigo text-base font-semibold">Assistant</div>
+                    </div>
+                    <Badge variant="outline" className="text-[10px] uppercase tracking-[0.15em]">
+                      Primary
+                    </Badge>
+                  </div>
+                  <div className="min-h-0 flex-1">
+                    <ChatThread
+                      currentShortcut={shortcut}
+                      onShortcutUpdate={handleChatShortcutUpdate}
+                      onOpenInspector={(panel) => openInspector(panel)}
+                      model={model}
+                      sessionKey={chatSessionKey}
+                      autoFocus={!isWideLayout}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {(isWideLayout || buildSurface !== 'assistant') && (
+              <div className="min-h-[420px] overflow-hidden">
+                <div className="mb-3 flex items-center gap-2 lg:hidden">
+                  <Button
+                    variant={buildSurface === 'preview' ? 'default' : 'secondary'}
+                    size="sm"
+                    onClick={() => setBuildSurface('preview')}
+                  >
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    Preview
+                  </Button>
+                  <Button
+                    variant={buildSurface === 'editor' ? 'default' : 'secondary'}
+                    size="sm"
+                    onClick={() => setBuildSurface('editor')}
+                  >
+                    <Code2 className="mr-2 h-4 w-4" />
+                    JSON
+                  </Button>
+                </div>
+
+                {isWideLayout ? (
+                  <div className="grid h-full gap-4 xl:grid-cols-[minmax(0,1fr)]">
+                    <div className="mb-3 hidden items-center gap-2 lg:flex">
+                      <Button
+                        variant={desktopCanvasSurface === 'preview' ? 'default' : 'secondary'}
+                        size="sm"
+                        onClick={() => setBuildSurface('preview')}
+                      >
+                        <Sparkles className="mr-2 h-4 w-4" />
+                        Preview
+                      </Button>
+                      <Button
+                        variant={desktopCanvasSurface === 'editor' ? 'default' : 'secondary'}
+                        size="sm"
+                        onClick={() => setBuildSurface('editor')}
+                      >
+                        <Code2 className="mr-2 h-4 w-4" />
+                        JSON editor
+                      </Button>
+                    </div>
+                    <div className="min-h-0 flex-1 overflow-hidden">
+                      {renderCanvas(desktopCanvasSurface)}
+                    </div>
+                  </div>
+                ) : (
+                  renderCanvas(buildSurface === 'editor' ? 'editor' : 'preview')
+                )}
+              </div>
+            )}
+
+            {showInlineInspector && inspectorPanel !== null && (
+              <aside className="min-h-[420px] overflow-hidden">
+                <div className="panel-surface flex h-full flex-col overflow-hidden rounded-2xl">
+                  <div className="flex items-center justify-between border-b px-4 py-3">
+                    <div>
+                      <div className="text-accent-coral text-xs uppercase tracking-[0.2em]">Validate</div>
+                      <div className="text-base font-semibold">
+                        {inspectorPanel === 'insights'
+                          ? 'Insights'
+                          : inspectorPanel === 'test'
+                            ? 'Runtime test'
+                            : 'Model settings'}
+                      </div>
+                    </div>
+                    <Badge variant="outline" className="text-[10px] uppercase tracking-[0.15em]">
+                      Inspector
+                    </Badge>
+                  </div>
+                  <div className="min-h-0 flex-1 overflow-auto p-3">
+                    <InspectorPanelContent
+                      panel={inspectorPanel}
+                      analysis={analysis}
+                      model={model}
+                      reasoningOptions={reasoningOptions}
+                      onReasoningOptionsChange={setReasoningOptions}
+                      shortcut={shortcut}
+                    />
+                  </div>
+                </div>
+              </aside>
+            )}
+          </div>
+        )}
+      </main>
+
+      <Sheet open={!showInlineInspector && isMobileInspectorOpen} onOpenChange={setIsMobileInspectorOpen}>
+        <SheetContent side={isMobile ? 'bottom' : 'right'} className="flex h-[88vh] flex-col">
+          <SheetHeader className="shrink-0">
+            <SheetTitle>
+              {inspectorPanel === 'insights'
+                ? 'Insights'
+                : inspectorPanel === 'test'
+                  ? 'Runtime test'
+                  : 'Model settings'}
+            </SheetTitle>
+          </SheetHeader>
+          <div className="mt-4 min-h-0 flex-1 overflow-auto">
+            <InspectorPanelContent
+              panel={inspectorPanel}
+              analysis={analysis}
+              model={model}
+              reasoningOptions={reasoningOptions}
+              onReasoningOptionsChange={setReasoningOptions}
+              shortcut={shortcut}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
 
       <ShareDialog
         open={shareDialogOpen}
         onOpenChange={setShareDialogOpen}
         shortcut={shortcut}
+      />
+
+      <DebugSessionDialog
+        open={debugDialogOpen}
+        onOpenChange={setDebugDialogOpen}
+        shortcut={shortcut}
+        model={model}
+        onShortcutApply={handleApplyDebugShortcut}
       />
     </div>
   );

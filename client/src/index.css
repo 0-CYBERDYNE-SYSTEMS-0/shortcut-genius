@@ -4,6 +4,11 @@
 
 @layer base {
   :root {
+    --accent-pink: 318 88% 58%;
+    --accent-coral: 15 94% 63%;
+    --accent-aqua: 171 62% 55%;
+    --accent-indigo: 233 40% 39%;
+
     --background: 0 0% 98%;
     --foreground: 0 0% 5%;
 
@@ -13,7 +18,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 5%;
 
-    --primary: 0 84% 44%;
+    --primary: var(--accent-pink);
     --primary-foreground: 0 0% 100%;
 
     --secondary: 0 0% 93%;
@@ -22,26 +27,31 @@
     --muted: 0 0% 95%;
     --muted-foreground: 0 0% 35%;
 
-    --accent: 0 0% 90%;
-    --accent-foreground: 0 0% 8%;
+    --accent: 171 62% 78%;
+    --accent-foreground: 235 38% 20%;
 
-    --destructive: 0 84% 44%;
+    --destructive: var(--accent-coral);
     --destructive-foreground: 0 0% 100%;
 
     --border: 0 0% 8%;
     --input: 0 0% 8%;
-    --ring: 0 84% 44%;
+    --ring: var(--accent-indigo);
 
     --radius: 0.2rem;
 
-    --chart-1: 0 84% 44%;
-    --chart-2: 0 0% 15%;
-    --chart-3: 0 0% 35%;
-    --chart-4: 0 0% 55%;
-    --chart-5: 0 0% 75%;
+    --chart-1: var(--accent-pink);
+    --chart-2: var(--accent-coral);
+    --chart-3: var(--accent-aqua);
+    --chart-4: var(--accent-indigo);
+    --chart-5: 0 0% 55%;
   }
 
   .dark {
+    --accent-pink: 318 92% 66%;
+    --accent-coral: 15 92% 66%;
+    --accent-aqua: 171 70% 60%;
+    --accent-indigo: 233 56% 62%;
+
     --background: 0 0% 7%;
     --foreground: 0 0% 96%;
 
@@ -51,8 +61,8 @@
     --popover: 0 0% 9%;
     --popover-foreground: 0 0% 96%;
 
-    --primary: 0 84% 58%;
-    --primary-foreground: 0 0% 7%;
+    --primary: var(--accent-pink);
+    --primary-foreground: 0 0% 8%;
 
     --secondary: 0 0% 14%;
     --secondary-foreground: 0 0% 96%;
@@ -60,21 +70,21 @@
     --muted: 0 0% 13%;
     --muted-foreground: 0 0% 66%;
 
-    --accent: 0 0% 18%;
-    --accent-foreground: 0 0% 92%;
+    --accent: 171 44% 24%;
+    --accent-foreground: 171 90% 88%;
 
-    --destructive: 0 84% 58%;
+    --destructive: var(--accent-coral);
     --destructive-foreground: 0 0% 98%;
 
     --border: 0 0% 85%;
     --input: 0 0% 85%;
-    --ring: 0 84% 58%;
+    --ring: var(--accent-indigo);
 
-    --chart-1: 0 84% 58%;
-    --chart-2: 0 0% 90%;
-    --chart-3: 0 0% 72%;
-    --chart-4: 0 0% 54%;
-    --chart-5: 0 0% 36%;
+    --chart-1: var(--accent-pink);
+    --chart-2: var(--accent-coral);
+    --chart-3: var(--accent-aqua);
+    --chart-4: var(--accent-indigo);
+    --chart-5: 0 0% 72%;
   }
 }
 
@@ -104,19 +114,27 @@
 /* Swiss-minimal brutalist shell */
 .app-shell {
   background-image:
+    radial-gradient(circle at 14% 16%, hsla(var(--accent-indigo) / 0.22) 0, transparent 28%),
+    radial-gradient(circle at 76% 12%, hsla(var(--accent-pink) / 0.18) 0, transparent 24%),
+    radial-gradient(circle at 84% 78%, hsla(var(--accent-aqua) / 0.16) 0, transparent 22%),
+    radial-gradient(circle at 26% 84%, hsla(var(--accent-coral) / 0.12) 0, transparent 20%),
     linear-gradient(to right, rgba(0, 0, 0, 0.06) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(0, 0, 0, 0.06) 1px, transparent 1px),
     linear-gradient(180deg, hsl(0 0% 99%), hsl(0 0% 96%));
-  background-size: 28px 28px, 28px 28px, 100% 100%;
+  background-size: auto, auto, auto, auto, 28px 28px, 28px 28px, 100% 100%;
   background-attachment: fixed;
 }
 
 .dark .app-shell {
   background-image:
+    radial-gradient(circle at 14% 16%, hsla(var(--accent-indigo) / 0.34) 0, transparent 30%),
+    radial-gradient(circle at 76% 12%, hsla(var(--accent-pink) / 0.22) 0, transparent 24%),
+    radial-gradient(circle at 84% 78%, hsla(var(--accent-aqua) / 0.18) 0, transparent 24%),
+    radial-gradient(circle at 26% 84%, hsla(var(--accent-coral) / 0.16) 0, transparent 22%),
     linear-gradient(to right, rgba(255, 255, 255, 0.08) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(255, 255, 255, 0.08) 1px, transparent 1px),
     linear-gradient(180deg, hsl(0 0% 8%), hsl(0 0% 6%));
-  background-size: 28px 28px, 28px 28px, 100% 100%;
+  background-size: auto, auto, auto, auto, 28px 28px, 28px 28px, 100% 100%;
 }
 
 /* Hard-edged panels */
@@ -147,8 +165,8 @@
 
 .nav-pill:hover {
   transform: translate(-2px, -2px);
-  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.9);
-  border-color: hsl(0 0% 8%);
+  box-shadow: 2px 2px 0 hsla(var(--accent-indigo) / 0.85);
+  border-color: hsl(var(--accent-pink));
 }
 
 .nav-pill:active {
@@ -273,6 +291,28 @@
   background: rgba(255, 255, 255, 0.3);
   background-clip: content-box;
 }
+
+::selection {
+  background: hsla(var(--accent-pink) / 0.28);
+  color: inherit;
+}
+
+.text-accent-pink {
+  color: hsl(var(--accent-pink));
+}
+
+.text-accent-coral {
+  color: hsl(var(--accent-coral));
+}
+
+.text-accent-aqua {
+  color: hsl(var(--accent-aqua));
+}
+
+.text-accent-indigo {
+  color: hsl(var(--accent-indigo));
+}
+
 
 /* Focus rings - iOS style */
 *:focus-visible {

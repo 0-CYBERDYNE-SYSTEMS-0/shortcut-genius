@@ -1,8 +1,10 @@
 import type { Express } from "express";
+import type { Request, Response } from "express";
 import multer from 'multer';
 import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
 import dotenv from 'dotenv';
+import crypto from 'crypto';
 
 // Ensure environment variables are loaded before any other initialization
 dotenv.config();
@@ -29,7 +31,8 @@ import {
   convertToPlist,
   convertToBinaryPlist,
   validateAppleCompatibility,
-  generateShortcutMetadata
+  generateShortcutMetadata,
+  importShortcutArtifact
 } from './shortcut-builder';
 import {
   signShortcut,
@@ -67,6 +70,18 @@ import { getAiActionPromptPath, getBaseUrl } from './runtime-config';
 import { ConversationalShortcutAgent } from './conversational-agent';
 import { db } from '../db';
 import { conversations } from '../db/schema';
+import {
+  addDebugDiagnostic,
+  approveDebugProposal,
+  createDebugAttempt,
+  createDebugProposal,
+  createDebugSession,
+  getAttemptFile,
+  getDebugSession,
+  initializeDebugSessionStore,
+  listDebugSessionsForUser,
+  saveDiagnosticFiles
+} from './debug-sessions';
 
 // AI Model Clients - Direct APIs and OpenRouter (initialized after dotenv config)
 let openai: OpenAI;
@@ -182,6 +197,102 @@ async function canUseConversationStore(): Promise<boolean> {
     console.warn('⚠️ Conversation store not available:', (error as Error).message);
     return false;
   }
+}
+
+function resolveRequestUserId(req: Request): number {
+  const fromBody = typeof req.body?.userId === 'number' ? req.body.userId : Number.parseInt(String(req.body?.userId ?? ''), 10);
+  const fromQuery = Number.parseInt(String(req.query.userId ?? ''), 10);
+  const fromHeader = Number.parseInt(String(req.header('x-user-id') ?? ''), 10);
+
+  return [fromBody, fromQuery, fromHeader].find((value) => Number.isInteger(value) && value > 0) || 1;
+}
+
+function getOwnedDebugSessionOrReject(req: Request, res: Response) {
+  const session = getDebugSession(req.params.id);
+  if (!session) {
+    res.status(404).json({ error: 'Debug session not found' });
+    return null;
+  }
+
+  const userId = resolveRequestUserId(req);
+  if (session.ownerUserId !== userId) {
+    res.status(403).json({ error: 'Forbidden: debug session belongs to a different user' });
+    return null;
+  }
+
+  return session;
+}
+
+function serializeDebugSession(session: ReturnType<typeof getDebugSession>, baseUrl: string) {
+  if (!session) {
+    return null;
+  }
+
+  return {
+    ...session,
+    attempts: session.attempts.map((attempt) => ({
+      ...attempt,
+      downloads: {
+        unsigned: `${baseUrl}/api/debug-sessions/${session.id}/attempts/${attempt.attempt}/artifacts/unsigned`,
+        debug: `${baseUrl}/api/debug-sessions/${session.id}/attempts/${attempt.attempt}/artifacts/debug`,
+        signed: attempt.signedAvailable ? `${baseUrl}/api/debug-sessions/${session.id}/attempts/${attempt.attempt}/artifacts/signed` : null,
+        manifest: `${baseUrl}/api/debug-sessions/${session.id}/attempts/${attempt.attempt}/artifacts/manifest`,
+        instructions: `${baseUrl}/api/debug-sessions/${session.id}/attempts/${attempt.attempt}/artifacts/instructions`,
+        kit: attempt.files.kitPath ? `${baseUrl}/api/debug-sessions/${session.id}/attempts/${attempt.attempt}/artifacts/kit` : null,
+      }
+    }))
+  };
+}
+
+function summarizeDiagnosticsForProposal(sessionId: string) {
+  const session = getDebugSession(sessionId);
+  if (!session) {
+    return {
+      promptBlock: 'No diagnostics available.',
+      recommendedChanges: ['Review the last attempt manually before rebuilding.'],
+      summary: 'No diagnostics were uploaded yet.'
+    };
+  }
+
+  const latest = session.diagnostics.slice(0, 5);
+  const recommendedChanges = new Set<string>();
+
+  latest.forEach((diagnostic) => {
+    if (diagnostic.failureMode === 'import') {
+      recommendedChanges.add('Reduce import friction by preferring the signed artifact and simplifying the first-run instructions.');
+    }
+    if (diagnostic.failureMode === 'wrong-output' || diagnostic.failureMode === 'partial-success') {
+      recommendedChanges.add('Add stronger result inspection and safer fallback output around the failing steps.');
+    }
+    if (diagnostic.importedShortcut) {
+      recommendedChanges.add('Compare the uploaded shortcut artifact against the previous JSON and preserve the user-edited changes.');
+    }
+    if (diagnostic.pastedPayload) {
+      recommendedChanges.add('Incorporate the returned debug payload into the next generated version instead of regenerating blind.');
+    }
+  });
+
+  if (recommendedChanges.size === 0) {
+    recommendedChanges.add('Tighten error handling and expose more intermediate output in the debug build.');
+  }
+
+  const promptBlock = latest.map((diagnostic, index) => [
+    `Diagnostic ${index + 1}:`,
+    `- attempt: ${diagnostic.attempt ?? 'unknown'}`,
+    `- failureMode: ${diagnostic.failureMode}`,
+    diagnostic.expectedOutcome ? `- expectedOutcome: ${diagnostic.expectedOutcome}` : null,
+    diagnostic.note ? `- note: ${diagnostic.note}` : null,
+    diagnostic.pastedPayload ? `- pastedPayload: ${diagnostic.pastedPayload}` : null,
+    diagnostic.importedShortcut ? `- importedShortcut: ${JSON.stringify(diagnostic.importedShortcut)}` : null,
+  ].filter(Boolean).join('\n')).join('\n\n');
+
+  return {
+    promptBlock,
+    recommendedChanges: Array.from(recommendedChanges),
+    summary: latest.length > 0
+      ? `Generated from ${latest.length} uploaded diagnostic${latest.length === 1 ? '' : 's'}.`
+      : 'No diagnostics were uploaded yet.'
+  };
 }
 
 const SYSTEM_PROMPT = `The assistant is in a highly skilled iOS Shortcuts architect kind of mood. The assistant specializes in reverse engineering and optimizing shortcuts with precision and expertise.
@@ -665,6 +776,7 @@ export async function registerRoutes(app: Express) {
 
   // Initialize sharing system
   initializeSharingSystem().catch(console.error);
+  initializeDebugSessionStore().catch(console.error);
 
   // Configure multer for file uploads
   const upload = multer({
@@ -679,11 +791,17 @@ export async function registerRoutes(app: Express) {
     try {
       const {
         shortcut,
-        format = 'plist',
+        format = 'shortcut',
         sign = true,
         signMode = 'anyone',
         debug = false
-      }: { shortcut: Shortcut; format?: 'plist' | 'binary'; sign?: boolean; signMode?: 'anyone' | 'contacts-only'; debug?: boolean } = req.body;
+      }: {
+        shortcut: Shortcut;
+        format?: 'shortcut' | 'plist' | 'binary';
+        sign?: boolean;
+        signMode?: 'anyone' | 'contacts-only';
+        debug?: boolean;
+      } = req.body;
 
       if (!shortcut || !shortcut.name || !Array.isArray(shortcut.actions)) {
         return res.status(400).json({ error: 'Invalid shortcut data' });
@@ -702,11 +820,13 @@ export async function registerRoutes(app: Express) {
       const metadata = generateShortcutMetadata(shortcut);
 
       // Convert to requested format
-      const buffer = format === 'binary' ? convertToBinaryPlist(shortcut, { debug }) : convertToPlist(shortcut, { debug });
+      const buffer = format === 'binary'
+        ? convertToBinaryPlist(shortcut, { debug })
+        : convertToPlist(shortcut, { debug, preserveImportedMetadata: true });
       let outputBuffer = buffer;
       let isSigned = false;
 
-      if (sign) {
+      if (sign && format !== 'plist') {
         const capability = await checkSigningCapability();
         if (!capability.available) {
           return res.status(400).json({
@@ -735,12 +855,13 @@ export async function registerRoutes(app: Express) {
       }
 
       res.set({
-        'Content-Type': 'application/octet-stream',
-        'Content-Disposition': `attachment; filename="${shortcut.name.replace(/[^a-zA-Z0-9]/g, '_')}${isSigned ? '_signed' : ''}.shortcut"`,
+        'Content-Type': format === 'plist' ? 'application/xml' : 'application/octet-stream',
+        'Content-Disposition': `attachment; filename="${shortcut.name.replace(/[^a-zA-Z0-9]/g, '_')}${isSigned ? '_signed' : ''}.${format === 'plist' ? 'plist' : 'shortcut'}"`,
         'X-Shortcut-ID': metadata.id,
         'X-Shortcut-Hash': metadata.hash,
         'X-Action-Count': metadata.actionCount.toString(),
-        'X-Is-Signed': isSigned.toString()
+        'X-Is-Signed': isSigned.toString(),
+        'X-Shortcut-Format': format
       });
 
       res.send(outputBuffer);
@@ -847,6 +968,315 @@ export async function registerRoutes(app: Express) {
       console.error('Verify shortcut error:', error);
       res.status(500).json({
         error: 'Failed to verify shortcut',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  app.post('/api/shortcuts/import-artifact', upload.single('file'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'No file provided' });
+      }
+
+      const imported = await importShortcutArtifact(req.file.buffer, {
+        fileName: req.file.originalname,
+        importIntent: (req.body.importIntent as 'debug' | 'reference' | undefined) || 'reference'
+      });
+      const validationErrors = validateShortcut(imported.shortcut);
+
+      if (validationErrors.length > 0) {
+        return res.status(422).json({
+          error: 'Imported shortcut is invalid',
+          details: validationErrors.join('\n'),
+          metadata: {
+            ...imported.metadata,
+            fileName: req.file.originalname,
+            validationErrors
+          }
+        });
+      }
+
+      res.json({
+        shortcut: imported.shortcut,
+        metadata: {
+          ...imported.metadata,
+          fileName: req.file.originalname,
+          validationErrors
+        }
+      });
+    } catch (error) {
+      res.status(400).json({
+        error: 'Failed to import shortcut artifact',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  app.get('/api/debug-sessions', async (req, res) => {
+    const baseUrl = getBaseUrl();
+    const userId = resolveRequestUserId(req);
+    res.json({
+      sessions: listDebugSessionsForUser(userId).map((session) => serializeDebugSession(session, baseUrl))
+    });
+  });
+
+  app.post('/api/debug-sessions', async (req, res) => {
+    try {
+      const { shortcut, model, conversationId, promptSummary } = req.body as {
+        shortcut: Shortcut;
+        model?: string;
+        conversationId?: number;
+        promptSummary?: string;
+      };
+
+      if (!shortcut || !shortcut.name || !Array.isArray(shortcut.actions)) {
+        return res.status(400).json({ error: 'Invalid shortcut data' });
+      }
+
+      const session = await createDebugSession({
+        shortcut,
+        ownerUserId: resolveRequestUserId(req),
+        model,
+        conversationId,
+        promptSummary
+      });
+      res.json({ session: serializeDebugSession(session, getBaseUrl()) });
+    } catch (error) {
+      res.status(500).json({
+        error: 'Failed to create debug session',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  app.get('/api/debug-sessions/:id', async (req, res) => {
+    const session = getOwnedDebugSessionOrReject(req, res);
+    if (!session) {
+      return;
+    }
+
+    res.json({ session: serializeDebugSession(session, getBaseUrl()) });
+  });
+
+  app.post('/api/debug-sessions/:id/build', async (req, res) => {
+    try {
+      const session = getOwnedDebugSessionOrReject(req, res);
+      if (!session) {
+        return;
+      }
+
+      const { shortcut, model, signMode = 'anyone' } = req.body as {
+        shortcut: Shortcut;
+        model?: string;
+        signMode?: 'anyone' | 'contacts-only';
+      };
+
+      if (!shortcut || !shortcut.name || !Array.isArray(shortcut.actions)) {
+        return res.status(400).json({ error: 'Invalid shortcut data' });
+      }
+
+      const compatibilityErrors = validateAppleCompatibility(shortcut);
+      if (compatibilityErrors.length > 0) {
+        return res.status(400).json({
+          error: 'Shortcut not compatible with Apple Shortcuts',
+          details: compatibilityErrors
+        });
+      }
+
+      const attempt = await createDebugAttempt(req.params.id, { shortcut, model, signMode });
+      const updatedSession = getDebugSession(req.params.id);
+      res.json({
+        attempt,
+        session: serializeDebugSession(updatedSession, getBaseUrl())
+      });
+    } catch (error) {
+      res.status(500).json({
+        error: 'Failed to create debug build',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  app.get('/api/debug-sessions/:id/attempts/:attempt/artifacts/:kind', async (req, res) => {
+    try {
+      const session = getOwnedDebugSessionOrReject(req, res);
+      if (!session) {
+        return;
+      }
+
+      const attempt = Number.parseInt(req.params.attempt, 10);
+      const kind = req.params.kind as 'unsigned' | 'debug' | 'signed' | 'manifest' | 'instructions' | 'kit';
+      const filePath = getAttemptFile(req.params.id, attempt, kind);
+
+      if (!filePath) {
+        return res.status(404).json({ error: 'Artifact not found' });
+      }
+
+      const fs = await import('fs/promises');
+      const buffer = await fs.readFile(filePath);
+      const contentType = kind === 'manifest'
+        ? 'application/json'
+        : kind === 'instructions'
+          ? 'text/plain; charset=utf-8'
+          : kind === 'kit'
+            ? 'application/zip'
+            : 'application/octet-stream';
+
+      res.set({
+        'Content-Type': contentType,
+        'Content-Disposition': `attachment; filename="${filePath.split('/').pop()}"`
+      });
+      res.send(buffer);
+    } catch (error) {
+      res.status(500).json({
+        error: 'Failed to download debug artifact',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  app.post('/api/debug-sessions/:id/diagnostics', upload.array('files', 8), async (req, res) => {
+    try {
+      const session = getOwnedDebugSessionOrReject(req, res);
+      if (!session) {
+        return;
+      }
+
+      const body = req.body as Record<string, string | undefined>;
+      const attempt = body.attempt ? Number.parseInt(body.attempt, 10) : null;
+      const files = ((req.files as Express.Multer.File[]) || []);
+      const importedShortcutFile = files.find((file) =>
+        file.originalname.endsWith('.shortcut') ||
+        file.originalname.endsWith('.json') ||
+        file.originalname.endsWith('.plist') ||
+        file.originalname.endsWith('.xml')
+      );
+      let importedShortcut: Shortcut | undefined;
+      const diagnosticId = crypto.randomUUID();
+
+      if (importedShortcutFile) {
+        try {
+          importedShortcut = (await importShortcutArtifact(importedShortcutFile.buffer, {
+            fileName: importedShortcutFile.originalname,
+            importIntent: 'debug'
+          })).shortcut;
+        } catch {
+          // Keep the raw file even if reverse import is partial.
+        }
+      }
+
+      const savedFiles = await saveDiagnosticFiles(
+        req.params.id,
+        diagnosticId,
+        files.map((file) => ({
+          name: file.originalname,
+          buffer: file.buffer,
+          mimeType: file.mimetype
+        }))
+      );
+
+      const savedDiagnostic = await addDebugDiagnostic(req.params.id, {
+        id: diagnosticId,
+        attempt,
+        failureMode: (body.failureMode as 'import' | 'run' | 'wrong-output' | 'partial-success' | 'other') || 'other',
+        expectedOutcome: body.expectedOutcome,
+        note: body.note,
+        pastedPayload: body.pastedPayload,
+        importedShortcut,
+        files: savedFiles
+      });
+
+      const sessionResponse = getDebugSession(req.params.id);
+      res.json({
+        diagnostic: savedDiagnostic,
+        session: serializeDebugSession(sessionResponse, getBaseUrl())
+      });
+    } catch (error) {
+      res.status(500).json({
+        error: 'Failed to upload diagnostics',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  app.post('/api/debug-sessions/:id/proposal', async (req, res) => {
+    try {
+      const session = getOwnedDebugSessionOrReject(req, res);
+      if (!session) {
+        return;
+      }
+
+      const requestedModel = req.body?.model || session.model || 'gpt-4o-mini';
+      const latestAttempt = session.attempts[session.attempts.length - 1];
+      const diagnosticSummary = summarizeDiagnosticsForProposal(req.params.id);
+
+      let proposedShortcut = session.shortcut;
+      let summary = diagnosticSummary.summary;
+      let recommendedChanges = diagnosticSummary.recommendedChanges;
+
+      if (aiProcessor) {
+        try {
+          const proposalPrompt = [
+            `You are fixing an iOS Shortcut from a structured debug loop.`,
+            `Return only valid shortcut JSON matching the existing schema with "name" and "actions".`,
+            `Current shortcut JSON:`,
+            JSON.stringify(latestAttempt ? session.shortcut : session.shortcut),
+            ``,
+            `Diagnostics:`,
+            diagnosticSummary.promptBlock,
+            ``,
+            `Required outcomes:`,
+            recommendedChanges.map((item, index) => `${index + 1}. ${item}`).join('\n')
+          ].join('\n');
+
+          const aiResult = await aiProcessor.process({
+            model: requestedModel,
+            prompt: proposalPrompt,
+            type: 'generate',
+            systemPrompt: SYSTEM_PROMPT
+          });
+          proposedShortcut = validateAndParseJSON(aiResult.content, 'generate').data || session.shortcut;
+          summary = `AI proposal generated from attempt ${latestAttempt?.attempt ?? 'current'} diagnostics.`;
+        } catch (error) {
+          console.warn('AI debug proposal fallback:', error);
+        }
+      }
+
+      const proposal = await createDebugProposal(req.params.id, {
+        model: requestedModel,
+        summary,
+        recommendedChanges,
+        proposedShortcut
+      });
+
+      res.json({
+        proposal,
+        session: serializeDebugSession(getDebugSession(req.params.id), getBaseUrl())
+      });
+    } catch (error) {
+      res.status(500).json({
+        error: 'Failed to generate debug proposal',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  app.post('/api/debug-sessions/:id/proposals/:proposalId/approve', async (req, res) => {
+    try {
+      const session = getOwnedDebugSessionOrReject(req, res);
+      if (!session) {
+        return;
+      }
+
+      const proposal = await approveDebugProposal(req.params.id, req.params.proposalId);
+      res.json({
+        proposal,
+        session: serializeDebugSession(getDebugSession(req.params.id), getBaseUrl())
+      });
+    } catch (error) {
+      res.status(404).json({
+        error: 'Failed to approve proposal',
         details: error instanceof Error ? error.message : 'Unknown error'
       });
     }
