@@ -1,8 +1,8 @@
 # ShortcutGenius CLI Guide
 
-## Current Status: ❌ No CLI Implemented
+## Current Status: ✅ CLI Implemented!
 
-**Important:** The ShortcutGenius application is currently **web-based only**. There is no Command Line Interface (CLI) implemented yet.
+**Great news:** A comprehensive CLI has been implemented for ShortcutGenius!
 
 ---
 
@@ -50,43 +50,95 @@ The application was designed as a **web-based tool** for these reasons:
 
 ---
 
-## 💡 Can We Add a CLI?
+## 🔧 Installation
 
-**Yes!** A CLI can be added if you need it. Here's what a CLI could do:
+### Prerequisites
 
-### Potential CLI Commands
+- Node.js 18+ installed
+- ShortcutGenius source code
+- npm installed
 
+### Install Steps
+
+1. **Install dependencies:**
 ```bash
-# Build a shortcut from description
-shortcut-genius build "Create a timer shortcut"
-
-# Analyze an existing shortcut
-shortcut-genius analyze my-shortcut.shortcut
-
-# Convert shortcut format
-shortcut-genius convert input.json --format plist
-
-# Test a shortcut (macOS only)
-shortcut-genius test my-shortcut.shortcut
-
-# Run with specific model
-shortcut-genius build "My shortcut" --model gpt-4o
-
-# List available models
-shortcut-genius models list
-
-# Generate from JSON
-shortcut-genius generate shortcut.json
+cd shortcut-genius
+npm install
 ```
 
-### Use Cases for CLI
+2. **Link CLI globally:**
+```bash
+npm link
+```
 
-1. **Automation** - Script shortcut generation in CI/CD pipelines
-2. **Batch Processing** - Process multiple shortcuts at once
-3. **Headless Operation** - Run without web browser
-4. **Terminal Lovers** - For users who prefer command line
-5. **Remote Servers** - Generate shortcuts on headless servers
-6. **Integration** - Use in other CLI tools or workflows
+3. **Verify installation:**
+```bash
+shortcut-genius --version
+```
+
+### Unlink
+
+To remove global symlink:
+```bash
+npm unlink -g shortcut-genius
+```
+
+## 🎯 Use Cases
+
+The CLI is perfect for:
+
+### 1. **Automation Scripts**
+Generate shortcuts as part of CI/CD pipelines or automated workflows:
+```bash
+#!/bin/bash
+for shortcut in "timer" "weather" "alarm"; do
+  shortcut-genius build "Create a ${shortcut} shortcut" \
+    --output ${shortcut}.shortcut \
+    --sign
+done
+```
+
+### 2. **Batch Processing**
+Process multiple shortcuts at once:
+```bash
+#!/bin/bash
+for file in *.json; do
+  shortcut-genius analyze "$file" --json > "${file%.json}-analysis.json"
+  shortcut-genius convert "$file" --to shortcut
+done
+```
+
+### 3. **Headless Operation**
+Run on servers without UI:
+```bash
+# On remote server
+npm run dev &
+# Then use CLI
+shortcut-genius build "Server monitoring shortcut"
+```
+
+### 4. **Terminal Preference**
+For users who love command line and hate mouse clicks:
+```bash
+# Much faster than web UI
+shortcut-genius build "Quick notes shortcut" --model gpt-4o-mini
+```
+
+### 5. **Integration with Other Tools**
+Use in shell scripts, Makefiles, or other CLI tools:
+```bash
+# In Makefile
+build-shortcuts:
+  shortcut-genius build "My shortcut" -o build/shortcut.shortcut
+
+# In shell script
+if shortcut-genius test shortcut.shortcut; then
+  echo "✓ Tests passed"
+else
+  echo "✗ Tests failed"
+  exit 1
+fi
+```
 
 ---
 
@@ -244,17 +296,108 @@ I'll implement it for you! 🚀
 
 ---
 
-## 🔮 Future Plans
+## 💡 Tips and Tricks
 
-A CLI is on the roadmap. The current focus is on:
+### 1. Fast Model Switching
 
-1. ✅ Web UI stability
-2. ✅ AI agent improvements
-3. ✅ Multi-provider support
-4. ✅ Shortcut testing system
-5. ⏳ CLI implementation (coming soon)
+Set different models via environment variable:
+```bash
+SHORTCUT_GENIUS_MODEL=claude-3-5-sonnet-20241022 \
+shortcut-genius build "Create shortcut"
+```
 
----
+### 2. Batch Processing Script
+
+Process a directory of shortcuts:
+```bash
+#!/bin/bash
+for file in shortcuts/*.json; do
+  base="${file%.json}"
+  echo "Processing $file..."
+  
+  # Analyze
+  shortcut-genius analyze "$file" --detailed \
+    > "${base}-analysis.txt"
+  
+  # Convert
+  shortcut-genius convert "$file" --to plist \
+    -o "${base}.plist"
+  
+  echo "✓ Completed $base"
+done
+```
+
+### 3. Automated Testing
+
+Test all shortcuts in a directory:
+```bash
+#!/bin/bash
+passed=0
+failed=0
+
+for file in tests/*.shortcut; do
+  echo "Testing $file..."
+  
+  if shortcut-genius test "$file" --steps; then
+    ((passed++))
+  else
+    ((failed++))
+    echo "✗ Failed: $file"
+  fi
+done
+
+echo ""
+echo "Results: $passed passed, $failed failed"
+```
+
+### 4. CI/CD Integration
+
+Use in GitHub Actions or other CI:
+```yaml
+name: Build Shortcuts
+on: [push]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup Node
+        uses: actions/setup-node@v2
+        with:
+          node-version: '18'
+      - name: Install dependencies
+        run: npm install
+      - name: Start server
+        run: npm run dev &
+      - name: Build shortcuts
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          shortcut-genius build "Timer shortcut" \
+            --output build/timer.shortcut \
+            --sign
+```
+
+### 5. Makefile Integration
+
+Create shortcuts with `make`:
+```makefile
+# Makefile
+.PHONY: build test clean
+
+build:
+  @echo "Building shortcuts..."
+  shortcut-genius build "Timer" -o build/timer.shortcut
+  shortcut-genius build "Weather" -o build/weather.shortcut
+
+test:
+  @echo "Testing shortcuts..."
+  shortcut-genius test build/timer.shortcut
+  shortcut-genius test build/weather.shortcut
+
+clean:
+  rm -rf build/
+```
 
 **Last Updated:** 2025-01-07
 **Status:** No CLI Currently Implemented
