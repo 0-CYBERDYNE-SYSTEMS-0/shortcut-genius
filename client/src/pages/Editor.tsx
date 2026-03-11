@@ -19,6 +19,7 @@ import { FileUpload } from '@/components/FileUpload';
 import { ModelSelector } from '@/components/ModelSelector';
 import { ShareDialog } from '@/components/ShareDialog';
 import { DebugSessionDialog } from '@/components/DebugSessionDialog';
+import { DebugConsoleDialog } from '@/components/DebugConsoleDialog';
 import { ThemeToggle } from '@/components/theme-toggle';
 import ChatThread from '@/components/ChatThread';
 import { useToast } from '@/hooks/use-toast';
@@ -47,6 +48,7 @@ import {
   Settings2,
   Share2,
   Sparkles,
+  Terminal,
   Wand2
 } from 'lucide-react';
 
@@ -140,6 +142,7 @@ export function Editor() {
   const [isMobileInspectorOpen, setIsMobileInspectorOpen] = useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [debugDialogOpen, setDebugDialogOpen] = useState(false);
+  const [debugConsoleOpen, setDebugConsoleOpen] = useState(false);
   const [chatSessionKey] = useState(() => `editor-session-${Date.now()}`);
   const { toast } = useToast();
   const { isMobile, isTablet, isDesktop, isLargeDesktop, isLaptop, isTouch } = useBreakpoint();
@@ -502,6 +505,18 @@ export function Editor() {
                     >
                       <Download className="mr-2 h-4 w-4" />
                       Download
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => setDebugConsoleOpen(true)}
+                      className={cn(
+                        chromeButton,
+                        compactHeader ? 'flex-1 sm:flex-none' : '',
+                        'text-accent-indigo hover:bg-accent-indigo/10 hover:text-accent-indigo'
+                      )}
+                    >
+                      <Terminal className="mr-2 h-4 w-4" />
+                      Console
                     </Button>
                     <Button
                       variant="outline"
@@ -905,6 +920,12 @@ export function Editor() {
         shortcut={shortcut}
         model={model}
         onShortcutApply={handleApplyDebugShortcut}
+      />
+
+      <DebugConsoleDialog
+        open={debugConsoleOpen}
+        onOpenChange={setDebugConsoleOpen}
+        shortcut={shortcut}
       />
     </div>
   );

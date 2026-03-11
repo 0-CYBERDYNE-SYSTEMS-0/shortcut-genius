@@ -190,3 +190,4 @@ drizzle/
 
 # Local app/runtime data
 .local/shortcut-genius/
+dogfood-output/

@@ -82,6 +82,7 @@ import {
   listDebugSessionsForUser,
   saveDiagnosticFiles
 } from './debug-sessions';
+import { runDebugPrimitive } from './debug-primitives';
 
 // AI Model Clients - Direct APIs and OpenRouter (initialized after dotenv config)
 let openai: OpenAI;
@@ -1009,6 +1010,18 @@ export async function registerRoutes(app: Express) {
       res.status(400).json({
         error: 'Failed to import shortcut artifact',
         details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  app.post('/api/debug-tools/primitive', async (req, res) => {
+    try {
+      const result = await runDebugPrimitive(req.body);
+      res.json(result);
+    } catch (error) {
+      res.status(400).json({
+        error: 'Failed to run debug primitive',
+        details: error instanceof Error ? error.message : 'Unknown error',
       });
     }
   });
