@@ -142,7 +142,7 @@ export function Editor() {
   const [debugDialogOpen, setDebugDialogOpen] = useState(false);
   const [chatSessionKey] = useState(() => `editor-session-${Date.now()}`);
   const { toast } = useToast();
-  const { isMobile, isTablet, isDesktop, isLargeDesktop } = useBreakpoint();
+  const { isMobile, isTablet, isDesktop, isLargeDesktop, isLaptop, isTouch } = useBreakpoint();
 
   const actionCount = shortcut.actions.length;
   const hasShortcut = actionCount > 0;
@@ -151,6 +151,8 @@ export function Editor() {
   const isWideLayout = isDesktop || isLargeDesktop;
   const desktopCanvasSurface = buildSurface === 'editor' ? 'editor' : 'preview';
   const showInlineInspector = isWideLayout && isDesktopInspectorOpen && inspectorPanel !== null;
+  const chromeButton = 'rounded-none border-2 border-border shadow-none';
+  const compactHeader = isMobile || isTablet || isLaptop;
 
   const updateShortcutFromCode = (value: string) => {
     setCode(value);
@@ -430,8 +432,8 @@ export function Editor() {
     <div className="app-shell flex min-h-screen flex-col text-foreground">
       <header className="border-b-2 border-border bg-card/95 backdrop-blur">
         <div className="mx-auto flex w-full max-w-[1680px] flex-col gap-4 px-3 py-4 sm:px-4 lg:px-6">
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-            <div className="space-y-3">
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(420px,auto)] xl:items-start">
+            <div className="space-y-3 min-w-0">
               <div className="text-accent-indigo text-xs uppercase tracking-[0.32em]">Shortcut Genius</div>
               <div className="flex flex-wrap items-center gap-3">
                 <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{shortcut.name}</h1>
@@ -458,146 +460,234 @@ export function Editor() {
               </p>
             </div>
 
-            <div className="flex flex-col gap-2 lg:items-end">
-              <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
-                <div className="w-full sm:w-auto">
+            <div className="grid gap-3 xl:justify-items-end">
+              <div className="grid w-full gap-3 xl:max-w-[760px] xl:grid-cols-[minmax(220px,280px)_minmax(0,1fr)]">
+                <div className="rounded-2xl border border-border/70 bg-background/70 p-3">
                   <ModelSelector value={model} onChange={setModel} />
                 </div>
-                <FileUpload onUpload={handleImport} />
-                <Button onClick={handleProcess} disabled={isProcessing}>
-                  {isProcessing ? (
-                    <>
-                      <Sparkles className="mr-2 h-4 w-4 animate-pulse" />
-                      Analyzing
-                    </>
-                  ) : (
-                    <>
-                      <Wand2 className="mr-2 h-4 w-4" />
-                      Analyze
-                    </>
-                  )}
-                </Button>
-                <Button variant="secondary" onClick={handleDownloadShortcut} disabled={!hasShortcut}>
-                  <Download className="mr-2 h-4 w-4" />
-                  Download
-                </Button>
-                <Button variant="secondary" onClick={() => setDebugDialogOpen(true)} disabled={!hasShortcut}>
-                  <Bug className="mr-2 h-4 w-4" />
-                  Debug loop
-                </Button>
-                <ThemeToggle />
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="secondary" size="icon" aria-label="More actions">
-                      <MoreVertical className="h-4 w-4" />
+                <div className="rounded-2xl border border-border/70 bg-background/70 p-3">
+                  <div className="flex flex-wrap items-start gap-2">
+                    <FileUpload onUpload={handleImport} />
+                    <Button
+                      onClick={handleProcess}
+                      disabled={isProcessing}
+                      variant="outline"
+                      className={cn(
+                        chromeButton,
+                        compactHeader ? 'flex-1 sm:flex-none' : '',
+                        'text-accent-coral hover:bg-accent-coral/10 hover:text-accent-coral'
+                      )}
+                    >
+                      {isProcessing ? (
+                        <>
+                          <Sparkles className="mr-2 h-4 w-4 animate-pulse" />
+                          Analyzing
+                        </>
+                      ) : (
+                        <>
+                          <Wand2 className="mr-2 h-4 w-4" />
+                          Analyze
+                        </>
+                      )}
                     </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => setShareDialogOpen(true)} disabled={!hasShortcut}>
-                      <Share2 className="mr-2 h-4 w-4" />
-                      Share
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleExport}>
-                      Export JSON
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleExportPlist} disabled={!hasShortcut}>
-                      Export PLIST
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleDownloadSignedShortcut} disabled={!hasShortcut}>
+                    <Button
+                      variant="outline"
+                      onClick={handleDownloadShortcut}
+                      disabled={!hasShortcut}
+                      className={cn(
+                        chromeButton,
+                        compactHeader ? 'flex-1 sm:flex-none' : '',
+                        'text-accent-aqua hover:bg-accent-aqua/10 hover:text-accent-aqua'
+                      )}
+                    >
                       <Download className="mr-2 h-4 w-4" />
-                      Download Signed
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                      Download
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => setDebugDialogOpen(true)}
+                      disabled={!hasShortcut}
+                      className={cn(
+                        chromeButton,
+                        compactHeader ? 'flex-1 sm:flex-none' : '',
+                        'text-accent-indigo hover:bg-accent-indigo/10 hover:text-accent-indigo'
+                      )}
+                    >
+                      <Bug className="mr-2 h-4 w-4" />
+                      Debug loop
+                    </Button>
+                    <div className="ml-auto flex items-center gap-2">
+                      <ThemeToggle />
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" size="icon" aria-label="More actions" className={chromeButton}>
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => setShareDialogOpen(true)} disabled={!hasShortcut}>
+                            <Share2 className="mr-2 h-4 w-4" />
+                            Share
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={handleExport}>
+                            Export JSON
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={handleExportPlist} disabled={!hasShortcut}>
+                            Export PLIST
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={handleDownloadSignedShortcut} disabled={!hasShortcut}>
+                            <Download className="mr-2 h-4 w-4" />
+                            Download Signed
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  variant={workspaceMode === 'build' ? 'default' : 'secondary'}
-                  size="sm"
-                  onClick={() => setWorkspaceMode('build')}
-                >
-                  <LayoutGrid className="mr-2 h-4 w-4" />
-                  Build
-                </Button>
-                <Button
-                  variant={workspaceMode === 'library' ? 'default' : 'secondary'}
-                  size="sm"
-                  onClick={() => setWorkspaceMode('library')}
-                  className={workspaceMode !== 'library' ? 'text-accent-indigo' : undefined}
-                >
-                  <GalleryVerticalEnd className="mr-2 h-4 w-4" />
-                  Library
-                </Button>
+              <div className="flex w-full flex-wrap items-center gap-3 xl:justify-end">
+                <div className="rounded-2xl border border-border/70 bg-background/70 p-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setWorkspaceMode('build')}
+                      className={cn(
+                        chromeButton,
+                        workspaceMode === 'build'
+                          ? 'bg-accent-pink/12 text-accent-pink border-accent-pink'
+                          : 'text-accent-pink hover:bg-accent-pink/10 hover:text-accent-pink'
+                      )}
+                    >
+                      <LayoutGrid className="mr-2 h-4 w-4" />
+                      Build
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setWorkspaceMode('library')}
+                      className={cn(
+                        chromeButton,
+                        workspaceMode === 'library'
+                          ? 'bg-accent-indigo/12 text-accent-indigo border-accent-indigo'
+                          : 'text-accent-indigo hover:bg-accent-indigo/10 hover:text-accent-indigo'
+                      )}
+                    >
+                      <GalleryVerticalEnd className="mr-2 h-4 w-4" />
+                      Library
+                    </Button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
           {workspaceMode === 'build' && (
-            <div className="flex flex-col gap-3 border-t pt-4">
-              <div className="flex flex-wrap items-center gap-2">
-                <div className="text-accent-pink mr-2 text-xs uppercase tracking-[0.2em]">Build surface</div>
-                <Button
-                  variant={buildSurface === 'assistant' ? 'default' : 'secondary'}
-                  size="sm"
-                  onClick={() => setBuildSurface('assistant')}
-                >
-                  <Bot className="mr-2 h-4 w-4" />
-                  Assistant
-                </Button>
-                <Button
-                  variant={buildSurface === 'preview' ? 'default' : 'secondary'}
-                  size="sm"
-                  onClick={() => setBuildSurface('preview')}
-                >
-                  <Sparkles className="mr-2 h-4 w-4" />
-                  Preview
-                </Button>
-                <Button
-                  variant={buildSurface === 'editor' ? 'default' : 'secondary'}
-                  size="sm"
-                  onClick={() => setBuildSurface('editor')}
-                >
-                  <Code2 className="mr-2 h-4 w-4" />
-                  JSON
-                </Button>
+            <div className="grid gap-3 border-t pt-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+              <div className="rounded-2xl border border-border/70 bg-background/70 p-3">
+                <div className="mb-2 text-accent-pink text-xs uppercase tracking-[0.2em]">Build surface</div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setBuildSurface('assistant')}
+                    className={cn(
+                      chromeButton,
+                      buildSurface === 'assistant'
+                        ? 'bg-accent-pink/12 text-accent-pink border-accent-pink'
+                        : 'text-accent-pink hover:bg-accent-pink/10 hover:text-accent-pink'
+                    )}
+                  >
+                    <Bot className="mr-2 h-4 w-4" />
+                    Assistant
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setBuildSurface('preview')}
+                    className={cn(
+                      chromeButton,
+                      buildSurface === 'preview'
+                        ? 'bg-accent-aqua/12 text-accent-aqua border-accent-aqua'
+                        : 'text-accent-aqua hover:bg-accent-aqua/10 hover:text-accent-aqua'
+                    )}
+                  >
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    Preview
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setBuildSurface('editor')}
+                    className={cn(
+                      chromeButton,
+                      buildSurface === 'editor'
+                        ? 'bg-accent-indigo/12 text-accent-indigo border-accent-indigo'
+                        : 'text-accent-indigo hover:bg-accent-indigo/10 hover:text-accent-indigo'
+                    )}
+                  >
+                    <Code2 className="mr-2 h-4 w-4" />
+                    JSON
+                  </Button>
+                </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2">
-                <div className="text-accent-coral mr-2 text-xs uppercase tracking-[0.2em]">Validate</div>
-                <Button
-                  variant={inspectorPanel === 'insights' && (showInlineInspector || isMobileInspectorOpen) ? 'default' : 'secondary'}
-                  size="sm"
-                  onClick={() => openInspector('insights')}
-                >
-                  <BarChart2 className="mr-2 h-4 w-4" />
-                  Insights
-                </Button>
-                <Button
-                  variant={inspectorPanel === 'test' && (showInlineInspector || isMobileInspectorOpen) ? 'default' : 'secondary'}
-                  size="sm"
-                  onClick={() => openInspector('test')}
-                >
-                  <PlayCircle className="mr-2 h-4 w-4" />
-                  Test
-                </Button>
-                <Button
-                  variant={inspectorPanel === 'model' && (showInlineInspector || isMobileInspectorOpen) ? 'default' : 'secondary'}
-                  size="sm"
-                  onClick={() => openInspector('model')}
-                >
-                  <Settings2 className="mr-2 h-4 w-4" />
-                  Model settings
-                </Button>
-                {showInlineInspector && (
+              <div className="rounded-2xl border border-border/70 bg-background/70 p-3">
+                <div className="mb-2 text-accent-coral text-xs uppercase tracking-[0.2em]">Validate</div>
+                <div className="flex flex-wrap items-center gap-2">
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
-                    onClick={() => setIsDesktopInspectorOpen(false)}
+                    onClick={() => openInspector('insights')}
+                    className={cn(
+                      chromeButton,
+                      inspectorPanel === 'insights' && (showInlineInspector || isMobileInspectorOpen)
+                        ? 'bg-accent-indigo/12 text-accent-indigo border-accent-indigo'
+                        : 'text-accent-indigo hover:bg-accent-indigo/10 hover:text-accent-indigo'
+                    )}
                   >
-                    Hide panel
+                    <BarChart2 className="mr-2 h-4 w-4" />
+                    Insights
                   </Button>
-                )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => openInspector('test')}
+                    className={cn(
+                      chromeButton,
+                      inspectorPanel === 'test' && (showInlineInspector || isMobileInspectorOpen)
+                        ? 'bg-accent-aqua/12 text-accent-aqua border-accent-aqua'
+                        : 'text-accent-aqua hover:bg-accent-aqua/10 hover:text-accent-aqua'
+                    )}
+                  >
+                    <PlayCircle className="mr-2 h-4 w-4" />
+                    Test
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => openInspector('model')}
+                    className={cn(
+                      chromeButton,
+                      inspectorPanel === 'model' && (showInlineInspector || isMobileInspectorOpen)
+                        ? 'bg-accent-coral/12 text-accent-coral border-accent-coral'
+                        : 'text-accent-coral hover:bg-accent-coral/10 hover:text-accent-coral'
+                    )}
+                  >
+                    <Settings2 className="mr-2 h-4 w-4" />
+                    Model settings
+                  </Button>
+                  {showInlineInspector && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setIsDesktopInspectorOpen(false)}
+                    >
+                      Hide panel
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -634,9 +724,9 @@ export function Editor() {
             className={cn(
               'grid flex-1 gap-4 overflow-hidden',
               showInlineInspector
-                ? 'lg:grid-cols-[minmax(340px,0.95fr)_minmax(0,1.05fr)_320px]'
+                ? 'lg:grid-cols-[minmax(320px,0.9fr)_minmax(0,1.15fr)_minmax(280px,320px)]'
                 : isWideLayout
-                  ? 'lg:grid-cols-[minmax(340px,0.95fr)_minmax(0,1.1fr)]'
+                  ? 'lg:grid-cols-[minmax(320px,0.92fr)_minmax(0,1.08fr)]'
                   : 'grid-cols-1'
             )}
           >
@@ -662,7 +752,7 @@ export function Editor() {
                       onOpenInspector={(panel) => openInspector(panel)}
                       model={model}
                       sessionKey={chatSessionKey}
-                      autoFocus={!isWideLayout}
+                      autoFocus={!isWideLayout && !isTouch}
                     />
                   </div>
                 </div>
@@ -673,17 +763,29 @@ export function Editor() {
               <div className="min-h-[420px] overflow-hidden">
                 <div className="mb-3 flex items-center gap-2 lg:hidden">
                   <Button
-                    variant={buildSurface === 'preview' ? 'default' : 'secondary'}
+                    variant="outline"
                     size="sm"
                     onClick={() => setBuildSurface('preview')}
+                    className={cn(
+                      chromeButton,
+                      buildSurface === 'preview'
+                        ? 'bg-accent-aqua/12 text-accent-aqua border-accent-aqua'
+                        : 'text-accent-aqua hover:bg-accent-aqua/10 hover:text-accent-aqua'
+                    )}
                   >
                     <Sparkles className="mr-2 h-4 w-4" />
                     Preview
                   </Button>
                   <Button
-                    variant={buildSurface === 'editor' ? 'default' : 'secondary'}
+                    variant="outline"
                     size="sm"
                     onClick={() => setBuildSurface('editor')}
+                    className={cn(
+                      chromeButton,
+                      buildSurface === 'editor'
+                        ? 'bg-accent-indigo/12 text-accent-indigo border-accent-indigo'
+                        : 'text-accent-indigo hover:bg-accent-indigo/10 hover:text-accent-indigo'
+                    )}
                   >
                     <Code2 className="mr-2 h-4 w-4" />
                     JSON
@@ -694,17 +796,29 @@ export function Editor() {
                   <div className="grid h-full gap-4 xl:grid-cols-[minmax(0,1fr)]">
                     <div className="mb-3 hidden items-center gap-2 lg:flex">
                       <Button
-                        variant={desktopCanvasSurface === 'preview' ? 'default' : 'secondary'}
+                        variant="outline"
                         size="sm"
                         onClick={() => setBuildSurface('preview')}
+                        className={cn(
+                          chromeButton,
+                          desktopCanvasSurface === 'preview'
+                            ? 'bg-accent-aqua/12 text-accent-aqua border-accent-aqua'
+                            : 'text-accent-aqua hover:bg-accent-aqua/10 hover:text-accent-aqua'
+                        )}
                       >
                         <Sparkles className="mr-2 h-4 w-4" />
                         Preview
                       </Button>
                       <Button
-                        variant={desktopCanvasSurface === 'editor' ? 'default' : 'secondary'}
+                        variant="outline"
                         size="sm"
                         onClick={() => setBuildSurface('editor')}
+                        className={cn(
+                          chromeButton,
+                          desktopCanvasSurface === 'editor'
+                            ? 'bg-accent-indigo/12 text-accent-indigo border-accent-indigo'
+                            : 'text-accent-indigo hover:bg-accent-indigo/10 hover:text-accent-indigo'
+                        )}
                       >
                         <Code2 className="mr-2 h-4 w-4" />
                         JSON editor

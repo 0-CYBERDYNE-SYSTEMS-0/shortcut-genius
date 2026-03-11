@@ -22,10 +22,21 @@ export function PreviewPane({ shortcut, className }: PreviewPaneProps) {
     return `${action.type}-${index}-${paramHash.substring(0, 20)}`;
   };
 
+  const formatValue = (value: unknown): string => {
+    if (typeof value === 'string') return value;
+    if (value === null || value === undefined) return String(value);
+
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return String(value);
+    }
+  };
+
   return (
-    <Card className={`h-full ${className || ''}`}>
+    <Card className={`flex h-full min-h-0 flex-col ${className || ''}`}>
       <ScrollArea className="h-full">
-        <div className="p-4 space-y-4">
+        <div className="space-y-4 p-4">
           <div className="rounded-xl border border-border/70 bg-muted/20 p-4">
             <div className="text-accent-indigo text-xs uppercase tracking-[0.2em]">Shortcut summary</div>
             <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
@@ -55,14 +66,14 @@ export function PreviewPane({ shortcut, className }: PreviewPaneProps) {
                   key={getActionKey(action, index)}
                   className="rounded-xl border border-border/70 bg-secondary/70 p-4"
                 >
-                  <div className="mb-3 flex items-center justify-between gap-3">
-                    <div>
+                  <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
                       <div className="text-accent-indigo text-xs uppercase tracking-[0.2em]">
                         Step {index + 1}
                       </div>
-                      <div className="font-medium text-primary">{action.type}</div>
+                      <div className="break-words font-medium text-primary">{action.type}</div>
                     </div>
-                    <div className="rounded-md border border-border/70 bg-background px-2 py-1 text-xs text-muted-foreground">
+                    <div className="shrink-0 rounded-md border border-border/70 bg-background px-2 py-1 text-xs text-muted-foreground">
                       {Object.keys(action.parameters).length} fields
                     </div>
                   </div>
@@ -71,10 +82,12 @@ export function PreviewPane({ shortcut, className }: PreviewPaneProps) {
                     {Object.entries(action.parameters).map(([key, value]) => (
                       <div
                         key={key}
-                        className="flex justify-between gap-3 rounded-lg bg-background/80 px-3 py-2 text-sm"
+                        className="flex flex-col gap-1 rounded-lg bg-background/80 px-3 py-2 text-sm sm:flex-row sm:items-start sm:justify-between sm:gap-3"
                       >
-                        <span className="text-muted-foreground">{key}</span>
-                        <span className="font-mono text-right">{String(value)}</span>
+                        <span className="min-w-0 text-muted-foreground break-words sm:max-w-[40%]">{key}</span>
+                        <span className="min-w-0 break-all font-mono text-left sm:max-w-[58%] sm:text-right">
+                          {formatValue(value)}
+                        </span>
                       </div>
                     ))}
                   </div>

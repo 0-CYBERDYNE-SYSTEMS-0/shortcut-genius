@@ -23,7 +23,7 @@ export function AnalysisPane({ analysis, className }: AnalysisPaneProps) {
           <CardTitle className="text-accent-indigo">Shortcut Analysis</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
+          <div className="flex min-h-[16rem] flex-col items-center justify-center text-muted-foreground">
             <div className="text-center space-y-2">
               <div className="text-4xl mb-2">📊</div>
               <p>No analysis available</p>
@@ -44,7 +44,7 @@ export function AnalysisPane({ analysis, className }: AnalysisPaneProps) {
       </CardHeader>
       <ScrollArea className="min-h-0 flex-1">
         <CardContent className="space-y-4 pb-5">
-          <div className="grid grid-cols-2 gap-2 md:gap-3">
+          <div className="grid grid-cols-1 gap-2 md:gap-3">
             <div className="min-w-0 rounded-lg border p-3">
               <div className="text-accent-indigo min-w-0 break-words text-[10px] uppercase leading-tight tracking-[0.12em] sm:text-xs">Patterns</div>
               <div className="mt-1 text-2xl font-semibold">{analysis.patterns.length}</div>
