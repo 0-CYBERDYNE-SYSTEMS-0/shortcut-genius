@@ -122,140 +122,144 @@ export function DebugConsoleDialog({ open, onOpenChange, shortcut }: DebugConsol
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92vh] max-w-6xl overflow-hidden p-0">
-        <div className="grid min-h-0 gap-0 lg:grid-cols-[360px_minmax(0,1fr)]">
-          <div className="border-b border-border/70 bg-card/90 p-5 lg:border-b-0 lg:border-r">
-            <DialogHeader className="space-y-3 text-left">
-              <DialogTitle className="flex items-center gap-2">
-                <Terminal className="h-5 w-5 text-accent-indigo" />
-                Debug Console
-              </DialogTitle>
-              <DialogDescription>
-                Run constrained inspection primitives on the current shortcut, preserved plist, or pasted JSON/XML.
-              </DialogDescription>
-            </DialogHeader>
+      <DialogContent className="h-[92vh] max-w-6xl overflow-hidden p-0">
+        <div className="grid h-full min-h-0 gap-0 lg:grid-cols-[360px_minmax(0,1fr)]">
+          <div className="min-h-0 overflow-hidden border-b border-border/70 bg-card/90 lg:border-b-0 lg:border-r">
+            <ScrollArea className="h-full">
+              <div className="p-5">
+                <DialogHeader className="space-y-3 text-left">
+                  <DialogTitle className="flex items-center gap-2">
+                    <Terminal className="h-5 w-5 text-accent-indigo" />
+                    Debug Console
+                  </DialogTitle>
+                  <DialogDescription>
+                    Run constrained inspection primitives on the current shortcut, preserved plist, or pasted JSON/XML.
+                  </DialogDescription>
+                </DialogHeader>
 
-            <div className="mt-5 space-y-4">
-              <div className="rounded-2xl border border-border/70 bg-background/80 p-4">
-                <Label className="text-xs uppercase tracking-[0.18em] text-accent-indigo">Source</Label>
-                <div className="mt-3 grid gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setSourceMode('current-shortcut')}
-                    className={cn(
-                      'justify-start rounded-none border-2 shadow-none',
-                      sourceMode === 'current-shortcut' && 'border-accent-pink bg-accent-pink/10 text-accent-pink'
-                    )}
-                  >
-                    Current shortcut JSON
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setSourceMode('current-plist')}
-                    className={cn(
-                      'justify-start rounded-none border-2 shadow-none',
-                      sourceMode === 'current-plist' && 'border-accent-aqua bg-accent-aqua/10 text-accent-aqua'
-                    )}
-                  >
-                    Current plist / shortcut artifact
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setSourceMode('pasted')}
-                    className={cn(
-                      'justify-start rounded-none border-2 shadow-none',
-                      sourceMode === 'pasted' && 'border-accent-indigo bg-accent-indigo/10 text-accent-indigo'
-                    )}
-                  >
-                    Pasted artifact
-                  </Button>
-                </div>
-                <p className="mt-3 text-sm text-muted-foreground">{sourceHint}</p>
-              </div>
-
-              {sourceMode === 'pasted' && (
-                <div className="rounded-2xl border border-border/70 bg-background/80 p-4">
-                  <div className="grid gap-3">
-                    <div>
-                      <Label className="text-xs uppercase tracking-[0.18em] text-accent-indigo">Format</Label>
-                      <Select value={rawFormat} onValueChange={(value) => setRawFormat(value as RawFormat)}>
-                        <SelectTrigger className="mt-2">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="auto">Auto-detect</SelectItem>
-                          <SelectItem value="json">JSON</SelectItem>
-                          <SelectItem value="plist">PLIST</SelectItem>
-                          <SelectItem value="xml">XML</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label className="text-xs uppercase tracking-[0.18em] text-accent-indigo">Artifact</Label>
-                      <Textarea
-                        value={rawInput}
-                        onChange={(event) => setRawInput(event.target.value)}
-                        className="mt-2 min-h-[180px] font-mono text-xs"
-                        placeholder="Paste JSON, plist, or XML here."
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div className="rounded-2xl border border-border/70 bg-background/80 p-4">
-                <div className="text-xs uppercase tracking-[0.18em] text-accent-coral">Primitives</div>
-                <div className="mt-3 grid gap-2">
-                  {PRIMITIVES.filter((primitive) => supportsXPath || primitive.id !== 'xpath').map((primitive) => {
-                    const Icon = primitive.icon;
-                    return (
-                      <button
-                        key={primitive.id}
+                <div className="mt-5 space-y-4 pb-5">
+                  <div className="rounded-2xl border border-border/70 bg-background/80 p-4">
+                    <Label className="text-xs uppercase tracking-[0.18em] text-accent-indigo">Source</Label>
+                    <div className="mt-3 grid gap-2">
+                      <Button
                         type="button"
-                        onClick={() => setActivePrimitive(primitive.id)}
+                        variant="outline"
+                        onClick={() => setSourceMode('current-shortcut')}
                         className={cn(
-                          'rounded-xl border border-border/70 bg-secondary/40 px-3 py-3 text-left transition-colors hover:bg-secondary/70',
-                          activePrimitive === primitive.id && 'border-primary/60 bg-primary/5'
+                          'justify-start rounded-none border-2 shadow-none',
+                          sourceMode === 'current-shortcut' && 'border-accent-pink bg-accent-pink/10 text-accent-pink'
                         )}
                       >
-                        <div className="flex items-start gap-3">
-                          <Icon className="mt-0.5 h-4 w-4 text-accent-indigo" />
-                          <div>
-                            <div className="font-medium">{primitive.label}</div>
-                            <div className="text-sm text-muted-foreground">{primitive.description}</div>
-                          </div>
+                        Current shortcut JSON
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setSourceMode('current-plist')}
+                        className={cn(
+                          'justify-start rounded-none border-2 shadow-none',
+                          sourceMode === 'current-plist' && 'border-accent-aqua bg-accent-aqua/10 text-accent-aqua'
+                        )}
+                      >
+                        Current plist / shortcut artifact
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setSourceMode('pasted')}
+                        className={cn(
+                          'justify-start rounded-none border-2 shadow-none',
+                          sourceMode === 'pasted' && 'border-accent-indigo bg-accent-indigo/10 text-accent-indigo'
+                        )}
+                      >
+                        Pasted artifact
+                      </Button>
+                    </div>
+                    <p className="mt-3 text-sm text-muted-foreground">{sourceHint}</p>
+                  </div>
+
+                  {sourceMode === 'pasted' && (
+                    <div className="rounded-2xl border border-border/70 bg-background/80 p-4">
+                      <div className="grid gap-3">
+                        <div>
+                          <Label className="text-xs uppercase tracking-[0.18em] text-accent-indigo">Format</Label>
+                          <Select value={rawFormat} onValueChange={(value) => setRawFormat(value as RawFormat)}>
+                            <SelectTrigger className="mt-2">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="auto">Auto-detect</SelectItem>
+                              <SelectItem value="json">JSON</SelectItem>
+                              <SelectItem value="plist">PLIST</SelectItem>
+                              <SelectItem value="xml">XML</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </div>
-                      </button>
-                    );
-                  })}
+                        <div>
+                          <Label className="text-xs uppercase tracking-[0.18em] text-accent-indigo">Artifact</Label>
+                          <Textarea
+                            value={rawInput}
+                            onChange={(event) => setRawInput(event.target.value)}
+                            className="mt-2 min-h-[180px] font-mono text-xs"
+                            placeholder="Paste JSON, plist, or XML here."
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="rounded-2xl border border-border/70 bg-background/80 p-4">
+                    <div className="text-xs uppercase tracking-[0.18em] text-accent-coral">Primitives</div>
+                    <div className="mt-3 grid gap-2">
+                      {PRIMITIVES.filter((primitive) => supportsXPath || primitive.id !== 'xpath').map((primitive) => {
+                        const Icon = primitive.icon;
+                        return (
+                          <button
+                            key={primitive.id}
+                            type="button"
+                            onClick={() => setActivePrimitive(primitive.id)}
+                            className={cn(
+                              'rounded-xl border border-border/70 bg-secondary/40 px-3 py-3 text-left transition-colors hover:bg-secondary/70',
+                              activePrimitive === primitive.id && 'border-primary/60 bg-primary/5'
+                            )}
+                          >
+                            <div className="flex items-start gap-3">
+                              <Icon className="mt-0.5 h-4 w-4 text-accent-indigo" />
+                              <div>
+                                <div className="font-medium">{primitive.label}</div>
+                                <div className="text-sm text-muted-foreground">{primitive.description}</div>
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {requiresQuery && (
+                    <div className="rounded-2xl border border-border/70 bg-background/80 p-4">
+                      <Label className="text-xs uppercase tracking-[0.18em] text-accent-indigo">
+                        {activePrimitive === 'xpath' ? 'XPath query' : 'Key path'}
+                      </Label>
+                      <Input
+                        value={query}
+                        onChange={(event) => setQuery(event.target.value)}
+                        className="mt-2 font-mono text-xs"
+                        placeholder={queryPlaceholder}
+                      />
+                    </div>
+                  )}
+
+                  <Button onClick={handleRun} disabled={loading} className="w-full rounded-none">
+                    {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Terminal className="mr-2 h-4 w-4" />}
+                    Run {primitiveMeta.label}
+                  </Button>
                 </div>
               </div>
-
-              {requiresQuery && (
-                <div className="rounded-2xl border border-border/70 bg-background/80 p-4">
-                  <Label className="text-xs uppercase tracking-[0.18em] text-accent-indigo">
-                    {activePrimitive === 'xpath' ? 'XPath query' : 'Key path'}
-                  </Label>
-                  <Input
-                    value={query}
-                    onChange={(event) => setQuery(event.target.value)}
-                    className="mt-2 font-mono text-xs"
-                    placeholder={queryPlaceholder}
-                  />
-                </div>
-              )}
-
-              <Button onClick={handleRun} disabled={loading} className="w-full rounded-none">
-                {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Terminal className="mr-2 h-4 w-4" />}
-                Run {primitiveMeta.label}
-              </Button>
-            </div>
+            </ScrollArea>
           </div>
 
-          <div className="min-h-0 bg-background/95 p-5">
+          <div className="min-h-0 overflow-hidden bg-background/95 p-5">
             {error && (
               <Alert variant="destructive" className="mb-4">
                 <AlertCircle className="h-4 w-4" />
@@ -299,24 +303,28 @@ export function DebugConsoleDialog({ open, onOpenChange, shortcut }: DebugConsol
               </TabsContent>
 
               <TabsContent value="cli" className="min-h-0 flex-1">
-                <div className="rounded-2xl border border-border/70 bg-background/80 p-4">
-                  <div className="mb-3 text-xs uppercase tracking-[0.18em] text-accent-coral">Suggested CLI</div>
-                  <div className="space-y-2">
-                    {(result?.suggestedCommands || []).length > 0 ? (
-                      result?.suggestedCommands.map((command) => (
-                        <div
-                          key={command}
-                          className="rounded-xl border border-border/70 bg-secondary/40 px-3 py-3 font-mono text-xs"
-                        >
-                          {command}
-                        </div>
-                      ))
-                    ) : (
-                      <div className="rounded-xl border border-dashed border-border/70 px-3 py-6 text-sm text-muted-foreground">
-                        Run a primitive to see the matching shell commands.
+                <div className="rounded-2xl border border-border/70 bg-background/80">
+                  <ScrollArea className="h-[52vh]">
+                    <div className="p-4">
+                      <div className="mb-3 text-xs uppercase tracking-[0.18em] text-accent-coral">Suggested CLI</div>
+                      <div className="space-y-2">
+                        {(result?.suggestedCommands || []).length > 0 ? (
+                          result?.suggestedCommands.map((command) => (
+                            <div
+                              key={command}
+                              className="rounded-xl border border-border/70 bg-secondary/40 px-3 py-3 font-mono text-xs"
+                            >
+                              {command}
+                            </div>
+                          ))
+                        ) : (
+                          <div className="rounded-xl border border-dashed border-border/70 px-3 py-6 text-sm text-muted-foreground">
+                            Run a primitive to see the matching shell commands.
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  </ScrollArea>
                 </div>
               </TabsContent>
             </Tabs>
