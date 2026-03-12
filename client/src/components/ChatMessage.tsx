@@ -59,11 +59,11 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
       <div className="flex-shrink-0">
         <Avatar className="h-8 w-8">
           {message.role === 'user' ? (
-            <AvatarFallback className="bg-black text-white border-2 border-black rounded-none">
+            <AvatarFallback className="rounded-none border-2 border-accent-indigo bg-accent-indigo/15 text-accent-indigo">
               U
             </AvatarFallback>
           ) : (
-            <AvatarFallback className="bg-white text-black border-2 border-black rounded-none">
+            <AvatarFallback className="rounded-none border-2 border-accent-aqua bg-accent-aqua/15 text-accent-aqua">
               A
             </AvatarFallback>
           )}
@@ -74,16 +74,16 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
       <div className={cn(
         "flex-1 min-w-0 border-2 p-3",
         isAssistant
-          ? "bg-white text-black border-black shadow-[3px_3px_0_0_rgba(0,0,0,0.95)]"
-          : "bg-black text-white border-black"
+          ? "border-accent-aqua bg-accent-aqua/8 text-foreground shadow-[3px_3px_0_0_hsla(var(--accent-aqua)/0.3)]"
+          : "border-accent-indigo bg-accent-indigo/12 text-foreground shadow-[3px_3px_0_0_hsla(var(--accent-indigo)/0.26)]"
       )}>
         <div className="prose prose-sm max-w-none">
           {isStreaming ? (
             <div className="flex items-center gap-2 text-muted-foreground">
-              <div className="animate-pulse">Thinking...</div>
+              <div className="thinking-spectrum text-sm font-semibold uppercase tracking-[0.32em]">Thinking</div>
             </div>
           ) : (
-            <p className="whitespace-pre-line">{message.content}</p>
+            <p className="whitespace-pre-line text-current">{message.content}</p>
           )}
         </div>
 

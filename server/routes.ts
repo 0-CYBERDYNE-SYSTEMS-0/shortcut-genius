@@ -565,14 +565,6 @@ export async function registerRoutes(app: Express) {
       });
     }
 
-    // Basic content safety check
-    const suspiciousPatterns = /\b(api[_-]?key|secret|token|password|auth)\b/i;
-    if (suspiciousPatterns.test(prompt)) {
-      return res.status(400).json({
-        error: 'Prompt contains potentially sensitive information'
-      });
-    }
-
     // Check for API key availability using AI processor
     const keyCheck = aiProcessor.checkApiKeyAvailability(model);
     if (!keyCheck.available) {

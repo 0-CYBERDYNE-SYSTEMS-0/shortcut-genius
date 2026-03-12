@@ -1,5 +1,22 @@
 import { ChatMessage, ChatRequest, ChatResponse, ChatError } from './chat-types';
 
+export function buildCreateConversationPayload(title: string, userId?: number, initialPrompt?: string) {
+  const payload: {
+    title: string;
+    userId: number;
+    initialPrompt?: string;
+  } = {
+    title,
+    userId: userId || 1
+  };
+
+  if (initialPrompt && initialPrompt.trim()) {
+    payload.initialPrompt = initialPrompt;
+  }
+
+  return payload;
+}
+
 /**
  * Chat API client for conversation management
  */
@@ -56,11 +73,7 @@ export class ChatAPIClient {
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          title,
-          initialPrompt: title,
-          userId: userId || 1
-        })
+        body: JSON.stringify(buildCreateConversationPayload(title, userId))
       }
     );
     return result.id;

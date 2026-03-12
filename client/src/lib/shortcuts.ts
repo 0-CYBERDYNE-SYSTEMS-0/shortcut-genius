@@ -306,21 +306,71 @@ export function validateShortcut(shortcut: Shortcut): string[] {
 
 export function parseShortcutFile(content: string): Shortcut {
   try {
-    const parsed = JSON.parse(content);
-    const shortcut = {
-      name: parsed.name || 'Untitled Shortcut',
-      actions: parsed.actions || []
-    };
-
-    const errors = validateShortcut(shortcut);
-    if (errors.length > 0) {
-      throw new Error(`Invalid shortcut:\n${errors.join('\n')}`);
-    }
-
-    return shortcut;
+    const parsed = extractShortcutFromText(content);
+    return parsed.shortcut;
   } catch (error) {
     throw new Error(`Invalid shortcut file: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
+}
+
+export function normalizeShortcutForEditor(shortcut: Shortcut): string {
+  return JSON.stringify(shortcut, null, 2);
+}
+
+export function extractShortcutFromText(content: string): {
+  shortcut: Shortcut;
+  normalized: string;
+  wasExtracted: boolean;
+} {
+  const fencedMatch = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  const candidate = fencedMatch ? fencedMatch[1].trim() : content.trim();
+
+  const tryParse = (raw: string): Shortcut | null => {
+    try {
+      const parsed = JSON.parse(raw);
+      const shortcut = {
+        ...parsed,
+        name: parsed.name || 'Untitled Shortcut',
+        actions: Array.isArray(parsed.actions) ? parsed.actions : []
+      } as Shortcut;
+
+      const errors = validateShortcut(shortcut);
+      if (errors.length > 0) {
+        throw new Error(`Invalid shortcut:\n${errors.join('\n')}`);
+      }
+
+      return shortcut;
+    } catch {
+      return null;
+    }
+  };
+
+  const direct = tryParse(candidate);
+  if (direct) {
+    return {
+      shortcut: direct,
+      normalized: normalizeShortcutForEditor(direct),
+      wasExtracted: candidate !== content.trim(),
+    };
+  }
+
+  const jsonStart = candidate.indexOf('{');
+  const jsonEnd = candidate.lastIndexOf('}');
+  if (jsonStart === -1 || jsonEnd === -1 || jsonEnd <= jsonStart) {
+    throw new Error('No valid JSON shortcut object found.');
+  }
+
+  const extracted = candidate.slice(jsonStart, jsonEnd + 1);
+  const shortcut = tryParse(extracted);
+  if (!shortcut) {
+    throw new Error('Shortcut JSON could not be parsed.');
+  }
+
+  return {
+    shortcut,
+    normalized: normalizeShortcutForEditor(shortcut),
+    wasExtracted: true,
+  };
 }
 
 export async function importShortcutArtifact(

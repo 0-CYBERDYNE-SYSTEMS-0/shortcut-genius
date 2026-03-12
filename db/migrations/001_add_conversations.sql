@@ -1,3 +1,15 @@
+-- Seed the default conversation user expected by the chat UI/API.
+INSERT INTO users (id, username, password)
+OVERRIDING SYSTEM VALUE
+VALUES (1, '__conversation_store_default_user__', '__conversation_store_placeholder__')
+ON CONFLICT DO NOTHING;
+
+SELECT setval(
+  pg_get_serial_sequence('users', 'id'),
+  GREATEST(COALESCE((SELECT MAX(id) FROM users), 1), 1),
+  true
+);
+
 -- Create conversations table
 CREATE TABLE IF NOT EXISTS conversations (
   id SERIAL PRIMARY KEY,

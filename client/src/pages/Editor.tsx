@@ -32,7 +32,15 @@ import {
   supportsVerbosity
 } from '@/lib/models';
 import { processWithAI } from '@/lib/ai';
-import { Shortcut, ShortcutImportIntent, exportShortcut, importShortcutArtifact } from '@/lib/shortcuts';
+import {
+  Shortcut,
+  ShortcutImportIntent,
+  exportShortcut,
+  extractShortcutFromText,
+  importShortcutArtifact,
+  normalizeShortcutForEditor,
+  validateShortcut
+} from '@/lib/shortcuts';
 import { analyzeShortcut } from '@/lib/shortcut-analyzer';
 import { cn } from '@/lib/utils';
 import {
@@ -134,6 +142,7 @@ export function Editor() {
   const [shortcut, setShortcut] = useState<Shortcut>(DEFAULT_SHORTCUT);
   const [code, setCode] = useState(JSON.stringify(DEFAULT_SHORTCUT, null, 2));
   const [isProcessing, setIsProcessing] = useState(false);
+  const [editorParseError, setEditorParseError] = useState<string | null>(null);
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [workspaceMode, setWorkspaceMode] = useState<WorkspaceMode>('build');
   const [buildSurface, setBuildSurface] = useState<BuildSurface>('assistant');
@@ -149,6 +158,7 @@ export function Editor() {
 
   const actionCount = shortcut.actions.length;
   const hasShortcut = actionCount > 0;
+  const editorIsValid = !editorParseError && validateShortcut(shortcut).length === 0;
   const analysis = useMemo(() => analyzeShortcut(shortcut), [shortcut]);
   const shortcutProvenance = shortcut._provenance;
   const isWideLayout = isDesktop || isLargeDesktop;
@@ -161,13 +171,18 @@ export function Editor() {
     setCode(value);
 
     try {
-      const parsed = JSON.parse(value);
+      const parsed = extractShortcutFromText(value);
+      setEditorParseError(null);
       setShortcut((current) => ({
-        ...parsed,
-        _provenance: parsed._provenance || current._provenance
+        ...parsed.shortcut,
+        _provenance: parsed.shortcut._provenance || current._provenance
       }));
-    } catch {
-      // Keep the editor editable while the JSON is temporarily invalid.
+
+      if (parsed.wasExtracted) {
+        setCode(parsed.normalized);
+      }
+    } catch (error) {
+      setEditorParseError(error instanceof Error ? error.message : 'Shortcut JSON could not be parsed.');
     }
   };
 
@@ -186,7 +201,8 @@ export function Editor() {
     try {
       const imported = await importShortcutArtifact(file, importIntent);
       setShortcut(imported.shortcut);
-      setCode(JSON.stringify(imported.shortcut, null, 2));
+      setCode(normalizeShortcutForEditor(imported.shortcut));
+      setEditorParseError(null);
       setWorkspaceMode('build');
       setBuildSurface(isWideLayout ? 'preview' : 'assistant');
       setShowAnalysis(true);
@@ -207,7 +223,8 @@ export function Editor() {
 
   const loadStarterTemplate = () => {
     setShortcut(API_NETWORK_PROBE_TEMPLATE);
-    setCode(JSON.stringify(API_NETWORK_PROBE_TEMPLATE, null, 2));
+    setCode(normalizeShortcutForEditor(API_NETWORK_PROBE_TEMPLATE));
+    setEditorParseError(null);
     setWorkspaceMode('build');
     setBuildSurface(isWideLayout ? 'preview' : 'assistant');
     openInspector('insights');
@@ -236,7 +253,7 @@ export function Editor() {
   };
 
   const handleExportPlist = async () => {
-    if (!hasShortcut) return;
+    if (!hasShortcut || !editorIsValid) return;
 
     try {
       await downloadShortcutBlob(
@@ -279,7 +296,7 @@ export function Editor() {
   };
 
   const handleDownloadShortcut = async () => {
-    if (!hasShortcut) return;
+    if (!hasShortcut || !editorIsValid) return;
 
     try {
       await downloadShortcutBlob(
@@ -296,7 +313,7 @@ export function Editor() {
   };
 
   const handleDownloadSignedShortcut = async () => {
-    if (!hasShortcut) return;
+    if (!hasShortcut || !editorIsValid) return;
 
     try {
       await downloadShortcutBlob(
@@ -364,7 +381,8 @@ export function Editor() {
     };
 
     setShortcut(nextShortcut);
-    setCode(JSON.stringify(nextShortcut, null, 2));
+    setCode(normalizeShortcutForEditor(nextShortcut));
+    setEditorParseError(null);
     setWorkspaceMode('build');
     setBuildSurface(isWideLayout ? 'preview' : 'assistant');
     setShowAnalysis(true);
@@ -383,7 +401,8 @@ export function Editor() {
     };
 
     setShortcut(nextShortcut);
-    setCode(JSON.stringify(nextShortcut, null, 2));
+    setCode(normalizeShortcutForEditor(nextShortcut));
+    setEditorParseError(null);
     setWorkspaceMode('build');
     setBuildSurface(isWideLayout ? 'editor' : 'assistant');
     openInspector('insights');
@@ -457,6 +476,11 @@ export function Editor() {
                     Analyzing...
                   </Badge>
                 )}
+                {editorParseError && (
+                  <Badge variant="outline" className="border-destructive text-destructive text-[10px] uppercase tracking-[0.12em]">
+                    Editor JSON invalid
+                  </Badge>
+                )}
               </div>
               <p className="text-accent-indigo max-w-3xl text-sm">
                 Describe the shortcut, refine the output, then validate it without switching mental models between screens.
@@ -496,7 +520,7 @@ export function Editor() {
                     <Button
                       variant="outline"
                       onClick={handleDownloadShortcut}
-                      disabled={!hasShortcut}
+                      disabled={!hasShortcut || !editorIsValid}
                       className={cn(
                         chromeButton,
                         compactHeader ? 'flex-1 sm:flex-none' : '',
@@ -521,7 +545,7 @@ export function Editor() {
                     <Button
                       variant="outline"
                       onClick={() => setDebugDialogOpen(true)}
-                      disabled={!hasShortcut}
+                      disabled={!hasShortcut || !editorIsValid}
                       className={cn(
                         chromeButton,
                         compactHeader ? 'flex-1 sm:flex-none' : '',
@@ -540,17 +564,17 @@ export function Editor() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => setShareDialogOpen(true)} disabled={!hasShortcut}>
+                          <DropdownMenuItem onClick={() => setShareDialogOpen(true)} disabled={!hasShortcut || !editorIsValid}>
                             <Share2 className="mr-2 h-4 w-4" />
                             Share
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={handleExport}>
+                          <DropdownMenuItem onClick={handleExport} disabled={!editorIsValid}>
                             Export JSON
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={handleExportPlist} disabled={!hasShortcut}>
+                          <DropdownMenuItem onClick={handleExportPlist} disabled={!hasShortcut || !editorIsValid}>
                             Export PLIST
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={handleDownloadSignedShortcut} disabled={!hasShortcut}>
+                          <DropdownMenuItem onClick={handleDownloadSignedShortcut} disabled={!hasShortcut || !editorIsValid}>
                             <Download className="mr-2 h-4 w-4" />
                             Download Signed
                           </DropdownMenuItem>

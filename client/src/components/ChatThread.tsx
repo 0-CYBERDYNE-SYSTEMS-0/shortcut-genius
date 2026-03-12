@@ -21,7 +21,8 @@ import ChatMessage from './ChatMessage';
 import ChatInput from './ChatInput';
 import { ChatMessage as IChatMessage, Conversation } from '../lib/chat-types';
 import { chatAPI } from '../lib/chat-api';
-import { Shortcut } from '../lib/shortcuts';
+import { getNextConversationSelectionAfterDelete } from '../lib/conversation-state';
+import { extractShortcutFromText, Shortcut, validateShortcut } from '../lib/shortcuts';
 import { processWithAI } from '@/lib/ai';
 import { AIModel } from '@/lib/types';
 
@@ -66,6 +67,23 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const isMountedRef = useRef(true);
+
+  const normalizeShortcutCandidate = useCallback((candidate: unknown, fallbackContent?: string): Shortcut | undefined => {
+    if (candidate && typeof candidate === 'object' && Array.isArray((candidate as Shortcut).actions)) {
+      const shortcut = candidate as Shortcut;
+      return validateShortcut(shortcut).length === 0 ? shortcut : undefined;
+    }
+
+    if (!fallbackContent) {
+      return undefined;
+    }
+
+    try {
+      return extractShortcutFromText(fallbackContent).shortcut;
+    } catch {
+      return undefined;
+    }
+  }, []);
 
   // Save conversation ID to sessionStorage when it changes
   const setActiveConversationIdWithSave = useCallback((id: number | undefined) => {
@@ -214,9 +232,10 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
   const deleteConversation = async (conversationId: number) => {
     setIsLoading(true);
     try {
+      const wasActiveConversation = conversationId === activeConversationId;
       await chatAPI.deleteConversation(conversationId);
 
-      if (conversationId === activeConversationId) {
+      if (wasActiveConversation) {
         setActiveConversationIdWithSave(undefined);
         setMessages([]);
       }
@@ -225,11 +244,15 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
       const conversationList = await chatAPI.getConversations(userId);
       setConversations(conversationList);
 
-      // Auto-select a different conversation if available
-      if (conversationList.length > 0 && !activeConversationId) {
-        const mostRecent = conversationList[0];
-        setActiveConversationIdWithSave(mostRecent.id);
-        await loadConversation(mostRecent.id);
+      const nextConversationId = getNextConversationSelectionAfterDelete(
+        conversationList,
+        conversationId,
+        activeConversationId
+      );
+
+      if (wasActiveConversation && nextConversationId) {
+        setActiveConversationIdWithSave(nextConversationId);
+        await loadConversation(nextConversationId);
       }
     } catch (error: any) {
       console.error('Failed to delete conversation:', error);
@@ -262,13 +285,7 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
         throw new Error(fallbackResult.error);
       }
 
-      let parsedShortcut: Shortcut | undefined;
-      try {
-        const parsed = JSON.parse(fallbackResult.content);
-        if (parsed && typeof parsed === 'object' && Array.isArray(parsed.actions)) {
-          parsedShortcut = parsed as Shortcut;
-        }
-      } catch {}
+      const parsedShortcut = normalizeShortcutCandidate(undefined, fallbackResult.content);
 
       return {
         content: fallbackResult.content,
@@ -374,6 +391,8 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
       if (!isMountedRef.current) return;
 
       // Add assistant response
+      const normalizedShortcut = normalizeShortcutCandidate(response.shortcut, response.content || response.message || '');
+
       const assistantMessage: IChatMessage = {
         id: `msg_${Date.now() + 1}`,
         role: 'assistant',
@@ -382,7 +401,7 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
         metadata: {
           phase: response.phase?.type,
           model: response.model,
-          shortcut: response.shortcut,
+          shortcut: normalizedShortcut,
           analysis: response.analysis,
           nextActions: response.nextActions,
           requiresClarification: response.requiresClarification
@@ -392,8 +411,8 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
       setMessages(prev => [...prev, normalizeMessage(assistantMessage)]);
 
       // If response contains a shortcut, update editor
-      if (response.shortcut && onShortcutUpdate) {
-        onShortcutUpdate(response.shortcut);
+      if (normalizedShortcut && onShortcutUpdate) {
+        onShortcutUpdate(normalizedShortcut);
       }
 
     } catch (error: any) {
@@ -404,6 +423,8 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
 
         if (!isMountedRef.current) return;
 
+        const normalizedShortcut = normalizeShortcutCandidate(fallbackResponse.shortcut, fallbackResponse.content);
+
         const assistantMessage: IChatMessage = {
           id: `msg_${Date.now() + 1}`,
           role: 'assistant',
@@ -411,14 +432,14 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
           timestamp: new Date(),
           metadata: {
             model,
-            shortcut: fallbackResponse.shortcut
+            shortcut: normalizedShortcut
           }
         };
 
         setMessages(prev => [...prev, normalizeMessage(assistantMessage)]);
 
-        if (fallbackResponse.shortcut && onShortcutUpdate) {
-          onShortcutUpdate(fallbackResponse.shortcut);
+        if (normalizedShortcut && onShortcutUpdate) {
+          onShortcutUpdate(normalizedShortcut);
         }
 
         setError(null);
@@ -451,15 +472,16 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
         setAgentUpdates([]);
       }
     }
-  }, [activeConversationId, createNewConversation, currentShortcut, model, onShortcutUpdate]);
+  }, [activeConversationId, createNewConversation, currentShortcut, model, normalizeShortcutCandidate, onShortcutUpdate]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   const handleApplyShortcut = (message: IChatMessage) => {
-    if (message.metadata?.shortcut && onShortcutUpdate) {
-      onShortcutUpdate(message.metadata.shortcut);
+    const normalizedShortcut = normalizeShortcutCandidate(message.metadata?.shortcut, message.content);
+    if (normalizedShortcut && onShortcutUpdate) {
+      onShortcutUpdate(normalizedShortcut);
     }
   };
 

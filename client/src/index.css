@@ -208,6 +208,17 @@
   }
 }
 
+@keyframes spectrum-spin {
+  0% {
+    background-position: 0% 50%;
+    transform: rotate(0deg);
+  }
+  100% {
+    background-position: 200% 50%;
+    transform: rotate(360deg);
+  }
+}
+
 @keyframes fade-in {
   0% {
     opacity: 0;
@@ -252,6 +263,23 @@
 .app-stagger > *:nth-child(4) { animation-delay: 90ms; }
 .app-stagger > *:nth-child(5) { animation-delay: 120ms; }
 .app-stagger > *:nth-child(6) { animation-delay: 150ms; }
+
+.thinking-spectrum {
+  background-image: linear-gradient(
+    90deg,
+    hsl(var(--accent-pink)),
+    hsl(var(--accent-coral)),
+    hsl(var(--accent-aqua)),
+    hsl(var(--accent-indigo)),
+    hsl(var(--accent-pink))
+  );
+  background-size: 220% 220%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  display: inline-block;
+  animation: spectrum-spin 2.8s linear infinite;
+}
 
 /* Code editor enhancements */
 .monaco-editor {
