@@ -25,6 +25,7 @@ interface SharedShortcut {
   description: string;
   shareUrl: string;
   qrCodeUrl: string;
+  icloudUrl?: string;
   downloadCount: number;
   actionCount: number;
   tags: string[];
@@ -126,8 +127,9 @@ export function ShortcutsGallery({ onImportShortcut }: ShortcutsGalleryProps) {
     );
   };
 
-  const downloadShortcut = (shortcut: SharedShortcut, signed: boolean = false) => {
-    const url = `/api/shortcuts/download/${shortcut.id}${signed ? '?signed=true' : ''}`;
+  const downloadShortcut = (shortcut: SharedShortcut, signed?: boolean) => {
+    const wantSigned = signed ?? shortcut.isSigned;
+    const url = `/api/shortcuts/download/${shortcut.id}?signed=${wantSigned ? 'true' : 'false'}`;
     window.open(url, '_blank');
   };
 
@@ -360,7 +362,7 @@ export function ShortcutsGallery({ onImportShortcut }: ShortcutsGalleryProps) {
                     className="flex-1"
                   >
                     <Download className="mr-2 h-4 w-4" />
-                    Download
+                    {shortcut.isSigned ? 'Download Signed' : 'Download'}
                   </Button>
 
                   <Button
@@ -382,13 +384,25 @@ export function ShortcutsGallery({ onImportShortcut }: ShortcutsGalleryProps) {
 
                 {shortcut.isSigned && (
                   <Button
-                    onClick={() => downloadShortcut(shortcut, true)}
+                    onClick={() => downloadShortcut(shortcut, false)}
                     size="sm"
-                    variant="secondary"
+                    variant="outline"
                     className="w-full"
                   >
                     <Shield className="mr-2 h-4 w-4" />
-                    Download Signed
+                    Download Unsigned (Advanced)
+                  </Button>
+                )}
+
+                {shortcut.icloudUrl && (
+                  <Button
+                    onClick={() => window.open(shortcut.icloudUrl!, '_blank')}
+                    size="sm"
+                    variant="outline"
+                    className="w-full"
+                  >
+                    <ExternalLink className="mr-2 h-4 w-4" />
+                    Open iCloud Link
                   </Button>
                 )}
 

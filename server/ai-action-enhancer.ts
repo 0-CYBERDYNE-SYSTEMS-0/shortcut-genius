@@ -3,6 +3,7 @@ import { GlyphMappingSystem } from './glyph-mapping-system';
 import { WebSearchTool } from './web-search-tool';
 import fs from 'fs/promises';
 import path from 'path';
+import { getActionDatabasePath } from './runtime-config';
 
 interface EnhancedShortcutRequest {
   prompt: string;
@@ -70,11 +71,11 @@ export class AIActionEnhancer {
   private webSearch: WebSearchTool;
   private actionDatabasePath: string;
 
-  constructor(actionDatabasePath?: string) {
+  constructor(actionDatabasePath: string = getActionDatabasePath()) {
     this.extractor = new ShortcutActionExtractor();
     this.glyphSystem = new GlyphMappingSystem();
     this.webSearch = new WebSearchTool();
-    this.actionDatabasePath = actionDatabasePath || path.join(process.cwd(), 'action-database.json');
+    this.actionDatabasePath = actionDatabasePath;
   }
 
   async initialize(): Promise<void> {
@@ -563,7 +564,7 @@ export class AIActionEnhancer {
     return `
 # Enhanced iOS Shortcuts Generation
 
-You are an expert iOS Shortcuts developer with access to a comprehensive action database.
+The assistant is in an expert iOS Shortcuts architect kind of mood. The assistant has access to a comprehensive action database and excels at crafting efficient shortcuts.
 
 ## Available Actions
 

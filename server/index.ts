@@ -1,25 +1,84 @@
 import express, { type Request, Response, NextFunction } from "express";
-import { registerRoutes } from "./routes";
+import helmet from "helmet";
 import { setupVite, serveStatic } from "./vite";
 import { createServer } from "http";
+import net from "net";
 import dotenv from "dotenv";
+import { DEFAULT_PORT, requireBaseUrl } from "./runtime-config";
 
 // Load environment variables
 dotenv.config();
 
-// Debug: Check if environment variables are loaded
-console.log('🔧 Environment Variables Loaded:');
-console.log('- OPENROUTER_API_KEY exists:', !!process.env.OPENROUTER_API_KEY);
-console.log('- OPENAI_API_KEY exists:', !!process.env.OPENAI_API_KEY);
-console.log('- ANTHROPIC_API_KEY exists:', !!process.env.ANTHROPIC_API_KEY);
-
 const app = express();
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+app.disable("x-powered-by");
+app.set("trust proxy", process.env.TRUST_PROXY === "true");
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false,
+}));
+app.use(express.json({ limit: "1mb" }));
+app.use(express.urlencoded({ extended: false, limit: "1mb" }));
+
+async function canListenOnPort(port: number, host = "0.0.0.0"): Promise<boolean> {
+  return new Promise((resolve) => {
+    const probe = net.createServer();
+
+    probe.once("error", () => {
+      resolve(false);
+    });
+
+    probe.once("listening", () => {
+      probe.close(() => resolve(true));
+    });
+
+    probe.listen(port, host);
+  });
+}
+
+async function resolveServerPort(configuredPort: string | undefined, environment: string): Promise<number> {
+  const requestedPort = Number(configuredPort ?? DEFAULT_PORT);
+
+  if (!Number.isInteger(requestedPort) || requestedPort < 0 || requestedPort > 65535) {
+    throw new Error(`Invalid PORT value: ${configuredPort}`);
+  }
+
+  if (await canListenOnPort(requestedPort)) {
+    return requestedPort;
+  }
+
+  if (environment !== "development") {
+    throw new Error(`Port ${requestedPort} is already in use. Set PORT to a free port and try again.`);
+  }
+
+  for (let port = requestedPort + 1; port <= requestedPort + 20; port++) {
+    if (await canListenOnPort(port)) {
+      console.warn(`Port ${requestedPort} is in use. Falling back to port ${port} for development.`);
+      return port;
+    }
+  }
+
+  throw new Error(`Could not find an available development port near ${requestedPort}.`);
+}
 
 (async () => {
-  registerRoutes(app);
+  const environment = app.get("env");
+  const PORT = await resolveServerPort(process.env.PORT, environment);
+  process.env.PORT = String(PORT);
+  process.env.BASE_URL = requireBaseUrl(environment);
+
+  const { registerRoutes } = await import("./routes");
+  await registerRoutes(app);
   const server = createServer(app);
+
+  server.on("error", (error: NodeJS.ErrnoException) => {
+    if (error.code === "EADDRINUSE") {
+      console.error(`Port ${PORT} is already in use. Stop the existing process or set PORT to a free port.`);
+      process.exit(1);
+    }
+
+    console.error("Server failed to start:", error);
+    process.exit(1);
+  });
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
@@ -32,63 +91,20 @@ app.use(express.urlencoded({ extended: false }));
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
-  if (app.get("env") === "development") {
+  if (environment === "development") {
     await setupVite(app, server);
   } else {
     serveStatic(app);
   }
 
-  // Serve the app - try environment variable first, then fallback
-  // this serves both the API and the client
-  const preferredPort = parseInt(process.env.PORT || "5000");
-  
-  // Function to try listening on a port and return the actual port used
-  const tryListen = (port: number): Promise<number> => {
-    return new Promise((resolve, reject) => {
-      server.listen(port, "0.0.0.0", () => {
-        const actualPort = (server.address() as any)?.port;
-        resolve(actualPort);
-      });
-      
-      server.once('error', (err: any) => {
-        if (err.code === 'EADDRINUSE') {
-          reject(err);
-        } else {
-          console.error('Server error:', err);
-          process.exit(1);
-        }
-      });
+  server.listen(PORT, "0.0.0.0", () => {
+    const formattedTime = new Date().toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true,
     });
-  };
-  
-  // Try to start the server, incrementing port if needed
-  const startServer = async (startPort: number) => {
-    try {
-      const actualPort = await tryListen(startPort);
-      
-      const formattedTime = new Date().toLocaleTimeString("en-US", {
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-        hour12: true,
-      });
-      
-      if (actualPort !== startPort) {
-        console.log(`${formattedTime} [express] Port ${startPort} was in use, serving on port ${actualPort}`);
-      } else {
-        console.log(`${formattedTime} [express] serving on port ${actualPort}`);
-      }
-      
-      // Store the actual port in the environment for other parts of the app to use
-      process.env.ACTUAL_PORT = actualPort.toString();
-    } catch (err: any) {
-      // Port is in use, try the next one
-      const nextPort = startPort + 1;
-      console.log(`Port ${startPort} is in use, trying port ${nextPort}...`);
-      await startServer(nextPort);
-    }
-  };
-  
-  // Start the server
-  startServer(preferredPort);
+
+    console.log(`${formattedTime} [express] serving on port ${PORT}`);
+  });
 })();

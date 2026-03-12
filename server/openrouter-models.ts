@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getOpenRouterReferer } from './runtime-config';
 
 export interface OpenRouterModel {
   id: string;
@@ -43,7 +44,7 @@ export class OpenRouterModelsService {
       const response = await axios.get<OpenRouterModelsResponse>('https://openrouter.ai/api/v1/models', {
         headers: {
           'Authorization': `Bearer ${this.apiKey}`,
-          'HTTP-Referer': process.env.BASE_URL || 'http://localhost:5000',
+          'HTTP-Referer': getOpenRouterReferer(),
           'X-Title': 'ShortcutGenius'
         }
       });

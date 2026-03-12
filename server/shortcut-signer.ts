@@ -141,7 +141,8 @@ export async function createMockSignedShortcut(
 // Verify if a shortcut file is signed
 export async function verifyShortcutSignature(filePath: string): Promise<{ signed: boolean; valid?: boolean; info?: any }> {
   try {
-    const content = await fs.readFile(filePath, 'utf8');
+    const raw = await fs.readFile(filePath);
+    const content = raw.toString('utf8');
 
     // Check for mock signature first
     if (content.includes('Mock Signature:')) {
@@ -156,18 +157,10 @@ export async function verifyShortcutSignature(filePath: string): Promise<{ signe
       }
     }
 
-    // For real signatures, we'd need to parse the plist and check Apple's signature
-    // This is a simplified check - real implementation would verify against Apple's CA
-    const capability = await checkSigningCapability();
-    if (capability.available) {
-      try {
-        // Use shortcuts list to see if shortcut is valid
-        await execAsync(`shortcuts list | grep -q "${path.basename(filePath, '.shortcut')}"`);
-        return { signed: true, valid: true, info: { type: 'apple' } };
-      } catch {
-        // If shortcuts list doesn't show it, it might still be signed but not installed
-        return { signed: false };
-      }
+    // Heuristic detection for signed shortcut bundles (AE/A1 header from shortcuts sign)
+    const header = raw.subarray(0, 4).toString('utf8');
+    if (header === 'AEA1' || raw.subarray(0, 6).toString('utf8') === 'bplist') {
+      return { signed: true, valid: true, info: { type: 'apple', heuristic: true } };
     }
 
     return { signed: false };

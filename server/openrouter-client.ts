@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
 import axios, { AxiosInstance } from 'axios';
+import { getOpenRouterReferer } from './runtime-config';
 
 export interface OpenRouterResponse {
   id: string;
@@ -56,7 +57,7 @@ export class OpenRouterClient {
       apiKey: apiKey,
       baseURL: 'https://openrouter.ai/api/v1',
       defaultHeaders: {
-        'HTTP-Referer': process.env.BASE_URL || 'http://localhost:5000',
+        'HTTP-Referer': getOpenRouterReferer(),
         'X-Title': 'ShortcutGenius'
       },
       timeout: 120000
@@ -68,7 +69,7 @@ export class OpenRouterClient {
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
-        'HTTP-Referer': process.env.BASE_URL || 'http://localhost:5000',
+        'HTTP-Referer': getOpenRouterReferer(),
         'X-Title': 'ShortcutGenius'
       },
       timeout: 120000
@@ -110,7 +111,7 @@ export class OpenRouterClient {
 
   async getModels() {
     try {
-      const response = await this.client.get('/models');
+      const response = await this.fallbackClient.get('/models');
       return response.data;
     } catch (error: any) {
       console.error('OpenRouter models API error:', error.response?.data || error.message);
@@ -122,7 +123,7 @@ export class OpenRouterClient {
 
   async getGeneration(generationId: string) {
     try {
-      const response = await this.client.get(`/generation?id=${generationId}`);
+      const response = await this.fallbackClient.get(`/generation?id=${generationId}`);
       return response.data;
     } catch (error: any) {
       console.error('OpenRouter generation API error:', error.response?.data || error.message);

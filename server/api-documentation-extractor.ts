@@ -247,7 +247,7 @@ export class APIDocumentationExtractor {
 
       if (inEndpointSection) {
         // Stop at next endpoint or section
-        if (/(GET|POST|PUT|DELETE|PATCH)\s/[^\s]/.test(line) || /^#{1,3}\s/.test(line)) {
+        if (/(GET|POST|PUT|DELETE|PATCH)\s[^\s]/.test(line) || /^#{1,3}\s/.test(line)) {
           break;
         }
 

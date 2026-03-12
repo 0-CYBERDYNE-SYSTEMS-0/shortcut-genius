@@ -4,58 +4,87 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --accent-pink: 318 88% 58%;
+    --accent-coral: 15 94% 63%;
+    --accent-aqua: 171 62% 55%;
+    --accent-indigo: 233 40% 39%;
+
+    --background: 0 0% 98%;
+    --foreground: 0 0% 5%;
+
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 0 0% 5%;
+
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-    --radius: 0.5rem;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
+    --popover-foreground: 0 0% 5%;
+
+    --primary: var(--accent-pink);
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 0 0% 93%;
+    --secondary-foreground: 0 0% 5%;
+
+    --muted: 0 0% 95%;
+    --muted-foreground: 0 0% 35%;
+
+    --accent: 171 62% 78%;
+    --accent-foreground: 235 38% 20%;
+
+    --destructive: var(--accent-coral);
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 0% 8%;
+    --input: 0 0% 8%;
+    --ring: var(--accent-indigo);
+
+    --radius: 0.2rem;
+
+    --chart-1: var(--accent-pink);
+    --chart-2: var(--accent-coral);
+    --chart-3: var(--accent-aqua);
+    --chart-4: var(--accent-indigo);
+    --chart-5: 0 0% 55%;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
+    --accent-pink: 318 92% 66%;
+    --accent-coral: 15 92% 66%;
+    --accent-aqua: 171 70% 60%;
+    --accent-indigo: 233 56% 62%;
+
+    --background: 0 0% 7%;
+    --foreground: 0 0% 96%;
+
+    --card: 0 0% 9%;
+    --card-foreground: 0 0% 96%;
+
+    --popover: 0 0% 9%;
+    --popover-foreground: 0 0% 96%;
+
+    --primary: var(--accent-pink);
+    --primary-foreground: 0 0% 8%;
+
+    --secondary: 0 0% 14%;
+    --secondary-foreground: 0 0% 96%;
+
+    --muted: 0 0% 13%;
+    --muted-foreground: 0 0% 66%;
+
+    --accent: 171 44% 24%;
+    --accent-foreground: 171 90% 88%;
+
+    --destructive: var(--accent-coral);
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 0 0% 85%;
+    --input: 0 0% 85%;
+    --ring: var(--accent-indigo);
+
+    --chart-1: var(--accent-pink);
+    --chart-2: var(--accent-coral);
+    --chart-3: var(--accent-aqua);
+    --chart-4: var(--accent-indigo);
+    --chart-5: 0 0% 72%;
   }
 }
 
@@ -63,13 +92,268 @@
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
-    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+    font-family: "Avenir Next", "Helvetica Neue", "SF Pro Text", "SF Pro Display", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
+    letter-spacing: 0.01em;
   }
 }
 
-/* Theme transition animations */
-.theme-transition * {
-  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease !important;
+/* Keep transitions tight and snappy */
+* {
+  transition: background-color 120ms linear,
+              color 120ms linear,
+              border-color 120ms linear,
+              box-shadow 120ms linear;
+}
+
+/* Swiss-minimal brutalist shell */
+.app-shell {
+  background-image:
+    radial-gradient(circle at 14% 16%, hsla(var(--accent-indigo) / 0.22) 0, transparent 28%),
+    radial-gradient(circle at 76% 12%, hsla(var(--accent-pink) / 0.18) 0, transparent 24%),
+    radial-gradient(circle at 84% 78%, hsla(var(--accent-aqua) / 0.16) 0, transparent 22%),
+    radial-gradient(circle at 26% 84%, hsla(var(--accent-coral) / 0.12) 0, transparent 20%),
+    linear-gradient(to right, rgba(0, 0, 0, 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.06) 1px, transparent 1px),
+    linear-gradient(180deg, hsl(0 0% 99%), hsl(0 0% 96%));
+  background-size: auto, auto, auto, auto, 28px 28px, 28px 28px, 100% 100%;
+  background-attachment: fixed;
+}
+
+.dark .app-shell {
+  background-image:
+    radial-gradient(circle at 14% 16%, hsla(var(--accent-indigo) / 0.34) 0, transparent 30%),
+    radial-gradient(circle at 76% 12%, hsla(var(--accent-pink) / 0.22) 0, transparent 24%),
+    radial-gradient(circle at 84% 78%, hsla(var(--accent-aqua) / 0.18) 0, transparent 24%),
+    radial-gradient(circle at 26% 84%, hsla(var(--accent-coral) / 0.16) 0, transparent 22%),
+    linear-gradient(to right, rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(180deg, hsl(0 0% 8%), hsl(0 0% 6%));
+  background-size: auto, auto, auto, auto, 28px 28px, 28px 28px, 100% 100%;
+}
+
+/* Hard-edged panels */
+.panel-surface {
+  background: hsl(0 0% 100%);
+  border: 2px solid hsl(0 0% 8%);
+  box-shadow:
+    4px 4px 0 rgba(0, 0, 0, 0.95);
+  border-radius: 0 !important;
+}
+
+.dark .panel-surface {
+  background: hsl(0 0% 8%);
+  border: 2px solid hsl(0 0% 90%);
+  box-shadow:
+    4px 4px 0 rgba(255, 255, 255, 0.9);
+  border-radius: 0 !important;
+}
+
+/* Hard interactions */
+.nav-pill {
+  transition: transform 100ms linear,
+              box-shadow 100ms linear,
+              background-color 100ms linear;
+  border: 2px solid transparent;
+  border-radius: 0 !important;
+}
+
+.nav-pill:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 2px 2px 0 hsla(var(--accent-indigo) / 0.85);
+  border-color: hsl(var(--accent-pink));
+}
+
+.nav-pill:active {
+  transform: translate(0, 0);
+  box-shadow: none;
+}
+
+/* Smooth entrance animations */
+@keyframes app-enter {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes app-exit {
+  0% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes app-stagger {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes spectrum-spin {
+  0% {
+    background-position: 0% 50%;
+    transform: rotate(0deg);
+  }
+  100% {
+    background-position: 200% 50%;
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes fade-in {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes fade-out {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.app-enter {
+  animation: app-enter 350ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.app-exit {
+  animation: app-exit 250ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.fade-in {
+  animation: fade-in 200ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.fade-out {
+  animation: fade-out 150ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.app-stagger > * {
+  animation: app-stagger 400ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.app-stagger > *:nth-child(1) { animation-delay: 0ms; }
+.app-stagger > *:nth-child(2) { animation-delay: 30ms; }
+.app-stagger > *:nth-child(3) { animation-delay: 60ms; }
+.app-stagger > *:nth-child(4) { animation-delay: 90ms; }
+.app-stagger > *:nth-child(5) { animation-delay: 120ms; }
+.app-stagger > *:nth-child(6) { animation-delay: 150ms; }
+
+.thinking-spectrum {
+  background-image: linear-gradient(
+    90deg,
+    hsl(var(--accent-pink)),
+    hsl(var(--accent-coral)),
+    hsl(var(--accent-aqua)),
+    hsl(var(--accent-indigo)),
+    hsl(var(--accent-pink))
+  );
+  background-size: 220% 220%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  display: inline-block;
+  animation: spectrum-spin 2.8s linear infinite;
+}
+
+/* Code editor enhancements */
+.monaco-editor {
+  font-family: "SF Mono", "Monaco", "Menlo", "Courier New", monospace !important;
+  font-feature-settings: "liga" 1, "calt" 1;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Scrollbar styling - macOS inspired */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 5px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+  background-clip: content-box;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  background-clip: content-box;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+  background-clip: content-box;
+}
+
+::selection {
+  background: hsla(var(--accent-pink) / 0.28);
+  color: inherit;
+}
+
+.text-accent-pink {
+  color: hsl(var(--accent-pink));
+}
+
+.text-accent-coral {
+  color: hsl(var(--accent-coral));
+}
+
+.text-accent-aqua {
+  color: hsl(var(--accent-aqua));
+}
+
+.text-accent-indigo {
+  color: hsl(var(--accent-indigo));
+}
+
+
+/* Focus rings - iOS style */
+*:focus-visible {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Selection color */
+::selection {
+  background-color: hsla(0, 84%, 44%, 0.24);
+}
+
+.dark ::selection {
+  background-color: hsla(0, 84%, 58%, 0.35);
 }

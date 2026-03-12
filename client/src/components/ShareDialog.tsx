@@ -32,6 +32,7 @@ interface SharedShortcut {
   description: string;
   shareUrl: string;
   qrCodeUrl: string;
+  icloudUrl?: string;
   downloadCount: number;
   actionCount: number;
   tags: string[];
@@ -55,11 +56,12 @@ export function ShareDialog({ open, onOpenChange, shortcut }: ShareDialogProps) 
 
   // Sharing options
   const [isPublic, setIsPublic] = useState(true);
-  const [signFile, setSignFile] = useState(false);
+  const [signFile, setSignFile] = useState(true);
   const [description, setDescription] = useState('');
   const [author, setAuthor] = useState('Anonymous');
   const [tags, setTags] = useState<string[]>([]);
   const [newTag, setNewTag] = useState('');
+  const [icloudUrl, setIcloudUrl] = useState('');
 
   // Results
   const [sharedShortcut, setSharedShortcut] = useState<SharedShortcut | null>(null);
@@ -72,6 +74,7 @@ export function ShareDialog({ open, onOpenChange, shortcut }: ShareDialogProps) 
       setStep('options');
       setError(null);
       setSharedShortcut(null);
+      setIcloudUrl('');
 
       // Check signing capability
       fetchSigningCapability();
@@ -83,6 +86,9 @@ export function ShareDialog({ open, onOpenChange, shortcut }: ShareDialogProps) 
       const response = await fetch('/api/shortcuts/signing-info');
       const data = await response.json();
       setSigningCapability(data);
+      if (data?.available) {
+        setSignFile(true);
+      }
     } catch (err) {
       console.error('Failed to fetch signing capability:', err);
     }
@@ -113,11 +119,12 @@ export function ShareDialog({ open, onOpenChange, shortcut }: ShareDialogProps) 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           shortcut,
-          signFile,
+          signFile: true,
           isPublic,
           description,
           tags,
-          author
+          author,
+          icloudUrl: icloudUrl || undefined
         })
       });
 
@@ -193,6 +200,20 @@ export function ShareDialog({ open, onOpenChange, shortcut }: ShareDialogProps) 
                   placeholder="Your name or handle"
                   className="mt-1"
                 />
+              </div>
+
+              <div>
+                <Label htmlFor="icloud-link">iCloud Link (optional)</Label>
+                <Input
+                  id="icloud-link"
+                  value={icloudUrl}
+                  onChange={(e) => setIcloudUrl(e.target.value)}
+                  placeholder="Paste an iCloud Shortcut link if you already have one"
+                  className="mt-1"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  If you create an iCloud link from the Shortcuts app, paste it here to show it on the share page.
+                </p>
               </div>
 
               <div>
@@ -285,8 +306,8 @@ export function ShareDialog({ open, onOpenChange, shortcut }: ShareDialogProps) 
                       <Switch
                         id="sign-switch"
                         checked={signFile}
-                        onCheckedChange={setSignFile}
-                        disabled={!signingCapability.available}
+                        onCheckedChange={() => setSignFile(true)}
+                        disabled
                       />
                     </div>
 
@@ -364,6 +385,25 @@ export function ShareDialog({ open, onOpenChange, shortcut }: ShareDialogProps) 
               </TabsList>
 
               <TabsContent value="share" className="space-y-4">
+                {sharedShortcut.icloudUrl && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-sm">iCloud Link</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="flex gap-2">
+                        <Input value={sharedShortcut.icloudUrl} readOnly className="flex-1" />
+                        <Button size="sm" onClick={() => copyToClipboard(sharedShortcut.icloudUrl!)}>
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                        <Button size="sm" onClick={() => openInNewTab(sharedShortcut.icloudUrl!)}>
+                          <ExternalLink className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-sm">Share Link</CardTitle>
@@ -404,42 +444,47 @@ export function ShareDialog({ open, onOpenChange, shortcut }: ShareDialogProps) 
                     <CardContent className="pt-6">
                       <div className="flex items-center justify-between">
                         <div>
-                          <h4 className="font-medium">Regular Download</h4>
-                          <p className="text-sm text-muted-foreground">Standard .shortcut file</p>
+                          <h4 className="font-medium">Signed Download</h4>
+                          <p className="text-sm text-muted-foreground">Recommended for import on modern iOS</p>
                         </div>
                         <Button
-                          onClick={() => openInNewTab(`/api/shortcuts/download/${sharedShortcut.id}`)}
+                          onClick={() => openInNewTab(`/api/shortcuts/download/${sharedShortcut.id}?signed=true`)}
                           size="sm"
+                          disabled={!sharedShortcut.isSigned}
                         >
                           <Download className="mr-2 h-4 w-4" />
-                          Download
+                          Download Signed
                         </Button>
                       </div>
                     </CardContent>
                   </Card>
 
-                  {sharedShortcut.isSigned && (
+                  {sharedShortcut.isSigned ? (
                     <Card>
                       <CardContent className="pt-6">
                         <div className="flex items-center justify-between">
                           <div>
-                            <h4 className="font-medium flex items-center gap-2">
-                              Signed Download
-                              <Shield className="h-4 w-4 text-green-500" />
-                            </h4>
-                            <p className="text-sm text-muted-foreground">For iOS 15+ devices</p>
+                            <h4 className="font-medium">Unsigned Download (Advanced)</h4>
+                            <p className="text-sm text-muted-foreground">Use only if you explicitly need an unsigned file</p>
                           </div>
                           <Button
-                            onClick={() => openInNewTab(`/api/shortcuts/download/${sharedShortcut.id}?signed=true`)}
+                            onClick={() => openInNewTab(`/api/shortcuts/download/${sharedShortcut.id}?signed=false`)}
                             size="sm"
-                            variant="secondary"
+                            variant="outline"
                           >
                             <Download className="mr-2 h-4 w-4" />
-                            Download Signed
+                            Download Unsigned
                           </Button>
                         </div>
                       </CardContent>
                     </Card>
+                  ) : (
+                    <Alert>
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription>
+                        Signed artifact was not generated. Re-share after signing succeeds to enable direct import.
+                      </AlertDescription>
+                    </Alert>
                   )}
                 </div>
               </TabsContent>

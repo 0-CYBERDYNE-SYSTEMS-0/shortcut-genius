@@ -26,7 +26,7 @@ export interface AIResponse {
 export interface ModelConfig {
   id: AIModel;
   name: string;
-  provider: 'openai' | 'anthropic' | 'openrouter';
+  provider: 'openai' | 'anthropic' | 'openrouter' | string;
   category: 'reasoning' | 'fast' | 'balanced' | 'coding';
   capabilities: ModelCapabilities;
   cost?: {

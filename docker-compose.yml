@@ -1,0 +1,17 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: shortcut-genius-postgres
+    environment:
+      POSTGRES_USER: shortcut_genius
+      POSTGRES_PASSWORD: shortcut_genius
+      POSTGRES_DB: shortcut_genius
+    ports:
+      - "5432:5432"
+    volumes:
+      - shortcut_genius_pgdata:/var/lib/postgresql/data
+
+volumes:
+  shortcut_genius_pgdata:

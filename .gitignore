@@ -63,10 +63,8 @@ jspm_packages/
 
 # Environment variables
 .env
-.env.development.local
-.env.test.local
-.env.production.local
-.env.local
+.env.*
+!.env.example
 
 # Parcel-bundler cache
 .cache
@@ -112,6 +110,7 @@ public
 # IDE
 .vscode/
 .idea/
+.factory/
 *.swp
 *.swo
 *~
@@ -132,12 +131,13 @@ server/public
 vite.config.ts.*
 *.tgz
 *.tar.gz
+shares/
+test-results/
 
 # Database
 *.sqlite
 *.sqlite3
 *.db
-.local/
 
 # Logs
 logs
@@ -146,6 +146,7 @@ logs
 # Runtime directories
 tmp/
 temp/
+temp_tests/
 .tmp/
 
 # Python (if using Python tools)
@@ -187,19 +188,6 @@ replit_zip_error_log.txt
 # Database files
 drizzle/
 
-# Generated action database files (runtime-generated, do not commit)
-action-database.json
-enhanced-action-database.json
-comprehensive-action-database.json
-final-action-database.json
-test-enhanced-database.json
-action-system-integration-report.json
-ai-action-prompt.md
-
-# Generated stats and update tracking files
-final-stats.json
-comprehensive-stats.json
-discovery-stats.json
-last-update.json
-update-report.json
-update-error.json
+# Local app/runtime data
+.local/shortcut-genius/
+dogfood-output/

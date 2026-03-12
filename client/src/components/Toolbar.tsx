@@ -1,13 +1,12 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { ModelSelector } from './ModelSelector';
 import { FileUpload } from './FileUpload';
 import { ShareDialog } from './ShareDialog';
 import { ThemeToggle } from './theme-toggle';
 import { AIModel, ReasoningOptions } from '@/lib/types';
-import { Shortcut } from '@/lib/shortcuts';
-import { BarChart2, Share2, Download, Mic, MoreVertical } from 'lucide-react';
+import { Shortcut, ShortcutImportIntent } from '@/lib/shortcuts';
+import { BarChart2, Share2, Download, MoreVertical, Shield } from 'lucide-react';
 import { useBreakpoint } from '@/hooks/use-mobile';
 import {
   DropdownMenu,
@@ -21,14 +20,14 @@ interface ToolbarProps {
   onModelChange: (model: AIModel) => void;
   reasoningOptions: ReasoningOptions;
   onReasoningOptionsChange: (options: ReasoningOptions) => void;
-  onImport: (content: string) => void;
+  onImport: (file: File, importIntent: ShortcutImportIntent) => void;
   onExport: () => void;
   onProcess: () => void;
-  onGenerate: (prompt: string) => void;
   isProcessing: boolean;
   showAnalysis: boolean;
   onToggleAnalysis: () => void;
   currentShortcut?: Shortcut | null;
+  onDownloadSigned?: () => void;
 }
 
 export function Toolbar({
@@ -39,26 +38,24 @@ export function Toolbar({
   onImport,
   onExport,
   onProcess,
-  onGenerate,
   isProcessing,
   showAnalysis,
   onToggleAnalysis,
-  currentShortcut
+  currentShortcut,
+  onDownloadSigned
 }: ToolbarProps) {
-  const [prompt, setPrompt] = useState('');
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
-  const [inputExpanded, setInputExpanded] = useState(false);
-  const [isListening, setIsListening] = useState(false);
-  const { isMobile, isTablet, isDesktop, isLargeDesktop, isTouch } = useBreakpoint();
+  const [debugBuild, setDebugBuild] = useState(false);
+  const { isMobile, isTablet, isDesktop, isLargeDesktop } = useBreakpoint();
 
-  const handleDownloadShortcut = async () => {
+  const handleDownloadShortcut = async (debug = false) => {
     if (!currentShortcut) return;
 
     try {
       const response = await fetch('/api/shortcuts/build', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ shortcut: currentShortcut })
+        body: JSON.stringify({ shortcut: currentShortcut, sign: true, signMode: 'anyone', debug: debug || debugBuild })
       });
 
       if (!response.ok) {
@@ -70,7 +67,8 @@ export function Toolbar({
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${currentShortcut.name.replace(/[^a-zA-Z0-9]/g, '_')}.shortcut`;
+      const suffix = (debug || debugBuild) ? '_debug' : '_signed';
+      a.download = `${currentShortcut.name.replace(/[^a-zA-Z0-9]/g, '_')}${suffix}.shortcut`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -78,48 +76,6 @@ export function Toolbar({
     } catch (error) {
       console.error('Download failed:', error);
       // Could add toast notification here
-    }
-  };
-
-  const handleVoiceInput = () => {
-    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-      alert('Speech recognition is not supported in your browser');
-      return;
-    }
-
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    const recognition = new SpeechRecognition();
-
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.lang = 'en-US';
-
-    recognition.onstart = () => {
-      setIsListening(true);
-    };
-
-    recognition.onresult = (event: any) => {
-      const transcript = event.results[0][0].transcript;
-      setPrompt(transcript);
-      setIsListening(false);
-    };
-
-    recognition.onerror = () => {
-      setIsListening(false);
-    };
-
-    recognition.onend = () => {
-      setIsListening(false);
-    };
-
-    recognition.start();
-  };
-
-  const handleGenerate = () => {
-    if (prompt.trim()) {
-      onGenerate(prompt);
-      setPrompt('');
-      setInputExpanded(false);
     }
   };
 
@@ -138,7 +94,17 @@ export function Toolbar({
                 disabled={isProcessing}
                 className="whitespace-nowrap"
               >
-                {isProcessing ? '...' : 'Process'}
+                {isProcessing ? (
+                  <>
+                    <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                    Analyzing...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="mr-1 h-3 w-3" />
+                    Analyze
+                  </>
+                )}
               </Button>
             </div>
             <div className="flex items-center gap-1">
@@ -166,56 +132,18 @@ export function Toolbar({
                     <Download className="mr-2 h-4 w-4" />
                     Download
                   </DropdownMenuItem>
+                  <DropdownMenuItem onClick={onDownloadSigned} disabled={!currentShortcut || !onDownloadSigned}>
+                    <Shield className="mr-2 h-4 w-4" />
+                    Download Signed
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={onExport}>
-                    Export
+                    Export JSON
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => {}}>
                     Import
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-            </div>
-          </div>
-
-          {/* Row 2: Expandable input */}
-          <div className="px-3 py-2">
-            <div className={`transition-all duration-200 ${inputExpanded ? 'min-h-[80px]' : 'h-10'}`}>
-              <div className="relative">
-                <Input
-                  placeholder="Describe your shortcut..."
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  onFocus={() => setInputExpanded(true)}
-                  onBlur={() => setInputExpanded(false)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey && prompt.trim()) {
-                      handleGenerate();
-                    }
-                  }}
-                  className="pr-20 text-base min-h-10"
-                />
-                <div className="absolute right-1 top-1/2 -translate-y-1/2 flex gap-1">
-                  {isTouch && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={handleVoiceInput}
-                      disabled={isListening}
-                      className="h-8 w-8 p-0"
-                    >
-                      <Mic className={`h-4 w-4 ${isListening ? 'text-red-500 animate-pulse' : ''}`} />
-                    </Button>
-                  )}
-                  <Button
-                    size="sm"
-                    onClick={handleGenerate}
-                    disabled={isProcessing || !prompt.trim()}
-                    className="h-8 px-3"
-                  >
-                    Generate
-                  </Button>
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -236,31 +164,10 @@ export function Toolbar({
         <div className="h-16 border-b px-4 flex items-center gap-3">
           <ModelSelector value={model} onChange={onModelChange} />
 
-          <div className="flex-1 flex items-center gap-2 min-w-0">
-            <Input
-              placeholder="Describe your shortcut..."
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey && prompt.trim()) {
-                  handleGenerate();
-                }
-              }}
-              className="flex-1"
-            />
-            <Button
-              onClick={handleGenerate}
-              disabled={isProcessing || !prompt.trim()}
-              size="sm"
-            >
-              Generate
-            </Button>
-          </div>
-
           <div className="flex items-center gap-2">
             <FileUpload onUpload={onImport} />
             <ThemeToggle />
-            <Button size="sm" variant="outline" onClick={onExport}>Export</Button>
+            <Button size="sm" variant="outline" onClick={onExport}>Export JSON</Button>
             <Button
               size="sm"
               variant="outline"
@@ -274,7 +181,7 @@ export function Toolbar({
               disabled={isProcessing}
               size="sm"
             >
-              {isProcessing ? 'Processing...' : 'Process'}
+              {isProcessing ? 'Analyzing...' : 'Analyze'}
             </Button>
           </div>
         </div>
@@ -294,27 +201,6 @@ export function Toolbar({
       <div className={`border-b flex items-center ${isLargeDesktop ? 'px-6 gap-4' : 'px-4 gap-3'} ${isDesktop && !isLargeDesktop ? 'h-16' : 'h-14'}`}>
         <ModelSelector value={model} onChange={onModelChange} />
 
-        <div className="flex-1 flex items-center gap-2 min-w-0">
-          <Input
-            placeholder={isLargeDesktop ? "Describe your shortcut in natural language..." : "Describe your shortcut..."}
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey && prompt.trim()) {
-                handleGenerate();
-              }
-            }}
-            className="flex-1 min-w-[200px]"
-          />
-          <Button
-            onClick={handleGenerate}
-            disabled={isProcessing || !prompt.trim()}
-            size={isLargeDesktop ? 'default' : 'sm'}
-          >
-            Generate
-          </Button>
-        </div>
-
         {/* Primary Actions - Always Visible */}
         <div className="flex items-center gap-2">
           <FileUpload onUpload={onImport} />
@@ -323,16 +209,33 @@ export function Toolbar({
           {isLargeDesktop ? (
             <>
               <Button variant="secondary" onClick={onExport}>
-                Export
+                Export JSON
               </Button>
               <Button
                 variant="secondary"
-                onClick={handleDownloadShortcut}
+                onClick={() => handleDownloadShortcut()}
                 disabled={!currentShortcut}
                 title="Download as .shortcut file"
               >
                 <Download className="mr-2 h-4 w-4" />
                 Download
+              </Button>
+              <Button
+                variant={debugBuild ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setDebugBuild(d => !d)}
+                title="Toggle debug build — inserts Show Result after each action for step-by-step tracing"
+              >
+                {debugBuild ? 'Debug ON' : 'Debug'}
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={onDownloadSigned}
+                disabled={!currentShortcut || !onDownloadSigned}
+                title="Download signed .shortcut file"
+              >
+                <Shield className="mr-2 h-4 w-4" />
+                Download Signed
               </Button>
               <Button
                 variant="secondary"
@@ -353,11 +256,15 @@ export function Toolbar({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={onExport}>
-                  Export
+                  Export JSON
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleDownloadShortcut} disabled={!currentShortcut}>
                   <Download className="mr-2 h-4 w-4" />
                   Download
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={onDownloadSigned} disabled={!currentShortcut || !onDownloadSigned}>
+                  <Shield className="mr-2 h-4 w-4" />
+                  Download Signed
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setShareDialogOpen(true)} disabled={!currentShortcut}>
                   <Share2 className="mr-2 h-4 w-4" />
@@ -381,7 +288,7 @@ export function Toolbar({
             disabled={isProcessing}
             size={isLargeDesktop ? 'default' : 'sm'}
           >
-            {isProcessing ? 'Processing...' : isLargeDesktop ? 'Process with AI' : 'Process'}
+            {isProcessing ? 'Analyzing...' : 'Analyze'}
           </Button>
         </div>
       </div>

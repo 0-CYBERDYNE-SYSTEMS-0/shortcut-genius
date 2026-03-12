@@ -1,7 +1,6 @@
 import OpenAI from 'openai';
 import Anthropic from '@anthropic-ai/sdk';
 import fs from 'fs/promises';
-import path from 'path';
 import { OpenRouterClient } from './openrouter-client';
 import { WebSearchTool } from './web-search-tool';
 import { AIActionEnhancer } from './ai-action-enhancer';
@@ -9,12 +8,17 @@ import { GlyphMappingSystem } from './glyph-mapping-system';
 import {
   getModelConfig,
   isOpenRouterModel,
+  isCustomProvider,
   getOpenRouterModelName,
   supportsReasoning,
   supportsVerbosity,
-  DEFAULT_REASONING_OPTIONS
+  DEFAULT_REASONING_OPTIONS,
+  CUSTOM_PROVIDER_PREFIXES,
 } from '../client/src/lib/models';
+import { loadProviders, PROVIDER_URLS, type ProviderName } from './providers';
+import { SHORTCUT_ACTIONS } from '../client/src/lib/shortcuts';
 import { AIModel, ReasoningOptions } from '../client/src/lib/types';
+import { getAiActionPromptPath, getFinalActionDatabasePath } from './runtime-config';
 
 interface AIProcessorOptions {
   openai: OpenAI;
@@ -29,6 +33,8 @@ interface ProcessRequest {
   type: 'generate' | 'analyze';
   systemPrompt: string;
   reasoningOptions?: ReasoningOptions;
+  useComprehensiveActions?: boolean;
+  allowTools?: boolean;
 }
 
 interface ProcessResult {
@@ -72,12 +78,12 @@ export class AIProcessor {
   private async loadComprehensiveActionDatabase(): Promise<void> {
     try {
       // Load final comprehensive database
-      const databasePath = path.join(process.cwd(), 'final-action-database.json');
+      const databasePath = getFinalActionDatabasePath();
       const data = await fs.readFile(databasePath, 'utf8');
       this.comprehensiveActionDatabase = JSON.parse(data);
 
       // Load optimized AI prompt
-      const promptPath = path.join(process.cwd(), 'ai-action-prompt.md');
+      const promptPath = getAiActionPromptPath();
       const promptData = await fs.readFile(promptPath, 'utf8');
       this.aiPrompt = promptData;
 
@@ -118,11 +124,25 @@ export class AIProcessor {
     const { model, prompt, type, systemPrompt, reasoningOptions } = request;
     const modelConfig = getModelConfig(model);
 
+    if (isCustomProvider(model)) {
+      return this.processCustomProvider(request);
+    }
+
     if (isOpenRouterModel(model)) {
       return this.processOpenRouter(request);
     }
 
     if (modelConfig.provider === 'openai') {
+      if (!process.env.OPENAI_API_KEY && process.env.OPENROUTER_API_KEY) {
+        const openRouterRequest: ProcessRequest = {
+          model: `openai/${model}`,
+          prompt,
+          type,
+          systemPrompt,
+          reasoningOptions
+        };
+        return this.processOpenRouter(openRouterRequest);
+      }
       return this.processOpenAI(request);
     }
 
@@ -134,13 +154,14 @@ export class AIProcessor {
   }
 
   private async processOpenAI(request: ProcessRequest): Promise<ProcessResult> {
-    const { model, prompt, type, systemPrompt, reasoningOptions } = request;
+    const { model, prompt, type, systemPrompt, reasoningOptions, useComprehensiveActions, allowTools } = request;
     const modelConfig = getModelConfig(model);
+    const toolsEnabled = allowTools !== false;
 
     // Prepare messages
     const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
-      { role: 'system', content: this.buildSystemPrompt(systemPrompt, type) },
-      { role: 'user', content: this.buildUserPrompt(prompt, type) }
+      { role: 'system', content: this.buildSystemPrompt(systemPrompt, type, useComprehensiveActions) },
+      { role: 'user', content: this.buildUserPrompt(prompt, type, useComprehensiveActions) }
     ];
 
     // Build request parameters
@@ -152,7 +173,7 @@ export class AIProcessor {
     };
 
     // Add web search tools if available
-    if (this.webSearchTool) {
+    if (this.webSearchTool && toolsEnabled) {
       requestParams.tools = this.webSearchTool.getAllToolDefinitions();
       requestParams.tool_choice = 'auto';
     }
@@ -168,7 +189,7 @@ export class AIProcessor {
     }
 
     // Add JSON mode for generation (but not when using tools)
-    if ((type === 'generate' || type === 'analyze') && !this.webSearchTool) {
+    if ((type === 'generate' || type === 'analyze') && !toolsEnabled) {
       requestParams.response_format = { type: 'json_object' };
     }
 
@@ -178,7 +199,7 @@ export class AIProcessor {
 
       // Handle function calls
       const toolCalls = response.choices[0].message.tool_calls;
-      if (toolCalls && this.webSearchTool) {
+      if (toolCalls && this.webSearchTool && toolsEnabled) {
         for (const toolCall of toolCalls) {
           if (['web_search', 'web_extract', 'web_crawl'].includes(toolCall.function.name)) {
             try {
@@ -231,24 +252,25 @@ export class AIProcessor {
   }
 
   private async processAnthropic(request: ProcessRequest): Promise<ProcessResult> {
-    const { model, prompt, type, systemPrompt } = request;
+    const { model, prompt, type, systemPrompt, useComprehensiveActions, allowTools } = request;
     const modelConfig = getModelConfig(model);
+    const toolsEnabled = allowTools !== false;
 
     const messages: any[] = [{
       role: 'user',
-      content: this.buildUserPrompt(prompt, type)
+      content: this.buildUserPrompt(prompt, type, useComprehensiveActions)
     }];
 
     const requestParams: any = {
       model: this.getAnthropicModelName(model),
-      system: this.buildSystemPrompt(systemPrompt, type),
+      system: this.buildSystemPrompt(systemPrompt, type, useComprehensiveActions),
       messages,
       temperature: 0.7,
       max_tokens: modelConfig.capabilities.maxTokens || 8192
     };
 
     // Add web search tools if available
-    if (this.webSearchTool) {
+    if (this.webSearchTool && toolsEnabled) {
       const toolDefinitions = this.webSearchTool.getAllOpenRouterToolDefinitions();
       requestParams.tools = toolDefinitions.map(tool => ({
         name: tool.function.name,
@@ -306,13 +328,14 @@ export class AIProcessor {
   }
 
   private async processOpenRouter(request: ProcessRequest): Promise<ProcessResult> {
-    const { model, prompt, type, systemPrompt, reasoningOptions } = request;
+    const { model, prompt, type, systemPrompt, reasoningOptions, useComprehensiveActions, allowTools } = request;
     const modelConfig = getModelConfig(model);
     const openRouterModelName = getOpenRouterModelName(model);
+    const toolsEnabled = allowTools !== false;
 
     const messages = [
-      { role: 'system' as const, content: this.buildSystemPrompt(systemPrompt, type) },
-      { role: 'user' as const, content: this.buildUserPrompt(prompt, type) }
+      { role: 'system' as const, content: this.buildSystemPrompt(systemPrompt, type, useComprehensiveActions) },
+      { role: 'user' as const, content: this.buildUserPrompt(prompt, type, useComprehensiveActions) }
     ];
 
     const requestData: any = {
@@ -324,7 +347,7 @@ export class AIProcessor {
     };
 
     // Add web search tools if available (OpenRouter function calling format)
-    if (this.webSearchTool) {
+    if (this.webSearchTool && toolsEnabled) {
       requestData.tools = this.webSearchTool.getAllOpenRouterToolDefinitions();
       requestData.tool_choice = 'auto';
     }
@@ -335,7 +358,7 @@ export class AIProcessor {
 
       // Handle function calls (OpenRouter format)
       const toolCalls = response.choices[0].message.tool_calls;
-      if (toolCalls && this.webSearchTool) {
+      if (toolCalls && this.webSearchTool && toolsEnabled) {
         for (const toolCall of toolCalls) {
           if (['web_search', 'web_extract', 'web_crawl'].includes(toolCall.function.name)) {
             try {
@@ -381,11 +404,11 @@ export class AIProcessor {
     }
   }
 
-  private buildSystemPrompt(basePrompt: string, type: string): string {
+  private buildSystemPrompt(basePrompt: string, type: string, useComprehensiveActions?: boolean): string {
     let systemPrompt = basePrompt;
 
     // Add comprehensive action database knowledge
-    if (this.comprehensiveActionDatabase && this.aiPrompt) {
+    if (useComprehensiveActions !== false && this.comprehensiveActionDatabase && this.aiPrompt) {
       systemPrompt += '\n\n' + this.aiPrompt;
     }
 
@@ -398,11 +421,11 @@ export class AIProcessor {
     return systemPrompt;
   }
 
-  private buildUserPrompt(prompt: string, type: string): string {
+  private buildUserPrompt(prompt: string, type: string, useComprehensiveActions?: boolean): string {
     if (type === 'generate') {
       let actionPrompt = '';
 
-      if (this.comprehensiveActionDatabase) {
+      if (useComprehensiveActions !== false && this.comprehensiveActionDatabase) {
         const availableActions = Object.keys(this.comprehensiveActionDatabase).length;
 
         // Get actions by category for better organization
@@ -427,14 +450,13 @@ ${actions.slice(0, 3).map((action: any) => `  • ${action.name} (\`${action.ide
 
 *Use only these verified action identifiers in your response. All required parameters must be included.*`;
       } else {
-        // Fallback to basic action database
-        const actionDatabase = this.getActionDatabase();
-        const availableActions = Object.keys(actionDatabase).length;
+        // Fallback to simplified in-app action list (matches validation)
+        const availableActions = Object.keys(SHORTCUT_ACTIONS).length;
         actionPrompt = `
 
 IMPORTANT: Use only the following verified iOS Shortcuts actions (${availableActions} available):
-${Object.entries(actionDatabase).slice(0, 10).map(([id, action]: [string, any]) =>
-  `- ${action.name}: ${id}\n  Parameters: ${action.parameters.map((p: any) => p.key).join(', ')}\n  Category: ${action.category}`
+${Object.entries(SHORTCUT_ACTIONS).map(([id, action]) =>
+  `- ${action.name}: ${id}\n  Parameters: ${action.parameters.join(', ')}`
 ).join('\n')}`;
       }
 
@@ -457,11 +479,70 @@ IMPORTANT:
 - Use only the action identifiers listed above
 - Include all required parameters for each action
 - Use proper parameter keys as shown in the action descriptions
+- Use iOS Shortcuts action identifiers (is.workflow.actions.* or com.apple.*) when possible
+- For API calls, prefer "Get Contents of URL" and include method/headers/body parameters as needed
 - Consider permission requirements
 - Match input/output types between connected actions`;
     } else {
       return `Analyze this shortcut and suggest improvements: ${prompt}`;
     }
+  }
+
+  private async processCustomProvider(request: ProcessRequest): Promise<ProcessResult> {
+    const { model, prompt, type, systemPrompt, useComprehensiveActions } = request;
+
+    console.log(`🔧 Processing custom provider model: ${model}`);
+
+    // Determine provider name from prefix (e.g. "glm/glm-4" → "glm")
+    const prefix = CUSTOM_PROVIDER_PREFIXES.find(p => model.startsWith(p));
+    if (!prefix) throw new Error(`Unknown custom provider for model: ${model}`);
+
+    // Provider key is the prefix without slash and without -direct suffix
+    const providerName = prefix.replace('/', '').replace('-direct', '') as ProviderName;
+    const store = await loadProviders();
+    const providerCfg = store[providerName];
+    const apiKey = providerCfg?.apiKey || providerCfg?.oauthToken;
+
+    if (!apiKey) {
+      throw new Error(`${providerName} API key not configured. Add it in Model Settings → Providers.`);
+    }
+
+    const baseURL = PROVIDER_URLS[providerName];
+    console.log(`🌐 Base URL: ${baseURL}`);
+    // Strip the "prefix/" from the model ID to get the raw model name for the API
+    const rawModel = model.startsWith(prefix) ? model.slice(prefix.length) : model;
+    console.log(`📝 Raw model for API: ${rawModel}`);
+
+    const client = new OpenAI({ apiKey, baseURL, timeout: 60000 });
+
+    const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
+      { role: 'system', content: this.buildSystemPrompt(systemPrompt, type, useComprehensiveActions) },
+      { role: 'user', content: this.buildUserPrompt(prompt, type, useComprehensiveActions) },
+    ];
+
+    console.log(`💬 Sending request with ${messages.length} messages, max_tokens: 8192`);
+
+    const response = await client.chat.completions.create({
+      model: rawModel,
+      messages,
+      temperature: 0.7,
+      max_tokens: 8192,
+    });
+
+    const msg = response.choices[0].message as any;
+    // GLM-4.7 (and other reasoning models) may return content in reasoning_content when content is empty
+    const content = msg.content || msg.reasoning_content || '';
+
+    console.log(`📄 Response length: ${content.length} chars`);
+
+    return {
+      content,
+      usage: response.usage ? {
+        prompt_tokens: response.usage.prompt_tokens,
+        completion_tokens: response.usage.completion_tokens,
+        total_tokens: response.usage.total_tokens,
+      } : undefined,
+    };
   }
 
   private getOpenAIModelName(model: AIModel): string {
@@ -511,6 +592,9 @@ IMPORTANT:
       }
     } else if (modelConfig.provider === 'openai') {
       if (!process.env.OPENAI_API_KEY) {
+        if (process.env.OPENROUTER_API_KEY) {
+          return { available: true };
+        }
         return { available: false, error: 'OpenAI API key not configured' };
       }
     } else if (modelConfig.provider === 'anthropic') {

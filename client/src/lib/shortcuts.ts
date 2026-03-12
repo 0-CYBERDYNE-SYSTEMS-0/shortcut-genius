@@ -5,13 +5,33 @@ export interface ShortcutAction {
   parameters: Record<string, any>;
 }
 
+export type ShortcutSourceFormat = 'json' | 'plist' | 'shortcut';
+export type ShortcutImportIntent = 'debug' | 'reference';
+
+export interface ShortcutProvenance {
+  sourceFormat: ShortcutSourceFormat;
+  importIntent?: ShortcutImportIntent;
+  fileName?: string;
+  warnings?: string[];
+  rawAppleShortcut?: Record<string, any>;
+  rawPlist?: string;
+}
+
 export interface Shortcut {
   name: string;
   actions: ShortcutAction[];
+  _provenance?: ShortcutProvenance;
+}
+
+const APPLE_ACTION_PREFIXES = ['is.workflow.actions.', 'com.apple.'];
+const BUNDLE_LIKE_ACTION_PATTERN = /^[a-z0-9]+(?:[._-][a-z0-9]+)+(?:\.[A-Za-z0-9_-]+)+$/i;
+
+export function isAppleActionIdentifier(type: string): boolean {
+  return APPLE_ACTION_PREFIXES.some(prefix => type.startsWith(prefix)) || BUNDLE_LIKE_ACTION_PATTERN.test(type);
 }
 
 // Maximum allowed actions in a shortcut
-const MAX_ACTIONS = 50;
+const MAX_ACTIONS = 100;
 
 // Permission levels for different action types
 export const ACTION_PERMISSIONS = {
@@ -30,7 +50,9 @@ export const ACTION_PERMISSIONS = {
   set_do_not_disturb: 'device',
   url: 'network',
   notification: 'notification',
+  create_note: 'notes',
   files: 'files',
+  save_file: 'files',
   calendar: 'calendar',
   contacts: 'contacts',
   get_location: 'location',
@@ -60,6 +82,7 @@ const parameterSchemas = {
   device: z.string(),
   headers: z.record(z.string(), z.string()).optional(),
   value: z.number(),
+  title: z.string(),
   condition: z.string(),
   then: z.array(z.lazy(() => actionSchema)),
   else: z.array(z.lazy(() => actionSchema)).optional(),
@@ -175,15 +198,14 @@ function formatError(type: string, message: string, index?: number): string {
 
 // Helper function for generating shortcut templates
 export function generateTemplate(type: 'basic' | 'conditional' | 'media' | 'device' | 'health' | 'home'): Shortcut {
-  const templateMap: Record<string, keyof typeof TEST_CASES> = {
+  return TEST_CASES[{
     basic: 'basicInputOutput',
     conditional: 'conditionalLogic',
     media: 'mediaHandling',
     device: 'deviceControl',
     health: 'healthData',
     home: 'homeAutomation'
-  };
-  return TEST_CASES[templateMap[type]];
+  }[type]];
 }
 
 // Enhanced validation function
@@ -211,95 +233,181 @@ export function validateShortcut(shortcut: Shortcut): string[] {
   errors.push(...circularErrors);
 
   // Action validation
-  const requiredPermissions = new Set<string>();
-  
   shortcut.actions.forEach((action, index) => {
     const actionType = SHORTCUT_ACTIONS[action.type as keyof typeof SHORTCUT_ACTIONS];
-    
+    const isAppleAction = isAppleActionIdentifier(action.type);
+
     // Action type validation
-    if (!actionType) {
+    if (!actionType && !isAppleAction) {
       errors.push(formatError('Invalid Action', `Unknown action type: ${action.type}`, index));
       return;
     }
 
-    // Permission tracking
-    const permission = ACTION_PERMISSIONS[action.type as keyof typeof ACTION_PERMISSIONS];
-    if (permission && permission !== 'none') {
-      requiredPermissions.add(permission);
-    }
-
     // Parameter validation
     try {
+      if (!action.parameters || typeof action.parameters !== 'object') {
+        errors.push(formatError('Parameters', 'Action parameters must be an object', index));
+        return;
+      }
+
       const sanitizedParams = sanitizeParameters(action.parameters);
       action.parameters = sanitizedParams;
 
-      actionType.parameters.forEach((param: string) => {
-        if (!sanitizedParams.hasOwnProperty(param)) {
-          errors.push(formatError('Parameters', `Missing required parameter: ${param}`, index));
-        } else {
-          const schema = parameterSchemas[param as keyof typeof parameterSchemas];
-          if (schema) {
-            try {
-              schema.parse(sanitizedParams[param]);
-            } catch (e) {
-              if (e instanceof z.ZodError) {
-                errors.push(formatError('Validation', `Invalid ${param}: ${e.errors[0].message}`, index));
+      if (actionType) {
+        const requiredParams = actionType.parameters;
+        const optionalParams = actionType.optionalParameters || [];
+        const allowedParams = new Set([...requiredParams, ...optionalParams]);
+
+        requiredParams.forEach(param => {
+          if (!sanitizedParams.hasOwnProperty(param)) {
+            errors.push(formatError('Parameters', `Missing required parameter: ${param}`, index));
+          } else {
+            const schema = parameterSchemas[param as keyof typeof parameterSchemas];
+            if (schema) {
+              try {
+                schema.parse(sanitizedParams[param]);
+              } catch (e) {
+                if (e instanceof z.ZodError) {
+                  errors.push(formatError('Validation', `Invalid ${param}: ${e.errors[0].message}`, index));
+                }
               }
             }
           }
-        }
-      });
-
-      // Extra parameter check
-      Object.keys(sanitizedParams).forEach(param => {
-        if (!actionType.parameters.includes(param)) {
-          errors.push(formatError('Parameters', `Unknown parameter: ${param}`, index));
-        }
-      });
-
-      // Nested action validation for if/repeat
-      if (action.type === 'if' || action.type === 'repeat') {
-        const nestedActions = action.type === 'if'
-          ? [...(action.parameters.then || []), ...(action.parameters.else || [])]
-          : action.parameters.actions;
-        
-        const nestedErrors = validateShortcut({ 
-          name: `${shortcut.name}_nested`, 
-          actions: nestedActions 
         });
-        
-        errors.push(...nestedErrors.map(error => formatError('Nested', error, index)));
+
+        // Extra parameter check
+        Object.keys(sanitizedParams).forEach(param => {
+          if (!allowedParams.has(param)) {
+            errors.push(formatError('Parameters', `Unknown parameter: ${param}`, index));
+          }
+        });
+
+        // Nested action validation for if/repeat
+        if (action.type === 'if' || action.type === 'repeat') {
+          const nestedActions = action.type === 'if'
+            ? [...(action.parameters.then || []), ...(action.parameters.else || [])]
+            : action.parameters.actions;
+          
+          const nestedErrors = validateShortcut({ 
+            name: `${shortcut.name}_nested`, 
+            actions: nestedActions 
+          });
+          
+          errors.push(...nestedErrors.map(error => formatError('Nested', error, index)));
+        }
       }
     } catch (error) {
       errors.push(formatError('Parameters', 'Invalid parameters structure', index));
     }
   });
 
-  // Add permission requirements to errors
-  if (requiredPermissions.size > 0) {
-    errors.push(formatError('Permissions', `Required permissions: ${Array.from(requiredPermissions).join(', ')}`));
-  }
-
   return errors;
 }
 
 export function parseShortcutFile(content: string): Shortcut {
   try {
-    const parsed = JSON.parse(content);
-    const shortcut = {
-      name: parsed.name || 'Untitled Shortcut',
-      actions: parsed.actions || []
-    };
-
-    const errors = validateShortcut(shortcut);
-    if (errors.length > 0) {
-      throw new Error(`Invalid shortcut:\n${errors.join('\n')}`);
-    }
-
-    return shortcut;
+    const parsed = extractShortcutFromText(content);
+    return parsed.shortcut;
   } catch (error) {
     throw new Error(`Invalid shortcut file: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
+}
+
+export function normalizeShortcutForEditor(shortcut: Shortcut): string {
+  return JSON.stringify(shortcut, null, 2);
+}
+
+export function extractShortcutFromText(content: string): {
+  shortcut: Shortcut;
+  normalized: string;
+  wasExtracted: boolean;
+} {
+  const fencedMatch = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  const candidate = fencedMatch ? fencedMatch[1].trim() : content.trim();
+
+  const tryParse = (raw: string): Shortcut | null => {
+    try {
+      const parsed = JSON.parse(raw);
+      const shortcut = {
+        ...parsed,
+        name: parsed.name || 'Untitled Shortcut',
+        actions: Array.isArray(parsed.actions) ? parsed.actions : []
+      } as Shortcut;
+
+      const errors = validateShortcut(shortcut);
+      if (errors.length > 0) {
+        throw new Error(`Invalid shortcut:\n${errors.join('\n')}`);
+      }
+
+      return shortcut;
+    } catch {
+      return null;
+    }
+  };
+
+  const direct = tryParse(candidate);
+  if (direct) {
+    return {
+      shortcut: direct,
+      normalized: normalizeShortcutForEditor(direct),
+      wasExtracted: candidate !== content.trim(),
+    };
+  }
+
+  const jsonStart = candidate.indexOf('{');
+  const jsonEnd = candidate.lastIndexOf('}');
+  if (jsonStart === -1 || jsonEnd === -1 || jsonEnd <= jsonStart) {
+    throw new Error('No valid JSON shortcut object found.');
+  }
+
+  const extracted = candidate.slice(jsonStart, jsonEnd + 1);
+  const shortcut = tryParse(extracted);
+  if (!shortcut) {
+    throw new Error('Shortcut JSON could not be parsed.');
+  }
+
+  return {
+    shortcut,
+    normalized: normalizeShortcutForEditor(shortcut),
+    wasExtracted: true,
+  };
+}
+
+export async function importShortcutArtifact(
+  file: File,
+  importIntent: ShortcutImportIntent = 'reference'
+): Promise<{
+  shortcut: Shortcut;
+  metadata: {
+    name: string;
+    actionCount: number;
+    sourceFormat: ShortcutSourceFormat;
+    importIntent?: ShortcutImportIntent;
+    warnings: string[];
+    fileName: string;
+    validationErrors: string[];
+    hasRawAppleDocument?: boolean;
+  };
+}> {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('importIntent', importIntent);
+
+  const response = await fetch('/api/shortcuts/import-artifact', {
+    method: 'POST',
+    body: formData
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.details || data.error || 'Failed to import shortcut artifact');
+  }
+
+  if (Array.isArray(data?.metadata?.validationErrors) && data.metadata.validationErrors.length > 0) {
+    throw new Error(data.metadata.validationErrors.join('\n'));
+  }
+
+  return data;
 }
 
 export function exportShortcut(shortcut: Shortcut): string {
@@ -374,15 +482,25 @@ export const SHORTCUT_ACTIONS = {
   // System
   url: {
     name: 'URL',
-    parameters: ['url', 'method', 'headers']
+    parameters: ['url'],
+    optionalParameters: ['method', 'headers', 'body', 'bodyType']
   },
   notification: {
     name: 'Notification',
     parameters: ['title', 'body', 'sound']
   },
+  create_note: {
+    name: 'Create Note',
+    parameters: ['text'],
+    optionalParameters: ['title']
+  },
   files: {
     name: 'Files',
     parameters: ['path', 'content', 'operation']
+  },
+  save_file: {
+    name: 'Save File',
+    parameters: ['path']
   },
 
   // Calendar & Contacts

@@ -181,9 +181,6 @@ export class GlyphMappingSystem {
       // Camera
       'is.workflow.actions.takephoto': 59529, // Camera
       'is.workflow.actions.selectphoto': 59530, // Photo
-
-      // Media
-      'is.workflow.actions.playmusic': 59531, // Music Note
       'is.workflow.actions.recordvideo': 59532, // Video
 
       // Data
@@ -213,7 +210,6 @@ export class GlyphMappingSystem {
       'is.workflow.actions.copy': 59549, // Clipboard
       'is.workflow.actions.getclipboard': 59549, // Clipboard
       'is.workflow.actions.speak': 59550, // Speaker
-      'is.workflow.actions.recordaudio': 59551, // Microphone
       'is.workflow.actions.setvolume': 59552, // Volume
 
       // Apps

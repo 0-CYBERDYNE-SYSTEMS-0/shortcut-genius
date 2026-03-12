@@ -4,17 +4,25 @@ import { registerShortcutLanguage } from '@/lib/monaco';
 import { Card } from '@/components/ui/card';
 import { useBreakpoint } from '@/hooks/use-mobile';
 import { useTheme } from '@/components/theme-provider';
+import { cn } from '@/lib/utils';
 
 interface EditorPaneProps {
   value: string;
   onChange: (value: string) => void;
+  className?: string;
 }
 
-export function EditorPane({ value, onChange }: EditorPaneProps) {
+export function EditorPane({ value, onChange, className }: EditorPaneProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const editor = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
+  const onChangeRef = useRef(onChange);
   const { isMobile, isTablet, isTouch } = useBreakpoint();
   const { theme } = useTheme();
+
+  // Keep onChange ref up to date without recreating editor
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
 
   useEffect(() => {
     if (editorRef.current) {
@@ -27,7 +35,7 @@ export function EditorPane({ value, onChange }: EditorPaneProps) {
         theme: theme === 'dark' ? 'shortcut-dark-theme' : 'shortcut-light-theme',
         minimap: { enabled: !isMobile },
         fontSize: isMobile ? 16 : (isTablet ? 15 : 14),
-        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+        fontFamily: '"SF Mono", "SF Pro Text", Menlo, Monaco, Consolas, monospace',
         lineNumbers: isMobile ? 'off' : 'on',
         scrollBeyondLastLine: false,
         automaticLayout: true,
@@ -55,7 +63,7 @@ export function EditorPane({ value, onChange }: EditorPaneProps) {
       editor.current = monaco.editor.create(editorRef.current, editorOptions);
 
       editor.current.onDidChangeModelContent(() => {
-        onChange(editor.current?.getValue() || '');
+        onChangeRef.current(editor.current?.getValue() || '');
       });
 
       // Mobile-specific editor adjustments
@@ -100,7 +108,7 @@ export function EditorPane({ value, onChange }: EditorPaneProps) {
   }, [theme]);
 
   return (
-    <Card className={`h-full overflow-hidden ${isMobile ? 'rounded-none border-x-0 border-t-0' : ''}`}>
+    <Card className={cn(`h-full overflow-hidden ${isMobile ? 'rounded-none border-x-0 border-t-0' : ''}`, className)}>
       <div
         ref={editorRef}
         className={`h-full w-full ${isMobile ? 'touch-manipulation' : ''}`}

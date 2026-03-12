@@ -1,7 +1,14 @@
 import plist from 'plist';
-import crypto from 'crypto';
+import * as crypto from 'crypto';
+import os from 'os';
+import path from 'path';
+import fs from 'fs/promises';
+import { promisify } from 'util';
+import { execFile } from 'child_process';
 import { v4 as uuidv4 } from 'uuid';
-import { Shortcut, ShortcutAction } from '../client/src/lib/shortcuts';
+import { Shortcut, ShortcutAction, ShortcutImportIntent, ShortcutSourceFormat } from '../client/src/lib/shortcuts';
+
+const execFileAsync = promisify(execFile);
 
 // Apple's shortcut file structure
 interface AppleShortcut {
@@ -24,6 +31,62 @@ interface AppleAction {
   WFWorkflowActionParameters: Record<string, any>;
 }
 
+type AppleShortcutDocument = AppleShortcut & Record<string, any>;
+
+const APPLE_ACTION_PREFIXES = ['is.workflow.actions.', 'com.apple.'];
+const BUNDLE_LIKE_ACTION_PATTERN = /^[a-z0-9]+(?:[._-][a-z0-9]+)+(?:\.[A-Za-z0-9_-]+)+$/i;
+
+function isAppleActionIdentifier(type: string): boolean {
+  return APPLE_ACTION_PREFIXES.some(prefix => type.startsWith(prefix)) || BUNDLE_LIKE_ACTION_PATTERN.test(type);
+}
+
+// Known-good Apple Shortcuts action identifiers for validation
+export const KNOWN_APPLE_IDENTIFIERS = new Set([
+  'is.workflow.actions.url',
+  'is.workflow.actions.getcontentsofurl',
+  'is.workflow.actions.showresult',
+  'is.workflow.actions.quicklook',
+  'is.workflow.actions.gettext',
+  'is.workflow.actions.number',
+  'is.workflow.actions.ask',
+  'is.workflow.actions.conditional',
+  'is.workflow.actions.repeat.count',
+  'is.workflow.actions.repeat.each',
+  'is.workflow.actions.delay',
+  'is.workflow.actions.playsound',
+  'is.workflow.actions.recordaudio',
+  'is.workflow.actions.takephoto',
+  'is.workflow.actions.selectphotos',
+  'is.workflow.actions.setvolume',
+  'is.workflow.actions.setbrightness',
+  'is.workflow.actions.dnd.set',
+  'is.workflow.actions.shownotification',
+  'is.workflow.actions.createnote',
+  'is.workflow.actions.documentpicker.open',
+  'is.workflow.actions.savefile',
+  'is.workflow.actions.addnewevent',
+  'is.workflow.actions.contacts',
+  'is.workflow.actions.location',
+  'is.workflow.actions.getdirections',
+  'is.workflow.actions.health.quantity.log',
+  'is.workflow.actions.health.quantity.get',
+  'is.workflow.actions.homekit.set',
+  'is.workflow.actions.homekit.get',
+  'is.workflow.actions.getclipboard',
+  'is.workflow.actions.setclipboard',
+  'is.workflow.actions.speak',
+  'is.workflow.actions.openurl',
+  'is.workflow.actions.searchsafari',
+  'is.workflow.actions.filter.files',
+  'is.workflow.actions.base64encode',
+  'is.workflow.actions.hash',
+  'is.workflow.actions.format.number',
+  'is.workflow.actions.format.date',
+  'is.workflow.actions.date',
+  'is.workflow.actions.calculateexpression',
+  'is.workflow.actions.downloadurl',  // legacy alias kept
+]);
+
 // Mapping from ShortcutGenius actions to Apple Shortcuts actions
 const ACTION_MAPPING: Record<string, string> = {
   text: 'is.workflow.actions.gettext',
@@ -41,7 +104,9 @@ const ACTION_MAPPING: Record<string, string> = {
   set_do_not_disturb: 'is.workflow.actions.dnd.set',
   url: 'is.workflow.actions.url',
   notification: 'is.workflow.actions.shownotification',
+  create_note: 'is.workflow.actions.createnote',
   files: 'is.workflow.actions.documentpicker.open',
+  save_file: 'is.workflow.actions.savefile',
   calendar: 'is.workflow.actions.addnewevent',
   contacts: 'is.workflow.actions.contacts',
   get_location: 'is.workflow.actions.location',
@@ -49,8 +114,42 @@ const ACTION_MAPPING: Record<string, string> = {
   log_health: 'is.workflow.actions.health.quantity.log',
   get_health: 'is.workflow.actions.health.quantity.get',
   control_devices: 'is.workflow.actions.homekit.set',
-  get_device_state: 'is.workflow.actions.homekit.get'
+  get_device_state: 'is.workflow.actions.homekit.get',
+  // Correct fetch/display identifiers
+  'get-url': 'is.workflow.actions.getcontentsofurl',
+  getcontentsofurl: 'is.workflow.actions.getcontentsofurl',
+  'get_contents_of_url': 'is.workflow.actions.getcontentsofurl',
+  downloadurl: 'is.workflow.actions.getcontentsofurl',
+  'show-result': 'is.workflow.actions.showresult',
+  show_result: 'is.workflow.actions.showresult',
+  showresult: 'is.workflow.actions.showresult',
+  quicklook: 'is.workflow.actions.quicklook',
+  'quick-look': 'is.workflow.actions.quicklook',
+  'quick_look': 'is.workflow.actions.quicklook',
+  previewdocument: 'is.workflow.actions.quicklook',
+  speak: 'is.workflow.actions.speak',
+  clipboard: 'is.workflow.actions.getclipboard',
+  get_clipboard: 'is.workflow.actions.getclipboard',
+  set_clipboard: 'is.workflow.actions.setclipboard',
+  open_url: 'is.workflow.actions.openurl',
 };
+
+const REVERSE_ACTION_MAPPING = Object.entries(ACTION_MAPPING).reduce<Record<string, string>>((acc, [internal, apple]) => {
+  if (!acc[apple]) {
+    acc[apple] = internal;
+  }
+  return acc;
+}, {
+  'is.workflow.actions.shownotification': 'notification',
+  'is.workflow.actions.documentpicker.open': 'files',
+  'is.workflow.actions.savefile': 'save_file',
+  'is.workflow.actions.location': 'get_location',
+  'is.workflow.actions.getdirections': 'get_directions',
+  'is.workflow.actions.health.quantity.log': 'log_health',
+  'is.workflow.actions.health.quantity.get': 'get_health',
+  'is.workflow.actions.homekit.set': 'control_devices',
+  'is.workflow.actions.homekit.get': 'get_device_state',
+});
 
 // Parameter mapping from ShortcutGenius to Apple format
 function mapParameters(actionType: string, parameters: Record<string, any>): Record<string, any> {
@@ -74,6 +173,19 @@ function mapParameters(actionType: string, parameters: Record<string, any>): Rec
       mapped.WFNotificationActionTitle = parameters.title || '';
       mapped.WFNotificationActionBody = parameters.body || '';
       mapped.WFNotificationActionSound = parameters.sound || true;
+      break;
+
+    case 'create_note':
+      mapped.WFNoteActionNote = parameters.text || '';
+      if (parameters.title) {
+        mapped.WFNoteActionTitle = parameters.title;
+      }
+      break;
+
+    case 'save_file':
+      if (parameters.path) {
+        mapped.WFSaveFileDestinationPath = parameters.path;
+      }
       break;
 
     case 'wait':
@@ -117,8 +229,66 @@ function mapParameters(actionType: string, parameters: Record<string, any>): Rec
   return mapped;
 }
 
+function reverseMapParameters(actionType: string, parameters: Record<string, any>): Record<string, any> {
+  switch (actionType) {
+    case 'text':
+      return { text: parameters.WFTextActionText ?? '' };
+    case 'number':
+      return { value: parameters.WFNumberActionNumber ?? 0 };
+    case 'ask':
+      return {
+        prompt: parameters.WFAskActionPrompt ?? 'Enter input',
+        defaultValue: parameters.WFAskActionDefaultAnswer ?? ''
+      };
+    case 'notification':
+      return {
+        title: parameters.WFNotificationActionTitle ?? '',
+        body: parameters.WFNotificationActionBody ?? '',
+        sound: parameters.WFNotificationActionSound ?? true
+      };
+    case 'create_note':
+      return {
+        text: parameters.WFNoteActionNote ?? '',
+        ...(parameters.WFNoteActionTitle ? { title: parameters.WFNoteActionTitle } : {})
+      };
+    case 'save_file':
+      return {
+        ...(parameters.WFSaveFileDestinationPath ? { path: parameters.WFSaveFileDestinationPath } : {})
+      };
+    case 'wait':
+      return { seconds: parameters.WFDelayTime ?? 1 };
+    case 'url':
+      return { url: parameters.WFURLActionURL ?? '' };
+    case 'set_volume':
+      return { level: Math.round((parameters.WFSetVolumeActionVolume ?? 0.5) * 100) };
+    case 'set_brightness':
+      return { level: Math.round((parameters.WFSetBrightnessActionBrightness ?? 0.5) * 100) };
+    case 'take_photo':
+      return {
+        useFrontCamera: parameters.WFCameraCaptureDevice === 'Front',
+        flash: parameters.WFCameraCaptureFlashMode ?? 'Auto'
+      };
+    default: {
+      const copied = { ...parameters };
+      delete copied.WFWorkflowActionUUID;
+      return copied;
+    }
+  }
+}
+
 // Convert ShortcutGenius action to Apple Shortcuts action
 function convertAction(action: ShortcutAction): AppleAction {
+  if (isAppleActionIdentifier(action.type)) {
+    const params = action.parameters || {};
+    return {
+      WFWorkflowActionIdentifier: action.type,
+      WFWorkflowActionParameters: {
+        ...params,
+        WFWorkflowActionUUID: params.WFWorkflowActionUUID || uuidv4()
+      }
+    };
+  }
+
   const appleIdentifier = ACTION_MAPPING[action.type];
   if (!appleIdentifier) {
     throw new Error(`Unsupported action type: ${action.type}`);
@@ -126,15 +296,53 @@ function convertAction(action: ShortcutAction): AppleAction {
 
   return {
     WFWorkflowActionIdentifier: appleIdentifier,
-    WFWorkflowActionParameters: mapParameters(action.type, action.parameters)
+    WFWorkflowActionParameters: {
+      ...mapParameters(action.type, action.parameters),
+      WFWorkflowActionUUID: uuidv4()
+    }
   };
 }
 
-// Build Apple Shortcuts plist structure
-export function buildAppleShortcut(shortcut: Shortcut): AppleShortcut {
-  const actions = shortcut.actions.map(convertAction);
+// Actions whose output is worth inspecting in debug mode
+const DEBUG_OUTPUT_ACTIONS = new Set([
+  'is.workflow.actions.getcontentsofurl',
+  'is.workflow.actions.url',
+  'is.workflow.actions.gettext',
+  'is.workflow.actions.ask',
+  'is.workflow.actions.location',
+  'is.workflow.actions.date',
+  'is.workflow.actions.getclipboard',
+  'is.workflow.actions.calculateexpression',
+  'is.workflow.actions.base64encode',
+  'is.workflow.actions.hash',
+]);
 
-  return {
+// Build Apple Shortcuts plist structure
+export function buildAppleShortcut(
+  shortcut: Shortcut,
+  options?: { debug?: boolean; preserveImportedMetadata?: boolean }
+): AppleShortcutDocument {
+  const rawActions = shortcut.actions.map(convertAction);
+  let actions = rawActions;
+
+  if (options?.debug) {
+    const debugActions: AppleAction[] = [];
+    for (const action of rawActions) {
+      debugActions.push(action);
+      if (DEBUG_OUTPUT_ACTIONS.has(action.WFWorkflowActionIdentifier)) {
+        debugActions.push({
+          WFWorkflowActionIdentifier: 'is.workflow.actions.showresult',
+          WFWorkflowActionParameters: {
+            WFShowResultActionResult: `[DEBUG] Output from ${action.WFWorkflowActionIdentifier}`,
+            WFWorkflowActionUUID: uuidv4()
+          }
+        });
+      }
+    }
+    actions = debugActions;
+  }
+
+  const baseDocument: AppleShortcutDocument = {
     WFWorkflowName: shortcut.name,
     WFWorkflowIcon: {
       WFWorkflowIconStartColor: 431817727, // Default blue color
@@ -166,22 +374,35 @@ export function buildAppleShortcut(shortcut: Shortcut): AppleShortcut {
     ],
     WFWorkflowActions: actions
   };
+
+  if (options?.preserveImportedMetadata !== false && shortcut._provenance?.rawAppleShortcut) {
+    return {
+      ...shortcut._provenance.rawAppleShortcut,
+      WFWorkflowName: shortcut.name,
+      WFWorkflowActions: actions
+    };
+  }
+
+  return baseDocument;
 }
 
 // Convert to plist format
-export function convertToPlist(shortcut: Shortcut): Buffer {
-  const appleShortcut = buildAppleShortcut(shortcut);
-  const plistString = plist.build(appleShortcut as unknown as plist.PlistValue);
+export function convertToPlist(
+  shortcut: Shortcut,
+  options?: { debug?: boolean; preserveImportedMetadata?: boolean }
+): Buffer {
+  const appleShortcut = buildAppleShortcut(shortcut, options);
+  const plistString = plist.build(appleShortcut);
   return Buffer.from(plistString, 'utf8');
 }
 
 // Convert to binary plist format
-export function convertToBinaryPlist(shortcut: Shortcut): Buffer {
-  const appleShortcut = buildAppleShortcut(shortcut);
+export function convertToBinaryPlist(shortcut: Shortcut, options?: { debug?: boolean }): Buffer {
+  const appleShortcut = buildAppleShortcut(shortcut, options);
 
   // For now, we'll create XML plist and note that binary conversion
   // would require additional native tools or libraries
-  const plistString = plist.build(appleShortcut as unknown as plist.PlistValue);
+  const plistString = plist.build(appleShortcut);
   return Buffer.from(plistString, 'utf8');
 }
 
@@ -208,7 +429,7 @@ export function validateAppleCompatibility(shortcut: Shortcut): string[] {
 
   // Check for unsupported actions
   shortcut.actions.forEach((action, index) => {
-    if (!ACTION_MAPPING[action.type]) {
+    if (!ACTION_MAPPING[action.type] && !isAppleActionIdentifier(action.type)) {
       errors.push(`Action ${index + 1}: "${action.type}" is not supported in Apple Shortcuts`);
     }
   });
@@ -224,4 +445,132 @@ export function validateAppleCompatibility(shortcut: Shortcut): string[] {
   }
 
   return errors;
+}
+
+export interface ImportedShortcutArtifact {
+  shortcut: Shortcut;
+  metadata: {
+    name: string;
+    actionCount: number;
+    sourceFormat: ShortcutSourceFormat;
+    importIntent: ShortcutImportIntent;
+    warnings: string[];
+    hasRawAppleDocument: boolean;
+  };
+}
+
+function isLikelyJsonArtifact(content: string): boolean {
+  const trimmed = content.trim();
+  return trimmed.startsWith('{') || trimmed.startsWith('[');
+}
+
+function isLikelyXmlPlist(content: string): boolean {
+  const trimmed = content.trimStart();
+  return trimmed.startsWith('<?xml') || trimmed.startsWith('<plist');
+}
+
+async function convertBinaryShortcutToXml(buffer: Buffer): Promise<string> {
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'shortcut-import-'));
+  const inputPath = path.join(tempDir, 'artifact.shortcut');
+
+  try {
+    await fs.writeFile(inputPath, buffer);
+    const { stdout } = await execFileAsync('plutil', ['-convert', 'xml1', '-o', '-', inputPath], {
+      encoding: 'utf8',
+      maxBuffer: 8 * 1024 * 1024
+    });
+    return stdout;
+  } finally {
+    await fs.rm(tempDir, { recursive: true, force: true }).catch(() => {});
+  }
+}
+
+function convertAppleActionToShortcutAction(action: AppleAction): ShortcutAction {
+  const internalType = REVERSE_ACTION_MAPPING[action.WFWorkflowActionIdentifier] || action.WFWorkflowActionIdentifier;
+  return {
+    type: internalType,
+    parameters: reverseMapParameters(internalType, action.WFWorkflowActionParameters || {})
+  };
+}
+
+export async function importShortcutArtifact(
+  buffer: Buffer,
+  options?: { fileName?: string; importIntent?: ShortcutImportIntent }
+): Promise<ImportedShortcutArtifact> {
+  const textContent = buffer.toString('utf8');
+  const warnings: string[] = [];
+  const importIntent = options?.importIntent || 'reference';
+  const inferredFormat: ShortcutSourceFormat = options?.fileName?.toLowerCase().endsWith('.shortcut')
+    ? 'shortcut'
+    : options?.fileName?.toLowerCase().endsWith('.json')
+      ? 'json'
+      : 'plist';
+
+  if (isLikelyJsonArtifact(textContent)) {
+    const parsed = JSON.parse(textContent);
+    const shortcut: Shortcut = {
+      name: parsed.name || 'Imported Shortcut',
+      actions: Array.isArray(parsed.actions) ? parsed.actions : [],
+      _provenance: {
+        sourceFormat: inferredFormat === 'shortcut' ? 'json' : inferredFormat,
+        importIntent,
+        fileName: options?.fileName,
+        warnings
+      }
+    };
+
+    return {
+      shortcut,
+      metadata: {
+        name: shortcut.name,
+        actionCount: shortcut.actions.length,
+        sourceFormat: 'json',
+        importIntent,
+        warnings,
+        hasRawAppleDocument: false,
+      }
+    };
+  }
+
+  let plistContent = textContent;
+  if (!isLikelyXmlPlist(textContent)) {
+    plistContent = await convertBinaryShortcutToXml(buffer);
+    warnings.push('Imported a binary shortcut artifact via system plist conversion.');
+  }
+
+  const parsed = plist.parse(plistContent) as AppleShortcutDocument;
+  if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.WFWorkflowActions)) {
+    throw new Error('Unsupported shortcut artifact. Expected ShortcutGenius JSON or XML plist content.');
+  }
+
+  const actions = parsed.WFWorkflowActions.map(convertAppleActionToShortcutAction);
+
+  if (actions.some(action => action.type.startsWith('is.workflow.actions.'))) {
+    warnings.push('Some Apple-native actions could not be losslessly mapped and were preserved as raw Apple identifiers.');
+  }
+
+  const shortcut: Shortcut = {
+    name: parsed.WFWorkflowName || 'Imported Shortcut',
+    actions,
+    _provenance: {
+      sourceFormat: inferredFormat,
+      importIntent,
+      fileName: options?.fileName,
+      warnings,
+      rawAppleShortcut: parsed,
+      rawPlist: plistContent
+    }
+  };
+
+  return {
+    shortcut,
+    metadata: {
+      name: shortcut.name,
+      actionCount: shortcut.actions.length,
+      sourceFormat: inferredFormat,
+      importIntent,
+      warnings,
+      hasRawAppleDocument: true,
+    }
+  };
 }
