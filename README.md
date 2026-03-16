@@ -283,3 +283,40 @@ MIT License - see [LICENSE](LICENSE) for details.
 <p align="center">
   Built with ❤️ for the iOS Shortcuts community
 </p>
+
+---
+
+## Release Highlights
+
+### v1.1.0 - Knowledge Base Feature (NEW!) 🆕
+
+**Personalized AI shortcut generation with your own examples**
+
+The new Knowledge Base feature lets you import your personal iOS Shortcuts as few-shot examples. The AI intelligently selects relevant shortcuts from your library to guide generation.
+
+**Key Features:**
+- 📚 **Import Your Shortcuts** - Upload JSON from ios-shortcuts CLI with `--full` flag
+- 🎯 **Smart Selection** - Algorithm picks relevant examples based on complexity, actions, and apps
+- 🏷️ **Tag & Filter** - Organize shortcuts with tags, filter by complexity level
+- ⭐ **Flag Examples** - Mark your best shortcuts as examples for AI to reference
+- 📊 **Statistics** - See your library overview and complexity distribution
+- 🔧 **Settings Control** - Enable/disable KB, set max examples, configure preferences
+
+**What Gets Imported:**
+- Complete action sequences with all parameters
+- Variable definitions and usage patterns
+- Third-party app integrations (Perplexity, Grok, Claude, etc.)
+- Complexity scores and metadata
+
+**How It Works:**
+1. Export shortcuts: \`ios-shortcuts export "Shortcut Name" --full\`
+2. Upload to Knowledge Base tab
+3. AI automatically uses your examples when generating
+4. Get shortcuts that match your patterns and complexity
+
+**Learn More:**
+- [User Setup Guide](docs/KNOWLEDGE_BASE_SETUP.md)
+- [API Documentation](docs/API_KNOWLEDGE_BASE.md)
+
+---
+
