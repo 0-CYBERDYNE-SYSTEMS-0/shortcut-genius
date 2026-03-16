@@ -89,7 +89,7 @@ Test shortcuts before downloading:
 
 ```bash
 # Clone the repository
-git clone https://github.com/scrimwiggins/shortcut-genius.git
+git clone https://github.com/0-CYBERDYNE-SYSTEMS-0/shortcut-genius.git
 cd shortcut-genius
 
 # Install dependencies
