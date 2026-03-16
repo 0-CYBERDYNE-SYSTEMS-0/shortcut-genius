@@ -14,6 +14,16 @@ export interface SystemMessageContext {
   currentPhase?: string;
   researchResults?: string;
   currentShortcut?: any;
+  shortcutKnowledgeBase?: {
+    total_shortcuts: number;
+    example_shortcuts: Array<{
+      name: string;
+      actions: any[];
+      complexity: number;
+      category: string;
+    }>;
+    tags: string[];
+  };
 }
 
 export class AgentSystemMessages {
@@ -65,7 +75,26 @@ RESPONSE GUIDELINES:
 
 ${context.researchResults ? `
 RESEARCH RESULTS AVAILABLE:
-${context.researchResults}` : ''}`;
+${context.researchResults}` : ''}
+
+${context.shortcutKnowledgeBase && context.shortcutKnowledgeBase.example_shortcuts && context.shortcutKnowledgeBase.example_shortcuts.length > 0 ? `
+USER'S SHORTCUT KNOWLEDGE BASE:
+${context.shortcutKnowledgeBase.total_shortcuts} shortcuts available for reference.
+
+TOP EXAMPLE SHORTCUTS (similar complexity to current task):
+${context.shortcutKnowledgeBase.example_shortcuts.map(s => `
+- ${s.name} (${s.complexity} actions)
+  Category: ${s.category}
+  Actions: ${s.actions.slice(0, 3).map(a => typeof a === 'string' ? a : a.identifier || a.WFWorkflowActionIdentifier || 'unknown').join(', ')}${s.actions.length > 3 ? '...' : ''}
+`).join('')}
+
+When generating shortcuts, reference these examples for:
+- Similar action patterns and flow
+- Parameter values and configurations
+- Variable naming and usage
+- Complexity and structure guidance
+- Integration patterns with external services
+` : ''}`;
   }
 
   /**
