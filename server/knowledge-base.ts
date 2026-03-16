@@ -1,7 +1,10 @@
 // Knowledge Base Management Module
 // Stores and retrieves user's personal iOS Shortcuts for few-shot prompting
 
-import { pool } from './db';
+import { db } from '../db';
+
+// Access the underlying pool for raw queries
+const pool = db.$client;
 
 export interface ShortcutKnowledgeBase {
   id: number;
@@ -282,7 +285,7 @@ export async function flagShortcut(
   const client = await pool.connect();
 
   try {
-    const query = `
+    let query = `
       UPDATE shortcut_knowledge_base
       SET is_example = $1, updated_at = NOW()
     `;
@@ -293,7 +296,7 @@ export async function flagShortcut(
       params.push(qualityScore);
     }
 
-    query += ` WHERE id = $3`;
+    query += ` WHERE id = $${params.length + 1}`;
     params.push(id);
 
     await client.query(query, params);

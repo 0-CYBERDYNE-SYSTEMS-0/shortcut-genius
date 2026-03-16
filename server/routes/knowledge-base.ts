@@ -3,7 +3,7 @@
 
 import type { Express } from 'express';
 import { Request, Response } from 'express';
-import * as KB from './knowledge-base';
+import * as KB from '../knowledge-base';
 import * as Selector from './knowledge-base-selector';
 
 /**
