@@ -160,18 +160,18 @@ app.use('/api/', apiLimiter);
 
 #### Issue 4: Hardcoded OAuth Client ID
 - **File:** `server/providers.ts:94`
-- **Problem:** Codex OAuth client ID is hardcoded
+- **Problem:** Codex OAuth client ID was hardcoded
 ```typescript
-const CODEX_CLIENT_ID = 'app_EMoamEEZ73f0CkXaXp7hrann';
+const CODEX_CLIENT_ID = 'YOUR_OPENAI_CODEX_CLIENT_ID';
 ```
 - **Risk:** Client ID exposed in source code
-- **Severity:** Low - Client IDs are meant to be public
+- **Severity:** Low - Client IDs are typically public
 - **Impact:** Minimal - It's a public OAuth client ID
 - **Fix:** (Already implemented ✅)
 ```typescript
-const CODEX_CLIENT_ID = process.env.OPENAI_CODEX_CLIENT_ID || 'app_EMoamEEZ73f0CkXaXp7hrann';
+const CODEX_CLIENT_ID = process.env.OPENAI_CODEX_CLIENT_ID || '';
 ```
-- **Status:** ✅ FIXED - Now reads from environment variable with fallback
+- **Status:** ✅ FIXED - Now reads exclusively from environment variable
 
 #### Issue 5: No CORS Configuration
 - **File:** `server/routes.ts`
