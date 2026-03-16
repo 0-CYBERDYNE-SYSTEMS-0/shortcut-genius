@@ -1,0 +1,32 @@
+{
+  "productName": "ShortcutGenius",
+  "version": "1.0.0",
+  "identifier": "com.shortcutgenius.app",
+  "build": {
+    "frontendDist": "../dist/public",
+    "devUrl": "http://localhost:4321",
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "category": "DeveloperTool",
+    "shortDescription": "AI-powered iOS Shortcut builder",
+    "longDescription": "ShortcutGenius is a desktop application for creating, analyzing, and optimizing iOS Shortcuts using AI. It features a Monaco code editor, multi-provider AI support (OpenAI, Anthropic, OpenRouter), and a conversational shortcut-building agent.",
+    "copyright": "Copyright © 2024 ShortcutGenius contributors"
+  }
+}
