@@ -55,6 +55,7 @@ import {
 } from './shortcut-sharing';
 import { registerConversationRoutes } from './routes/conversations';
 import { registerSimpleConversationRoutes } from './routes/simple-conversations';
+import { registerKnowledgeBaseRoutes } from './routes/knowledge-base';
 import {
   disconnectProvider,
   loadProviders,
@@ -473,6 +474,12 @@ export async function registerRoutes(app: Express) {
       console.warn('⚠️ Using simplified conversation routes (AI or database unavailable)');
       registerSimpleConversationRoutes(app, conversationalAgent);
       console.log('✅ Simplified conversation routes registered');
+    }
+
+    // Register knowledge base routes (require database)
+    if (canUseDb) {
+      registerKnowledgeBaseRoutes(app);
+      console.log('✅ Knowledge base routes registered');
     }
 
   } catch (error) {
