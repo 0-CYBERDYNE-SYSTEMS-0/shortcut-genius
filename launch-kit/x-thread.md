@@ -48,10 +48,11 @@ Output matches *your* style.
 
 ---
 
-**5/** The flow is genuinely short:
+**5/** The flow:
 
-```bash
-ios-shortcuts export "My Shortcut" --full
+```
+1. Export from Shortcuts.app
+2. npx shortcut-genius convert "My Shortcut.shortcut"
    → upload JSON to the KB tab
    → next prompt auto-injects your best examples
    → download a signed .shortcut file
