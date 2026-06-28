@@ -109,6 +109,8 @@ Once the above is queued, the only outstanding automated action is **waiting for
 - Security score is 76/100 per `SECURITY.md`. Acceptable for a local dev tool; not for public deployment.
 - No automated tests were added for the new CLI commands. The verification was a manual smoke test.
 - iOS 26 / iOS 27-specific messaging is **not** in the README. The repo references "iOS Shortcuts" generically. That's a deliberate scope cut to ship this PR cleanly.
+- **iOS capabilities research did not land.** The web-research sub-agent returned an HTTP 404 and produced no usable artifact. If you want the README to call out iOS 26-specific Shortcuts authoring features (App Intents, Apple Intelligence on-device actions, plist format changes from iOS 17/18 to 26), that's a follow-up PR with a fresh research dispatch.
+- **The launch-kit sub-agent's "VERIFIED" report was partially inaccurate.** It reintroduced a phantom `ios-shortcuts export` line on x-thread.md tweet 5 that a prior sweep had removed, and missed that tweet 5 was 297 chars (over X's 280 limit). Both were caught and fixed before this standby report. Always re-verify a sub-agent's "verified" claim against disk state.
 
 ---
 
