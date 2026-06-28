@@ -1,8 +1,12 @@
 {
   "name": "shortcut-genius",
-  "version": "1.0.0",
+  "version": "1.1.1",
   "type": "module",
   "license": "MIT",
+  "description": "AI-powered IDE for iOS Shortcuts — conversational builder, analyzer, runtime tester, and public gallery.",
+  "engines": {
+    "node": ">=18"
+  },
   "bin": {
     "shortcut-genius": "./cli/index.ts"
   },

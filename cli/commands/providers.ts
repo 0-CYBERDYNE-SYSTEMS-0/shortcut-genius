@@ -17,7 +17,7 @@ const PROVIDERS_FILE = path.join(PROVIDERS_DIR, 'providers.json');
 
 export const providersCommand = new Command('providers')
   .description('Manage API provider configurations')
-  .addSubCommand(new Command('list')
+  .addCommand(new Command('list')
     .description('List configured providers')
     .action(async () => {
       try {
@@ -28,7 +28,7 @@ export const providersCommand = new Command('providers')
         process.exit(1);
       }
     }))
-  .addSubCommand(new Command('configure')
+  .addCommand(new Command('configure')
     .description('Configure a provider')
     .argument('<provider>', 'Provider name (openai, anthropic, glm, minimax, kimi, opencode, codex)')
     .option('-k, --key <api-key>', 'API key to set')
@@ -41,7 +41,7 @@ export const providersCommand = new Command('providers')
         process.exit(1);
       }
     }))
-  .addSubCommand(new Command('remove')
+  .addCommand(new Command('remove')
     .description('Remove provider configuration')
     .argument('<provider>', 'Provider name to remove')
     .action(async (provider) => {
@@ -52,7 +52,7 @@ export const providersCommand = new Command('providers')
         process.exit(1);
       }
     }))
-  .addSubCommand(new Command('test')
+  .addCommand(new Command('test')
     .description('Test provider connection')
     .argument('<provider>', 'Provider name to test')
     .action(async (provider) => {
@@ -63,7 +63,7 @@ export const providersCommand = new Command('providers')
         process.exit(1);
       }
     }))
-  .addSubCommand(new Command('import')
+  .addCommand(new Command('import')
     .description('Import provider from web app')
     .argument('<file>', 'Path to providers.json file')
     .action(async (file) => {

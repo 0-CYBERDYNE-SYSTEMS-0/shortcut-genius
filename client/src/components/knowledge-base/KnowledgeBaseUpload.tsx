@@ -115,8 +115,9 @@ export default function KnowledgeBaseUpload({ onUploadComplete }: KnowledgeBaseU
     <div className="kb-upload">
       <h2>Upload Shortcuts</h2>
       <p className="kb-upload-instructions">
-        Upload your iOS Shortcuts exported with the ios-shortcuts tool:
-        <code className="kb-code">ios-shortcuts export "Shortcut Name" --full</code>
+        Upload your iOS Shortcuts exported with the ShortcutGenius CLI
+        (<code className="kb-code">npx shortcut-genius</code>):
+        <code className="kb-code">{`npx shortcut-genius convert "Shortcut Name.shortcut"`}</code>
       </p>
 
       <div className="kb-upload-dropzone">

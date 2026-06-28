@@ -14,7 +14,7 @@ The Knowledge Base feature allows you to:
 
 1. **macOS** with Shortcuts app installed
 2. **iOS device** with shortcuts synced via iCloud
-3. **ios-shortcuts skill** installed
+3. **ShortcutGenius CLI (`npx shortcut-genius`)** installed
 4. **ShortcutGenius** running locally
 
 ## Step 1: Export Your Shortcuts
@@ -22,7 +22,7 @@ The Knowledge Base feature allows you to:
 ### Option A: Export Single Shortcut with Full Actions
 
 ```bash
-ios-shortcuts export "Shortcut Name" --full --output my-shortcut-full.json
+`npx shortcut-genius convert "MyShortcuts/Shortcut Name.shortcut" -o out.json`
 ```
 
 **What this exports:**
@@ -37,11 +37,11 @@ Currently, export all shortcuts with full action data by exporting each individu
 
 ```bash
 # List all shortcuts
-ios-shortcuts list --json > shortcuts-list.json
+list shortcuts in the Shortcuts.app sidebar (export each individually below)
 
 # Then export each shortcut you want
-ios-shortcuts export "Shortcut 1" --full --output shortcut1.json
-ios-shortcuts export "Shortcut 2" --full --output shortcut2.json
+`npx shortcut-genius convert "MyShortcuts/Shortcut 1.shortcut" -o out.json`
+`npx shortcut-genius convert "MyShortcuts/Shortcut 2.shortcut" -o out.json`
 # ... etc
 ```
 
@@ -49,13 +49,13 @@ ios-shortcuts export "Shortcut 2" --full --output shortcut2.json
 
 ```bash
 # Export complex shortcut for reference
-ios-shortcuts export "Farm Friend MAC" --full --output farm-friend-full.json
+`npx shortcut-genius convert "MyShortcuts/Farm Friend MAC.shortcut" -o out.json`
 
 # Export third-party integration shortcut
-ios-shortcuts export "Ask Perplexity" --full --output perplexity-integration.json
+`npx shortcut-genius convert "MyShortcuts/Ask Perplexity.shortcut" -o out.json`
 
 # Export simple shortcut
-ios-shortcuts export "Simple Timer" --full --output timer-full.json
+`npx shortcut-genius convert "MyShortcuts/Simple Timer.shortcut" -o out.json`
 ```
 
 ## Step 2: Upload to ShortcutGenius
@@ -198,7 +198,7 @@ Based on your Ask Perplexity example, here's a new Perplexity API shortcut...
 
 **Problem:** "Shortcut not found"
 - **Solution:** Check exact shortcut name (case-sensitive)
-- Use `ios-shortcuts list` to see available shortcuts
+- Use `the bundled `shortcut-genius` CLI list` to see available shortcuts
 
 **Problem:** "Full JSON output requires parsing ZDATA blobs"
 - **Solution:** Add `--full` flag to export command
@@ -210,7 +210,7 @@ Based on your Ask Perplexity example, here's a new Perplexity API shortcut...
 ### Upload Issues
 
 **Problem:** "Invalid JSON format"
-- **Solution:** Ensure file was exported with `--full` flag
+- **Solution:** Ensure file was exported with the `convert` subcommand
 - Check JSON structure should be array of shortcuts
 
 **Problem:** "Validation failed"
@@ -237,9 +237,9 @@ For importing multiple shortcuts, create a combined JSON:
 
 ```bash
 # Export multiple shortcuts
-ios-shortcuts export "Shortcut 1" --full --output s1.json
-ios-shortcuts export "Shortcut 2" --full --output s2.json
-ios-shortcuts export "Shortcut 3" --full --output s3.json
+`npx shortcut-genius convert "MyShortcuts/Shortcut 1.shortcut" -o out.json`
+`npx shortcut-genius convert "MyShortcuts/Shortcut 2.shortcut" -o out.json`
+`npx shortcut-genius convert "MyShortcuts/Shortcut 3.shortcut" -o out.json`
 
 # Combine using jq (JSON processor)
 jq -s '.[inputs]' s1.json s2.json s3.json > combined.json

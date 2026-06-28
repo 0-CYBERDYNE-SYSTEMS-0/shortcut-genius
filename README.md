@@ -44,17 +44,19 @@ Our stateful AI agent doesn't just generate code—it researches real APIs, vali
 - **Zero Placeholder Policy** - Validates against example.com and placeholder URLs
 - **Confidence Scoring** - Only finalizes when confidence exceeds 90%
 
-### 100+ AI Models
-Choose from the best models via OpenRouter, or use direct integrations:
+### Multi-Provider AI Support
+Bring your own API key. We support the providers serious shortcut-builders use:
 
-| Provider | Models |
-|----------|--------|
-| OpenAI | GPT-4o, GPT-4o-mini, GPT-4-turbo |
-| Anthropic | Claude 3.5 Sonnet, Claude 3 Opus |
-| OpenRouter | 100+ models (DeepSeek, Llama, Mistral, etc.) |
-| Zai | GLM-4.7, GLM-4.6 |
-| MiniMax | MiniMax-M2.5, MiniMax-M2.1 |
-| Moonshot | Kimi K2.5 |
+| Provider | Notes |
+|----------|-------|
+| OpenAI | `gpt-4o-mini`, `gpt-4o`, and current-generation models |
+| Anthropic | `claude-3-5-sonnet-latest` and current Anthropic models |
+| OpenRouter | Any model on OpenRouter (DeepSeek, Llama, Mistral, Qwen, etc.) |
+| GLM (Zai) | `glm-4.6` and current GLM models |
+| MiniMax | `MiniMax-M2.5` and current MiniMax direct models |
+| Moonshot Kimi | `kimi-k2-5` and current Kimi models |
+
+See [docs/custom-provider-setup.md](docs/custom-provider-setup.md) for adding your own.
 
 ### Runtime Testing (macOS)
 Test shortcuts before downloading:
@@ -89,7 +91,7 @@ Test shortcuts before downloading:
 
 ```bash
 # Clone the repository
-git clone https://github.com/scrimwiggins/shortcut-genius.git
+git clone https://github.com/0-CYBERDYNE-SYSTEMS-0/shortcut-genius.git
 cd shortcut-genius
 
 # Install dependencies
@@ -295,7 +297,7 @@ MIT License - see [LICENSE](LICENSE) for details.
 The new Knowledge Base feature lets you import your personal iOS Shortcuts as few-shot examples. The AI intelligently selects relevant shortcuts from your library to guide generation.
 
 **Key Features:**
-- 📚 **Import Your Shortcuts** - Upload JSON from ios-shortcuts CLI with `--full` flag
+- 📚 **Import Your Shortcuts** - Export from the iOS Shortcuts app, convert via the bundled CLI, and upload to the Knowledge Base tab
 - 🎯 **Smart Selection** - Algorithm picks relevant examples based on complexity, actions, and apps
 - 🏷️ **Tag & Filter** - Organize shortcuts with tags, filter by complexity level
 - ⭐ **Flag Examples** - Mark your best shortcuts as examples for AI to reference
@@ -309,10 +311,11 @@ The new Knowledge Base feature lets you import your personal iOS Shortcuts as fe
 - Complexity scores and metadata
 
 **How It Works:**
-1. Export shortcuts: \`ios-shortcuts export "Shortcut Name" --full\`
-2. Upload to Knowledge Base tab
-3. AI automatically uses your examples when generating
-4. Get shortcuts that match your patterns and complexity
+1. Export from Shortcuts.app (File → Export…)
+2. Convert: `npx shortcut-genius convert my-shortcut.shortcut`
+3. Upload the resulting JSON to the Knowledge Base tab
+4. The AI uses your examples automatically when generating new shortcuts
+5. Output shortcuts match your patterns and complexity
 
 **Learn More:**
 - [User Setup Guide](docs/KNOWLEDGE_BASE_SETUP.md)

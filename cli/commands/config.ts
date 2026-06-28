@@ -10,7 +10,7 @@ import { loadConfig, saveConfig, initConfig, getConfigValue, setConfigValue, lis
 
 export const configCommand = new Command('config')
   .description('View or edit CLI configuration')
-  .addSubCommand(new Command('get')
+  .addCommand(new Command('get')
     .description('Get configuration value')
     .argument('<key>', 'Configuration key')
     .action(async (key) => {
@@ -29,7 +29,7 @@ export const configCommand = new Command('config')
         process.exit(1);
       }
     }))
-  .addSubCommand(new Command('set')
+  .addCommand(new Command('set')
     .description('Set configuration value')
     .argument('<key>', 'Configuration key')
     .argument('<value>', 'Configuration value')
@@ -57,7 +57,7 @@ export const configCommand = new Command('config')
         process.exit(1);
       }
     }))
-  .addSubCommand(new Command('list')
+  .addCommand(new Command('list')
     .description('List all configuration')
     .action(async () => {
       try {
@@ -67,7 +67,7 @@ export const configCommand = new Command('config')
         process.exit(1);
       }
     }))
-  .addSubCommand(new Command('reset')
+  .addCommand(new Command('reset')
     .description('Reset configuration to defaults')
     .option('-f, --force', 'Force reset without confirmation')
     .action(async (options) => {
@@ -78,7 +78,7 @@ export const configCommand = new Command('config')
         process.exit(1);
       }
     }))
-  .addSubCommand(new Command('init')
+  .addCommand(new Command('init')
     .description('Initialize configuration')
     .action(async () => {
       try {
